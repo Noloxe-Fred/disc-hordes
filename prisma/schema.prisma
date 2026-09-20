@@ -6,3 +6,463 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+// =========================================================================
+// Enums
+// =========================================================================
+
+enum Metier {
+  GARDE
+  MEDECIN
+  ARTISAN
+  ECLAIREUR
+  GUETTEUR
+  CUISINIER
+  FOSSOYEUR
+  INGENIEUR
+  CHASSEUR
+  DIPLOMATE
+}
+
+enum StatutJoueur {
+  VIVANT
+  MORT // mort "classique", devient une ame jouable (conception.md §3)
+  ZOMBIFIE // infection non soignee a temps, rejoint l'attaque de la nuit suivante
+  EXCLU // exclu par le maire, existe toujours en territoire externe
+}
+
+enum StatutVille {
+  EN_CREATION
+  ACTIVE
+  TOMBEE
+}
+
+enum TypePhase {
+  JOUR
+  NUIT
+}
+
+enum MeteoType {
+  NORMALE
+  MAUVAIS_TEMPS
+}
+
+enum PalierZone {
+  PROCHE
+  MOYENNE
+  ELOIGNEE
+}
+
+enum TypeObjet {
+  RESSOURCE_BRUTE
+  CRAFT_SIMPLE
+  CRAFT_AVANCE
+  RARE
+}
+
+enum TypeBatiment {
+  PALISSADE
+  ATELIER
+  PUITS
+  PLACE_PUBLIQUE
+  MAIRIE
+}
+
+enum TypeElection {
+  MAIRE
+  DEFIANCE
+}
+
+enum StatutElection {
+  EN_COURS
+  TERMINEE
+}
+
+// =========================================================================
+// Comptes & meta-progression (persistants entre parties)
+// =========================================================================
+
+model Utilisateur {
+  id          Int      @id @default(autoincrement())
+  discordId   String   @unique
+  pseudoCache String?
+  createdAt   DateTime @default(now())
+
+  joueurs Joueur[]
+  succes  UtilisateurSucces[]
+}
+
+model Succes {
+  id          Int    @id @default(autoincrement())
+  code        String @unique
+  nom         String
+  description String
+
+  utilisateurs UtilisateurSucces[]
+}
+
+model UtilisateurSucces {
+  id            Int      @id @default(autoincrement())
+  utilisateurId Int
+  succesId      Int
+  obtenuLe      DateTime @default(now())
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  succes      Succes      @relation(fields: [succesId], references: [id], onDelete: Cascade)
+
+  @@unique([utilisateurId, succesId])
+}
+
+// =========================================================================
+// Groupes & villes
+// =========================================================================
+
+// Regroupe jusqu'a 3 villes partageant les memes territoires externes (conception.md §1).
+// Le groupe reste fige une fois forme : pas de champ "nombre de villes", la regle des
+// 3 max et le non-remplacement des places liberees sont appliques cote code.
+model Groupe {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  villes Ville[]
+  zones  Zone[]
+}
+
+model Ville {
+  id                Int         @id @default(autoincrement())
+  nom               String
+  groupeId          Int
+  statut            StatutVille @default(EN_CREATION)
+  dateCreation      DateTime    @default(now())
+  dateFondation     DateTime?
+  dateChute         DateTime?
+  // Calcule une seule fois a /fonder-ville : floor(180 / habitants au lancement), plafonne a 40
+  // (equilibrage.md §1). Conserve ici a titre d'historique/stats ; le PA max operatoire
+  // de chaque joueur vit sur Joueur.paMax et ne bouge plus jamais ensuite.
+  paMaxFondation    Int?
+  cycleActuel       Int         @default(0)
+  phaseActuelle     TypePhase   @default(JOUR)
+  meteoActuelle     MeteoType   @default(NORMALE)
+  rationnementActif Boolean     @default(false)
+  maireId           Int?        @unique
+  mandatFinCycle    Int?
+
+  groupe     Groupe            @relation(fields: [groupeId], references: [id])
+  maire      Joueur?           @relation("MaireVille", fields: [maireId], references: [id])
+  habitants  Joueur[]          @relation("HabitantsVille")
+  inventaire InventaireVille[]
+  batiments  BatimentVille[]
+  attaques   CycleAttaque[]
+  elections  Election[]
+  journal    JournalEntree[]
+}
+
+// =========================================================================
+// Territoires externes
+// =========================================================================
+
+model Zone {
+  id       Int        @id @default(autoincrement())
+  nom      String
+  palier   PalierZone
+  groupeId Int
+
+  groupe           Groupe               @relation(fields: [groupeId], references: [id])
+  adjacentesDepuis ZoneAdjacence[]      @relation("ZoneA")
+  adjacentesVers   ZoneAdjacence[]      @relation("ZoneB")
+  joueursPresents  Joueur[]
+  decouvertesPar   CarteDecouverte[]
+  stocksRessources ZoneRessourceStock[]
+
+  @@unique([groupeId, nom])
+}
+
+// Arete non orientee stockee une seule fois (zoneAId < zoneBId, applique cote code) ;
+// le deplacement se fait de proche en proche via ces liens (conception.md §1).
+model ZoneAdjacence {
+  id      Int @id @default(autoincrement())
+  zoneAId Int
+  zoneBId Int
+
+  zoneA Zone @relation("ZoneA", fields: [zoneAId], references: [id], onDelete: Cascade)
+  zoneB Zone @relation("ZoneB", fields: [zoneBId], references: [id], onDelete: Cascade)
+
+  @@unique([zoneAId, zoneBId])
+}
+
+// Carte de decouverte individuelle (conception.md §1) : une ligne = une zone vue par ce joueur.
+model CarteDecouverte {
+  id          Int      @id @default(autoincrement())
+  joueurId    Int
+  zoneId      Int
+  decouvertLe DateTime @default(now())
+
+  joueur Joueur @relation(fields: [joueurId], references: [id], onDelete: Cascade)
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([joueurId, zoneId])
+}
+
+// Stock courant d'une ressource regenerante sur une zone (bois/baies/gibier).
+// quantiteMax suit le palier de la zone (100/150/200, equilibrage.md §2) ; les ressources
+// transformees/non-regenerantes n'ont volontairement pas de ligne ici (stock non suivi en V1).
+model ZoneRessourceStock {
+  id               Int @id @default(autoincrement())
+  zoneId           Int
+  objetId          Int
+  quantiteActuelle Int
+  quantiteMax      Int
+
+  zone  Zone  @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  objet Objet @relation(fields: [objetId], references: [id], onDelete: Cascade)
+
+  @@unique([zoneId, objetId])
+}
+
+// =========================================================================
+// Objets, recettes, inventaires
+// =========================================================================
+
+// Catalogue unique pour ressources brutes, craft simple/avance et loot rare : la liste de
+// recettes est evolutive (conception.md §6), donc modelisee en donnees plutot qu'en enum.
+model Objet {
+  id         Int       @id @default(autoincrement())
+  nom        String    @unique
+  type       TypeObjet
+  regenerant Boolean   @default(false)
+
+  recette                Recette?
+  utiliseCommeIngredient RecetteIngredient[]
+  inventairesJoueur      InventaireJoueur[]
+  inventairesVille       InventaireVille[]
+  stocksZone             ZoneRessourceStock[]
+  contributions          ContributionBatiment[]
+}
+
+model Recette {
+  id                  Int     @id @default(autoincrement())
+  objetResultatId     Int     @unique
+  coutPA              Int
+  requiertAtelier     Boolean @default(false)
+  palierAtelierRequis Int?
+  metierExclusif      Metier?
+
+  objetResultat Objet               @relation(fields: [objetResultatId], references: [id], onDelete: Cascade)
+  ingredients   RecetteIngredient[]
+}
+
+model RecetteIngredient {
+  id        Int @id @default(autoincrement())
+  recetteId Int
+  objetId   Int
+  quantite  Int
+
+  recette Recette @relation(fields: [recetteId], references: [id], onDelete: Cascade)
+  objet   Objet   @relation(fields: [objetId], references: [id])
+
+  @@unique([recetteId, objetId])
+}
+
+model InventaireJoueur {
+  id       Int @id @default(autoincrement())
+  joueurId Int
+  objetId  Int
+  quantite Int @default(0)
+
+  joueur Joueur @relation(fields: [joueurId], references: [id], onDelete: Cascade)
+  objet  Objet  @relation(fields: [objetId], references: [id])
+
+  @@unique([joueurId, objetId])
+}
+
+// Fait aussi office de banque de ville (conception.md §1).
+model InventaireVille {
+  id       Int @id @default(autoincrement())
+  villeId  Int
+  objetId  Int
+  quantite Int @default(0)
+
+  ville Ville @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  objet Objet @relation(fields: [objetId], references: [id])
+
+  @@unique([villeId, objetId])
+}
+
+// =========================================================================
+// Batiments
+// =========================================================================
+
+model BatimentVille {
+  id           Int          @id @default(autoincrement())
+  villeId      Int
+  type         TypeBatiment
+  palierActuel Int          @default(0)
+
+  ville         Ville                  @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  contributions ContributionBatiment[]
+
+  @@unique([villeId, type])
+}
+
+// Ressources deposees en attente d'atteindre le seuil du prochain palier (equilibrage.md §7) ;
+// remise a zero (cote code) une fois le palier installe.
+model ContributionBatiment {
+  id              Int @id @default(autoincrement())
+  batimentVilleId Int
+  objetId         Int
+  quantiteDeposee Int @default(0)
+
+  batiment BatimentVille @relation(fields: [batimentVilleId], references: [id], onDelete: Cascade)
+  objet    Objet         @relation(fields: [objetId], references: [id])
+
+  @@unique([batimentVilleId, objetId])
+}
+
+// =========================================================================
+// Joueurs
+// =========================================================================
+
+model Joueur {
+  id             Int          @id @default(autoincrement())
+  utilisateurId  Int
+  villeId        Int?
+  zoneActuelleId Int?
+  metier         Metier?
+  statut         StatutJoueur @default(VIVANT)
+  // Fige a l'arrivee du joueur dans sa toute premiere ville (floor(180/N), plafond 40) et ne
+  // change plus jamais ensuite, meme en cas de demenagement vers une autre ville (equilibrage.md §1).
+  paMax          Int?
+  paActuel       Int?
+  faim           Int          @default(100)
+  soif           Int          @default(100)
+  blessures      Int          @default(0)
+  // Date de declenchement de l'infection ; cachee aux autres joueurs. Le malus PA (0% a -30%
+  // lineaire sur 96h) et la transformation en zombie a 96h se calculent a la volee depuis cette
+  // date plutot que d'etre stockes (equilibrage.md §1).
+  infecteDepuis  DateTime?
+  maisonPalier   Int          @default(1)
+  xp             Int          @default(0)
+  dateArrivee    DateTime     @default(now())
+  dateSortie     DateTime?
+
+  utilisateur       Utilisateur        @relation(fields: [utilisateurId], references: [id])
+  ville             Ville?             @relation("HabitantsVille", fields: [villeId], references: [id])
+  villeDirigee      Ville?             @relation("MaireVille")
+  zoneActuelle      Zone?              @relation(fields: [zoneActuelleId], references: [id])
+  inventaire        InventaireJoueur[]
+  cartesDecouvertes CarteDecouverte[]
+  gardesMontees     GardeVolontaire[]
+  candidatures      Candidature[]
+  votes             Vote[]
+  signalementsEmis  Signalement[]      @relation("Signalant")
+  signalementsRecus Signalement[]      @relation("Cible")
+  journal           JournalEntree[]
+}
+
+// =========================================================================
+// Defense de nuit
+// =========================================================================
+
+model CycleAttaque {
+  id             Int      @id @default(autoincrement())
+  villeId        Int
+  cycleNumero    Int
+  forceAttaque   Float
+  defenseTotale  Float
+  meteoMauvais   Boolean  @default(false)
+  dateResolution DateTime @default(now())
+
+  ville  Ville             @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  gardes GardeVolontaire[]
+
+  @@unique([villeId, cycleNumero])
+}
+
+model GardeVolontaire {
+  id             Int @id @default(autoincrement())
+  cycleAttaqueId Int
+  joueurId       Int
+  bonus          Int
+
+  cycleAttaque CycleAttaque @relation(fields: [cycleAttaqueId], references: [id], onDelete: Cascade)
+  joueur       Joueur       @relation(fields: [joueurId], references: [id])
+
+  @@unique([cycleAttaqueId, joueurId])
+}
+
+// =========================================================================
+// Politique
+// =========================================================================
+
+model Election {
+  id                Int            @id @default(autoincrement())
+  villeId           Int
+  type              TypeElection
+  dateDeclenchement DateTime       @default(now())
+  dateVote          DateTime
+  statut            StatutElection @default(EN_COURS)
+  // Utilise uniquement pour un vote de defiance (le maire vise, conception.md §5).
+  maireCibleId      Int?
+
+  ville        Ville         @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  candidatures Candidature[]
+  votes        Vote[]
+}
+
+model Candidature {
+  id         Int @id @default(autoincrement())
+  electionId Int
+  joueurId   Int
+  votes      Int @default(0)
+
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  joueur   Joueur   @relation(fields: [joueurId], references: [id])
+
+  @@unique([electionId, joueurId])
+}
+
+model Vote {
+  id               Int      @id @default(autoincrement())
+  electionId       Int
+  votantId         Int
+  // Election MAIRE : id du candidat choisi. Election DEFIANCE : candidatId reste nul,
+  // choixDestitution porte le choix maintenir/destituer (conception.md §5).
+  candidatId       Int?
+  choixDestitution Boolean?
+  dateVote         DateTime @default(now())
+
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  votant   Joueur   @relation(fields: [votantId], references: [id])
+
+  @@unique([electionId, votantId])
+}
+
+// =========================================================================
+// Moderation & journal
+// =========================================================================
+
+model Signalement {
+  id           Int      @id @default(autoincrement())
+  signalantId  Int
+  cibleId      Int?
+  message      String
+  dateCreation DateTime @default(now())
+  traite       Boolean  @default(false)
+
+  signalant Joueur  @relation("Signalant", fields: [signalantId], references: [id])
+  cible     Joueur? @relation("Cible", fields: [cibleId], references: [id])
+}
+
+// Flux du journal de bord (conception.md §7) : public pour les actions en ville, prive/absent
+// pour le territoire externe (les joueurs racontent eux-memes ce qui s'y passe).
+model JournalEntree {
+  id           Int      @id @default(autoincrement())
+  villeId      Int
+  joueurId     Int?
+  message      String
+  public       Boolean  @default(true)
+  dateCreation DateTime @default(now())
+
+  ville  Ville   @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  joueur Joueur? @relation(fields: [joueurId], references: [id])
+}
