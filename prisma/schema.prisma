@@ -78,6 +78,12 @@ enum StatutElection {
   TERMINEE
 }
 
+enum TypeRessourceDiscord {
+  ROLE
+  CATEGORIE
+  SALON
+}
+
 // =========================================================================
 // Comptes & meta-progression (persistants entre parties)
 // =========================================================================
@@ -468,4 +474,22 @@ model JournalEntree {
 
   ville  Ville   @relation(fields: [villeId], references: [id], onDelete: Cascade)
   joueur Joueur? @relation(fields: [joueurId], references: [id])
+}
+
+// =========================================================================
+// Structure Discord (/init)
+// =========================================================================
+
+// "Config en base" de conception.md §4 : associe chaque ressource Discord logique et fixe
+// (un role, un salon...) a l'id Discord reellement cree, pour que /init puisse comparer l'etat
+// souhaite a l'etat reel (diff) et mettre a jour sans dupliquer ni casser les salons "maison".
+model RessourceDiscord {
+  id        Int                  @id @default(autoincrement())
+  guildId   String
+  cle       String
+  type      TypeRessourceDiscord
+  discordId String
+  updatedAt DateTime             @updatedAt
+
+  @@unique([guildId, cle])
 }

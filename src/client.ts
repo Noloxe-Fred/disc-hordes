@@ -1,8 +1,9 @@
+import type { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 
 export interface Command {
-  data: { name: string };
-  execute: (interaction: import("discord.js").ChatInputCommandInteraction) => Promise<void>;
+  data: SlashCommandBuilder;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
 export class DiscHordesClient extends Client {
