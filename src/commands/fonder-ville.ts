@@ -87,6 +87,7 @@ const command: Command = {
           paMaxFondation: paMax,
           groupeId,
           cycleActuel: 1,
+          phaseDepuis: new Date(),
           mandatFinCycle: CYCLES_PAR_MANDAT_MAIRE,
           maireId: createurJoueur.id,
         },

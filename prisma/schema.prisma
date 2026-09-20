@@ -153,6 +153,10 @@ model Ville {
   paMaxFondation        Int?
   cycleActuel           Int         @default(0)
   phaseActuelle         TypePhase   @default(JOUR)
+  // Debut de la phase courante ; sert a calculer le temps restant avant jour/nuit affiche
+  // dans /personnage (conception.md §2, phase de 24h). Mis a jour a chaque bascule de phase
+  // (systeme d'avancement de cycle automatique pas encore construit).
+  phaseDepuis           DateTime?
   meteoActuelle         MeteoType   @default(NORMALE)
   rationnementActif     Boolean     @default(false)
   maireId               Int?        @unique
