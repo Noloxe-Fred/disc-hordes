@@ -20,6 +20,22 @@ const RESSOURCES_BRUTES: { nom: string; regenerant?: boolean }[] = [
 // Loot rare sans recette — equilibrage.md §5
 const OBJETS_RARES: string[] = ["Radio"];
 
+// Objets de loot catalogues (equilibrage.md §5) mais sans effet mecanique defini pour
+// l'instant : tirables et stockables des la V1, comportement a trancher plus tard (§12).
+const OBJETS_SANS_MECANIQUE: string[] = [
+  "Médicament basique",
+  "Arme simple",
+  "Arme avancée",
+  "Petit gibier",
+  "Gros gibier",
+  "Gibier rare",
+  "Bois rare",
+  "Minerai rare",
+  "Pièces mécaniques rouillées",
+  "Pièces pour voiture",
+  "Objet rare",
+];
+
 interface RecetteSeed {
   nom: string;
   ingredients: { nom: string; quantite: number }[];
@@ -76,9 +92,6 @@ const RECETTES_SIMPLES: RecetteSeed[] = [
 ];
 
 // Craft avance, atelier requis, une recette exclusive par metier — equilibrage.md §8
-// coutPA absent = pas de valeur exacte chiffree dans le document (seuls le remede et la
-// reparation voiture sont chiffres precisement ; les autres ne sont donnes que par une
-// fourchette generale de 4 a 8 PA, cf equilibrage.md §4).
 const RECETTES_AVANCEES: RecetteSeed[] = [
   {
     nom: "Remède contre l'infection",
@@ -110,6 +123,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
       { nom: "Bois", quantite: 3 },
       { nom: "Pierre", quantite: 2 },
     ],
+    coutPA: 8,
     requiertAtelier: true,
     palierAtelierRequis: 1,
     metierExclusif: Metier.INGENIEUR,
@@ -121,6 +135,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
       { nom: "Baies", quantite: 2 },
       { nom: "Ration d'eau purifiée", quantite: 1 },
     ],
+    coutPA: 5,
     requiertAtelier: true,
     palierAtelierRequis: 1,
     metierExclusif: Metier.CUISINIER,
@@ -131,6 +146,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
       { nom: "Gibier", quantite: 2 },
       { nom: "Tissu", quantite: 1 },
     ],
+    coutPA: 4,
     requiertAtelier: true,
     palierAtelierRequis: 1,
     metierExclusif: Metier.CUISINIER,
@@ -141,6 +157,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
       { nom: "Plante médicinale", quantite: 1 },
       { nom: "Ration d'eau purifiée", quantite: 1 },
     ],
+    coutPA: 4,
     requiertAtelier: true,
     palierAtelierRequis: 1,
     metierExclusif: Metier.CUISINIER,
@@ -152,6 +169,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
       { nom: "Bois", quantite: 2 },
       { nom: "Gibier", quantite: 1 },
     ],
+    coutPA: 5,
     requiertAtelier: true,
     palierAtelierRequis: 1,
     metierExclusif: Metier.CHASSEUR,
@@ -163,6 +181,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
       { nom: "Bois", quantite: 2 },
       { nom: "Pièces mécaniques", quantite: 1 },
     ],
+    coutPA: 6,
     requiertAtelier: true,
     palierAtelierRequis: 1,
     metierExclusif: Metier.ARTISAN,
@@ -178,7 +197,7 @@ async function seedObjets() {
     });
   }
 
-  for (const nom of OBJETS_RARES) {
+  for (const nom of [...OBJETS_RARES, ...OBJETS_SANS_MECANIQUE]) {
     await prisma.objet.upsert({
       where: { nom },
       update: { type: TypeObjet.RARE },

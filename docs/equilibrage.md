@@ -4,7 +4,7 @@
 
 Base de référence : ville de **15 joueurs max**, cycle de **48h réelles** (24h jour + 24h nuit), attaque de zombies à minuit du second jour.
 
-> **Mise à jour** : décroissance faim/soif doublée, sévérité du jet de risque chiffrée, déclenchement de l'infection formalisé, stub v0.1 pour les rencontres en territoire externe, stock max des ressources naturelles chiffré par palier de zone ; **tous les points ouverts de la section 10 sont désormais tranchés** — malus PA de l'infection passé en linéaire continu, loot rare étendu à la zone moyenne, croissance de l'attaque/rythme d'installation/recettes cuisinier/stock de ressources naturelles validés tels quels. Seule la table complète des rencontres humaines/bandits reste hors scope V1 (voir section 11).
+> **Mise à jour** : décroissance faim/soif doublée, sévérité du jet de risque chiffrée, déclenchement de l'infection formalisé, stub v0.1 pour les rencontres en territoire externe, stock max des ressources naturelles chiffré par palier de zone ; **tous les points ouverts de la section 10 sont désormais tranchés** — malus PA de l'infection passé en linéaire continu, loot rare étendu à la zone moyenne, croissance de l'attaque/rythme d'installation/recettes cuisinier/stock de ressources naturelles validés tels quels, coût PA des 6 recettes avancées restantes chiffré. La table complète des rencontres humaines/bandits reste hors scope V1 (section 11) ; l'effet mécanique de certains objets de loot sans recette reste un point ouvert (section 12).
 
 ---
 
@@ -188,6 +188,8 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Règles transverses** : Ingrédient de remède ≤ 10 % en zone éloignée, **5 % en zone moyenne** (nouveau), 0 % en zone proche. Radio ≤ 10 % en zone éloignée (marécages uniquement), **5 % en zone moyenne** (marécages, nouveau), 0 % ailleurs et en zone proche. Rencontres tirées séparément du loot.
 
+**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Médicament basique, Arme simple, Arme avancée, Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
+
 ### Rencontres en territoire externe (stub v0.1 — confirmé suffisant pour le lancement V1)
 Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au palier de la zone (aucune rencontre humaine/bandit encore implémentée — la table complète est confirmée hors scope V1, voir section 11) :
 
@@ -246,16 +248,18 @@ Coût par palier en **ressources déposées dans l'inventaire de ville**, puis *
 
 ## 8. Craft avancé (atelier requis) — une recette exclusive par métier
 
-| Métier | Recette | Ingrédients | Effet |
-|---|---|---|---|
-| **Médecin** | Remède contre l'infection | 2 Plante médicinale + 1 Ingrédient de remède + 1 Ration d'eau purifiée | Guérit l'infection en cours |
-| **Ingénieur/bâtisseur** | Réparation voiture (palier 1 atelier) | 4 Pièces mécaniques + 2 Ferraille | Débloque le déplacement en voiture (−50 % PA partagé) |
-| **Ingénieur/bâtisseur** | Structures de défense avancées | 3 Ferraille + 3 Bois + 2 Pierre | Bonus de défense de nuit additionnel, indépendant des paliers de palissade |
-| **Cuisinier** | Ragoût fortifiant | 1 Gibier + 2 Baies + 1 Eau purifiée | +40 faim + 2 PA au prochain réveil |
-| **Cuisinier** | Conserve longue durée | 2 Gibier + 1 Tissu (emballage) | +25 faim, ne se dégrade jamais, idéal en réserve de ville pour le rationnement |
-| **Cuisinier** | Infusion médicinale | 1 Plante médicinale + 1 Eau purifiée | +15 soif, atténue d'1 point le malus PA de l'infection pendant 1 phase (soulage sans guérir) |
-| **Chasseur/trappeur** | Pièges avancés | 2 Ferraille + 2 Bois + 1 Gibier (appât) | Chance de loot passif nettement supérieure au piège simple |
-| **Artisan** | Armes/outils avancés | 3 Ferraille + 2 Bois + 1 Pièce mécanique | −2 PA sur "attaquer" + bonus dégâts en combat |
+| Métier | Recette | Ingrédients | Coût PA | Effet |
+|---|---|---|---|---|
+| **Médecin** | Remède contre l'infection | 2 Plante médicinale + 1 Ingrédient de remède + 1 Ration d'eau purifiée | 6 | Guérit l'infection en cours |
+| **Ingénieur/bâtisseur** | Réparation voiture (palier 1 atelier) | 4 Pièces mécaniques + 2 Ferraille | 8 | Débloque le déplacement en voiture (−50 % PA partagé) |
+| **Ingénieur/bâtisseur** | Structures de défense avancées | 3 Ferraille + 3 Bois + 2 Pierre | 8 | Bonus de défense de nuit additionnel, indépendant des paliers de palissade |
+| **Cuisinier** | Ragoût fortifiant | 1 Gibier + 2 Baies + 1 Eau purifiée | 5 | +40 faim + 2 PA au prochain réveil |
+| **Cuisinier** | Conserve longue durée | 2 Gibier + 1 Tissu (emballage) | 4 | +25 faim, ne se dégrade jamais, idéal en réserve de ville pour le rationnement |
+| **Cuisinier** | Infusion médicinale | 1 Plante médicinale + 1 Eau purifiée | 4 | +15 soif, atténue d'1 point le malus PA de l'infection pendant 1 phase (soulage sans guérir) |
+| **Chasseur/trappeur** | Pièges avancés | 2 Ferraille + 2 Bois + 1 Gibier (appât) | 5 | Chance de loot passif nettement supérieure au piège simple |
+| **Artisan** | Armes/outils avancés | 3 Ferraille + 2 Bois + 1 Pièce mécanique | 6 | −2 PA sur "attaquer" + bonus dégâts en combat |
+
+**Coûts PA (validés)** : seuls le remède et la réparation voiture avaient un chiffre exact au premier jet ; les 6 autres recettes n'étaient couvertes que par la fourchette générale de la section 4 (4–8 PA). Chiffrage retenu par palier d'utilité, cohérent avec les deux valeurs déjà fixées : 8 PA pour les bonus durables/structurels (structures de défense, à l'image de la réparation voiture), 6 PA pour un bonus de combat permanent (armes/outils avancés, même tier que le remède), 5 PA pour un effet notable mais consommable (pièges avancés, ragoût fortifiant), 4 PA pour un effet mineur/de confort (conserve longue durée, infusion médicinale).
 
 Les 3 recettes cuisinier sont gardées telles quelles pour le lancement V1 (pas de nerf), malgré le déséquilibre relevé face aux autres métiers à une seule recette exclusive — à surveiller pendant la bêta plutôt qu'à corriger a priori.
 
@@ -281,7 +285,12 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 - **Malus PA de l'infection** : passage d'un système à paliers par jour à une progression linéaire continue, de 0 % à −30 % sur les 96h d'incubation (section 1).
 - **Équilibre cuisinier** : les 3 recettes avancées sont gardées telles quelles, à surveiller en bêta plutôt qu'à nerfer a priori (section 8).
 - **Stock max des ressources naturelles par palier** : 100/150/200 (proche/moyenne/éloignée) validé tel quel (section 2).
+- **Coût PA des 6 recettes avancées restantes** : chiffré par palier d'utilité (4 à 8 PA), voir section 8.
 
 ## 11. Hors scope V1 (reporté volontairement à la bêta)
 
 - **Table complète des rencontres en territoire externe** : dangerosité différenciée par zone, rencontres humaines/bandits, capture de bandit. Le stub zombie uniquement (10/20/35 % par palier, ×1,5 la nuit — section 5) suffit pour lancer le développement V1 ; l'extension complète est prévue pendant la phase de bêta, avec de vrais retours joueurs pour la calibrer.
+
+## 12. Points ouverts restants
+
+- **Effet mécanique des objets de loot sans recette** (section 5) : Médicament basique, Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.
