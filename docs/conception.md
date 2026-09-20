@@ -45,6 +45,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - PA régénérés à **paliers fixes** (plutôt que progressif dans le temps), notamment par le sommeil
 - Cycle fixé à **48h réelles** : 24h de jour puis 24h de nuit
 - Attaque de zombies à **minuit du second jour réel**
+- **Horloge commune à minuit** : les passages jour/nuit (et l'attaque qui accompagne le passage au jour) ont lieu chaque nuit à minuit, à la même horloge pour toutes les villes actives, plutôt que 24h/48h après la fondation de chacune. Une ville fondée en cours de journée a donc un **premier cycle plus court** (jusqu'au minuit suivant), mais ce premier cycle reste un cycle de jour classé sans risque : **aucune attaque à ce tout premier passage à minuit**, pour laisser une nuit de répit à une ville qui vient de démarrer. Toutes les nuits suivantes suivent la formule normale (section 3 du document d'équilibrage).
 - La nuit : rencontres aléatoires différentes et plus dangereuses, déplacements plus coûteux en PA (moins de visibilité)
 - **Notifications de cycle** : ping automatique dans un salon de ville au passage jour/nuit et à l'approche de l'attaque de zombies
 - Temps restant avant jour/nuit affiché dans `/personnage`

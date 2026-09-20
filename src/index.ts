@@ -5,6 +5,7 @@ import { Events } from "discord.js";
 import { createClient, type Command } from "./client";
 import { prisma } from "./db";
 import { gererBouton } from "./discord/boutons";
+import { demarrerHorlogeCycle } from "./scheduler/cycle";
 
 const client = createClient();
 
@@ -16,6 +17,7 @@ for (const file of readdirSync(commandsDir).filter((f) => f.endsWith(".ts") || f
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Connecte en tant que ${readyClient.user.tag}`);
+  demarrerHorlogeCycle(client);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

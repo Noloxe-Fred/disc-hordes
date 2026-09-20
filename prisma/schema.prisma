@@ -154,9 +154,13 @@ model Ville {
   cycleActuel           Int         @default(0)
   phaseActuelle         TypePhase   @default(JOUR)
   // Debut de la phase courante ; sert a calculer le temps restant avant jour/nuit affiche
-  // dans /personnage (conception.md §2, phase de 24h). Mis a jour a chaque bascule de phase
-  // (systeme d'avancement de cycle automatique pas encore construit).
+  // dans /personnage (conception.md §2, phase de 24h). Mis a jour a chaque bascule par
+  // l'horloge commune de minuit (src/scheduler/cycle.ts).
   phaseDepuis           DateTime?
+  // Premiere nuit de la ville (cycle raccourci a la fondation) : passe a true des que la
+  // ville a connu son premier passage jour->nuit, qui n'inflige jamais d'attaque
+  // (conception.md §2 - periode de grace).
+  premiereNuitPassee    Boolean     @default(false)
   meteoActuelle         MeteoType   @default(NORMALE)
   rationnementActif     Boolean     @default(false)
   maireId               Int?        @unique
