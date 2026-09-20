@@ -119,7 +119,7 @@ CREATE TABLE `Objet` (
 CREATE TABLE `Recette` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `objetResultatId` INTEGER NOT NULL,
-    `coutPA` INTEGER NOT NULL,
+    `coutPA` INTEGER NULL,
     `requiertAtelier` BOOLEAN NOT NULL DEFAULT false,
     `palierAtelierRequis` INTEGER NULL,
     `metierExclusif` ENUM('GARDE', 'MEDECIN', 'ARTISAN', 'ECLAIREUR', 'GUETTEUR', 'CUISINIER', 'FOSSOYEUR', 'INGENIEUR', 'CHASSEUR', 'DIPLOMATE') NULL,

@@ -242,7 +242,10 @@ model Objet {
 model Recette {
   id                  Int     @id @default(autoincrement())
   objetResultatId     Int     @unique
-  coutPA              Int
+  // Nullable : equilibrage.md §4 ne chiffre precisement que le remede (6) et la reparation
+  // voiture (8) ; les autres recettes avancees ne sont donnees que par une fourchette
+  // generale (4-8 PA) - pas de valeur inventee ici tant que le chiffre exact n'est pas tranche.
+  coutPA              Int?
   requiertAtelier     Boolean @default(false)
   palierAtelierRequis Int?
   metierExclusif      Metier?
