@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Events } from "discord.js";
 import { createClient, type Command } from "./client";
 import { prisma } from "./db";
+import { gererBouton } from "./discord/boutons";
 
 const client = createClient();
 
@@ -18,19 +19,20 @@ client.once(Events.ClientReady, (readyClient) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const command = client.commands.get(interaction.commandName);
-  if (!command) return;
-
   try {
-    await command.execute(interaction);
+    if (interaction.isChatInputCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) return;
+      await command.execute(interaction);
+    } else if (interaction.isButton()) {
+      await gererBouton(interaction);
+    }
   } catch (error) {
-    console.error(`Erreur lors de l'execution de /${interaction.commandName}`, error);
+    console.error("Erreur lors du traitement d'une interaction", error);
     const reply = { content: "Une erreur est survenue.", ephemeral: true };
-    if (interaction.replied || interaction.deferred) {
+    if (interaction.isRepliable() && (interaction.replied || interaction.deferred)) {
       await interaction.followUp(reply);
-    } else {
+    } else if (interaction.isRepliable()) {
       await interaction.reply(reply);
     }
   }

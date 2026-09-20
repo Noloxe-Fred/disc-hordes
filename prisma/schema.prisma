@@ -94,8 +94,10 @@ model Utilisateur {
   pseudoCache String?
   createdAt   DateTime @default(now())
 
-  joueurs Joueur[]
-  succes  UtilisateurSucces[]
+  joueurs             Joueur[]
+  succes              UtilisateurSucces[]
+  villesCreees        Ville[]              @relation("CreateurVille")
+  demandesInscription DemandeInscription[]
 }
 
 model Succes {
@@ -135,32 +137,64 @@ model Groupe {
 }
 
 model Ville {
-  id                Int         @id @default(autoincrement())
-  nom               String
-  groupeId          Int
-  statut            StatutVille @default(EN_CREATION)
-  dateCreation      DateTime    @default(now())
-  dateFondation     DateTime?
-  dateChute         DateTime?
+  id                    Int         @id @default(autoincrement())
+  nom                   String
+  createurUtilisateurId Int
+  // Nul tant que la ville est EN_CREATION : le rattachement a un groupe de territoires
+  // externes n'a lieu qu'a /fonder-ville, jamais avant (conception.md §4).
+  groupeId              Int?
+  statut                StatutVille @default(EN_CREATION)
+  dateCreation          DateTime    @default(now())
+  dateFondation         DateTime?
+  dateChute             DateTime?
   // Calcule une seule fois a /fonder-ville : floor(180 / habitants au lancement), plafonne a 40
   // (equilibrage.md §1). Conserve ici a titre d'historique/stats ; le PA max operatoire
   // de chaque joueur vit sur Joueur.paMax et ne bouge plus jamais ensuite.
-  paMaxFondation    Int?
-  cycleActuel       Int         @default(0)
-  phaseActuelle     TypePhase   @default(JOUR)
-  meteoActuelle     MeteoType   @default(NORMALE)
-  rationnementActif Boolean     @default(false)
-  maireId           Int?        @unique
-  mandatFinCycle    Int?
+  paMaxFondation        Int?
+  cycleActuel           Int         @default(0)
+  phaseActuelle         TypePhase   @default(JOUR)
+  meteoActuelle         MeteoType   @default(NORMALE)
+  rationnementActif     Boolean     @default(false)
+  maireId               Int?        @unique
+  mandatFinCycle        Int?
+  // Message d'annonce poste dans #fonder-une-colonie a /creer-ville ; supprime avec les
+  // messages de demande a /fonder-ville (conception.md §4 : "messages ... supprimes/archives").
+  messageAnnonceId      String?
 
-  groupe     Groupe            @relation(fields: [groupeId], references: [id])
-  maire      Joueur?           @relation("MaireVille", fields: [maireId], references: [id])
-  habitants  Joueur[]          @relation("HabitantsVille")
+  createur   Utilisateur          @relation("CreateurVille", fields: [createurUtilisateurId], references: [id])
+  groupe     Groupe?              @relation(fields: [groupeId], references: [id])
+  maire      Joueur?              @relation("MaireVille", fields: [maireId], references: [id])
+  habitants  Joueur[]             @relation("HabitantsVille")
+  demandes   DemandeInscription[]
   inventaire InventaireVille[]
   batiments  BatimentVille[]
   attaques   CycleAttaque[]
   elections  Election[]
   journal    JournalEntree[]
+}
+
+enum StatutDemande {
+  EN_ATTENTE
+  ACCEPTEE
+  REFUSEE
+  ANNULEE
+}
+
+// Demande de rejoindre une ville EN_CREATION (conception.md §4, commande /rejoindre) :
+// validation manuelle par le createur, pas d'inscription a la volee. Le Joueur n'est cree
+// qu'a l'acceptation ; avant ca, la place de metier n'est pas consommee.
+model DemandeInscription {
+  id            Int           @id @default(autoincrement())
+  villeId       Int
+  utilisateurId Int
+  metierDemande Metier?
+  statut        StatutDemande @default(EN_ATTENTE)
+  messageId     String?
+  dateCreation  DateTime      @default(now())
+  dateReponse   DateTime?
+
+  ville       Ville       @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
 }
 
 // =========================================================================

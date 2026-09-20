@@ -1,4 +1,4 @@
-import { ChannelType, type Guild, type OverwriteResolvable, type Role, type TextChannel } from "discord.js";
+import { ChannelType, type Guild, type OverwriteResolvable, type Role, type TextChannel, type VoiceChannel } from "discord.js";
 import { TypeRessourceDiscord } from "@prisma/client";
 import { prisma } from "../db";
 
@@ -71,6 +71,46 @@ export async function ensureTextChannel(
   const salon = await guild.channels.create({
     name: nom,
     type: ChannelType.GuildText,
+    parent: parentId ?? undefined,
+    permissionOverwrites: overwrites,
+  });
+  await saveRessource(guild.id, cle, TypeRessourceDiscord.SALON, salon.id);
+  return salon;
+}
+
+export async function trouverRole(guild: Guild, cle: string): Promise<Role | null> {
+  const discordId = await getDiscordId(guild.id, cle);
+  if (!discordId) return null;
+  return guild.roles.fetch(discordId).catch(() => null);
+}
+
+export async function trouverSalonTexte(guild: Guild, cle: string): Promise<TextChannel | null> {
+  const discordId = await getDiscordId(guild.id, cle);
+  if (!discordId) return null;
+  const salon = await guild.channels.fetch(discordId).catch(() => null);
+  return salon && salon.type === ChannelType.GuildText ? salon : null;
+}
+
+export async function ensureVoiceChannel(
+  guild: Guild,
+  cle: string,
+  nom: string,
+  parentId: string | null,
+  overwrites: OverwriteResolvable[] = [],
+): Promise<VoiceChannel> {
+  const discordId = await getDiscordId(guild.id, cle);
+  if (discordId) {
+    const salon = await guild.channels.fetch(discordId).catch(() => null);
+    if (salon && salon.type === ChannelType.GuildVoice) {
+      await salon.permissionOverwrites.set(overwrites);
+      if (salon.parentId !== parentId) await salon.setParent(parentId);
+      return salon;
+    }
+  }
+
+  const salon = await guild.channels.create({
+    name: nom,
+    type: ChannelType.GuildVoice,
     parent: parentId ?? undefined,
     permissionOverwrites: overwrites,
   });
