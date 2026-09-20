@@ -26,23 +26,18 @@ async function posterDansMairie(client: DiscHordesClient, guildId: string, ville
 }
 
 async function basculerVersNuit(client: DiscHordesClient, guildId: string, ville: Ville) {
-  const etaitEnGrace = !ville.premiereNuitPassee;
-
   await prisma.ville.update({
     where: { id: ville.id },
-    data: { phaseActuelle: TypePhase.NUIT, phaseDepuis: new Date(), premiereNuitPassee: true },
+    data: { phaseActuelle: TypePhase.NUIT, phaseDepuis: new Date() },
   });
 
-  if (etaitEnGrace) {
-    await posterDansMairie(
-      client,
-      guildId,
-      ville.id,
-      `🌙 La nuit tombe sur **${ville.nom}**. Première nuit : calme, aucune attaque cette fois-ci.`,
-    );
-    return;
-  }
+  await posterDansMairie(client, guildId, ville.id, `🌙 La nuit tombe sur **${ville.nom}**.`);
+}
 
+// L'attaque de zombies se resout a l'aube, en cloture de la nuit qui s'acheve (pas a la
+// tombee de la nuit) : le minuit qui cloture une journee n'a donc jamais d'attaque, a chaque
+// cycle et pour toutes les villes (conception.md §2).
+async function basculerVersJour(client: DiscHordesClient, guildId: string, ville: Ville) {
   const palissade = await prisma.batimentVille.findUnique({
     where: { villeId_type: { villeId: ville.id, type: TypeBatiment.PALISSADE } },
   });
@@ -62,27 +57,23 @@ async function basculerVersNuit(client: DiscHordesClient, guildId: string, ville
     },
   });
 
-  const deficit = Math.max(0, forceAttaque - defenseTotale);
-  await posterDansMairie(
-    client,
-    guildId,
-    ville.id,
-    `🧟 Attaque de zombies sur **${ville.nom}** ! Force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
-      (deficit > 0
-        ? ` — déficit de ${deficit.toFixed(1)} (résolution des dégâts/blessures pas encore implémentée).`
-        : " — repoussée sans difficulté."),
-  );
-}
-
-async function basculerVersJour(client: DiscHordesClient, guildId: string, ville: Ville) {
   const nouveauCycle = ville.cycleActuel + 1;
-
   await prisma.ville.update({
     where: { id: ville.id },
     data: { phaseActuelle: TypePhase.JOUR, phaseDepuis: new Date(), cycleActuel: nouveauCycle },
   });
 
-  await posterDansMairie(client, guildId, ville.id, `☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`);
+  const deficit = Math.max(0, forceAttaque - defenseTotale);
+  await posterDansMairie(
+    client,
+    guildId,
+    ville.id,
+    `🧟 Attaque de la nuit sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
+      (deficit > 0
+        ? ` — déficit de ${deficit.toFixed(1)} (résolution des dégâts/blessures pas encore implémentée).`
+        : " — repoussée sans difficulté.") +
+      `\n☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`,
+  );
 }
 
 async function executerTick(client: DiscHordesClient) {
