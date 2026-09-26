@@ -15,8 +15,20 @@ for (const file of readdirSync(commandsDir).filter((f) => f.endsWith(".ts") || f
   client.commands.set(command.data.name, command);
 }
 
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Connecte en tant que ${readyClient.user.tag}`);
+
+  // Deploiement des commandes a chaque demarrage : sur la guilde de dev si DISCORD_GUILD_ID est defini, sinon global
+  const guildId = process.env.DISCORD_GUILD_ID || undefined;
+  try {
+    const body = client.commands.map((command) => command.data.toJSON());
+    if (guildId) await readyClient.application.commands.set(body, guildId);
+    else await readyClient.application.commands.set(body);
+    console.log(`${body.length} commande(s) déployée(s)${guildId ? ` sur la guilde ${guildId}` : " globalement"}.`);
+  } catch (error) {
+    console.error("Echec du deploiement des commandes", error);
+  }
+
   demarrerHorlogeCycle(client);
 });
 
