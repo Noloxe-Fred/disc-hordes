@@ -10,6 +10,7 @@ import {
   ROLE_MJ,
   ROLES_DESIRES,
   ROLES_OBSOLETES,
+  SALON_ANNONCES,
   SALON_COMMEMORATION,
   SALON_DISCUSSION_MJ,
   SALON_FONDER_COLONIE,
@@ -99,6 +100,7 @@ const command: Command = {
       { id: mjId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
       { id: adminId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
     ];
+    await ensureTextChannel(guild, SALON_ANNONCES.cle, SALON_ANNONCES.nom, categorieDiscHordes.id, overwritesLectureSeule);
     await ensureTextChannel(guild, SALON_REGLES.cle, SALON_REGLES.nom, categorieDiscHordes.id, overwritesLectureSeule);
     await ensureTextChannel(
       guild,
@@ -116,7 +118,7 @@ const command: Command = {
 
     await interaction.editReply(
       "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (signalements + discussion-mj + gestion) " +
-        "et catégorie Disc'Hordes (général + fonder-une-colonie + nouvel-arrivant + règles + commémoration). " +
+        "et catégorie Disc'Hordes (général + fonder-une-colonie + nouvel-arrivant + annonces + règles + commémoration). " +
         `Rôle Nomade synchronisé sur ${membres.filter((m) => !m.user.bot).size} membre(s).` +
         (staffPlace
           ? ""

@@ -42,3 +42,4 @@ export const SALON_FONDER_COLONIE = { cle: "salon:fonder-une-colonie", nom: "fon
 // Demandes d'inscription aux villes, postees par le bot (lecture seule pour les joueurs)
 export const SALON_NOUVEL_ARRIVANT = { cle: "salon:nouvel-arrivant", nom: "nouvel-arrivant" } as const;
 export const SALON_COMMEMORATION = { cle: "salon:commemoration", nom: "commémoration" } as const; // recaps de chute de ville
+export const SALON_ANNONCES = { cle: "salon:annonces", nom: "annonces" } as const; // lecture pour tous, ecriture MJ/Admin

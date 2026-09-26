@@ -10,7 +10,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 
 **Catégorie "Ville"** : mairie, place publique, chantiers, atelier, puits, maisons privées, **un salon vocal général lié au rôle-ville**.
 **Catégorie "Territoires externes"** (une par groupe de villes, créée à la fondation de la première ville du groupe) : 12 salons de zone, un par type de zone (ville en ruines, forêt, marécages, montagnes) et par palier (proche, moyenne, éloignée), ex. `forêt-proche` — **partagée entre les villes d'un même groupe** (voir section Multi-villes ci-dessous). La catégorie n'est visible que par les rôles-ville du groupe ; chaque salon de zone reste masqué tant que le joueur ne s'y est pas déplacé. Pas de vocal par zone.
-**Catégorie "Disc'Hordes"** (publique, créée par `/init`) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs), salon `règles` et salon `commémoration` (récapitulatifs des villes tombées) — ces deux derniers en lecture seule, seuls MJ et Admins y écrivent.
+**Catégorie "Disc'Hordes"** (publique, créée par `/init`) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs), salon `annonces`, salon `règles` et salon `commémoration` (récapitulatifs des villes tombées) — ces trois derniers consultables par tous, en lecture seule : seuls MJ et Admins y écrivent.
 **Catégorie "Admin-MJ"**, incluant un salon de signalements (voir section 4), un salon `discussion-mj` pour la coordination entre MJ, et un salon `gestion` réservé aux Admins. Les salons de la catégorie accessibles aux MJ le sont aussi aux Admins.
 
 **Rôles** :
@@ -140,7 +140,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
-- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons `général`, `fonder-une-colonie`, `nouvel-arrivant`, `règles` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
+- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons `général`, `fonder-une-colonie`, `nouvel-arrivant`, `annonces`, `règles` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : explique le concept et redirige vers `fonder-une-colonie`
