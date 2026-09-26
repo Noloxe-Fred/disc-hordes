@@ -10,15 +10,18 @@ import {
 } from "../config/metiers";
 import { prisma } from "../db";
 import { trouverRole, trouverSalonTexte } from "../discord/reconcile";
-import { ROLE_CITOYEN, ROLE_MJ_ADMIN, SALON_FONDER_COLONIE } from "../discord/structure";
+import { ROLE_ADMIN, ROLE_CITOYEN, ROLE_MJ, SALON_FONDER_COLONIE } from "../discord/structure";
 import { creerStructureVille } from "../discord/villeStructure";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
-async function estMjAdmin(guild: Guild, userId: string): Promise<boolean> {
-  const roleMj = await trouverRole(guild, ROLE_MJ_ADMIN.cle);
-  if (!roleMj) return false;
+async function estMjOuAdmin(guild: Guild, userId: string): Promise<boolean> {
   const membre = await guild.members.fetch(userId).catch(() => null);
-  return membre?.roles.cache.has(roleMj.id) ?? false;
+  if (!membre) return false;
+  for (const cle of [ROLE_MJ.cle, ROLE_ADMIN.cle]) {
+    const role = await trouverRole(guild, cle);
+    if (role && membre.roles.cache.has(role.id)) return true;
+  }
+  return false;
 }
 
 async function nettoyerMessagesRecrutement(guild: Guild, villeId: number, messageAnnonceId: string | null) {
@@ -71,7 +74,7 @@ const command: Command = {
 
     const nombreHabitants = ville.habitants.length;
 
-    if (nombreHabitants < JOUEURS_MIN_FONDATION && !(await estMjAdmin(guild, interaction.user.id))) {
+    if (nombreHabitants < JOUEURS_MIN_FONDATION && !(await estMjOuAdmin(guild, interaction.user.id))) {
       await interaction.reply({
         content:
           `**${ville.nom}** compte ${nombreHabitants} habitant(s) : il en faut au moins ${JOUEURS_MIN_FONDATION} pour la fonder. ` +

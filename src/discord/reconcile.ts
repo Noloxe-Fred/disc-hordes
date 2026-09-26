@@ -21,6 +21,7 @@ export async function ensureRole(guild: Guild, cle: string, nom: string, couleur
   if (discordId) {
     const role = await guild.roles.fetch(discordId).catch(() => null);
     if (role) {
+      if (role.name !== nom) await role.setName(nom);
       if (couleur !== undefined && role.colors.primaryColor !== couleur) await role.setColors({ primaryColor: couleur });
       return role;
     }
@@ -32,6 +33,12 @@ export async function ensureRole(guild: Guild, cle: string, nom: string, couleur
   });
   await saveRessource(guild.id, cle, TypeRessourceDiscord.ROLE, role.id);
   return role;
+}
+
+// Sans effet si l'ancienne cle n'existe pas, ou si la nouvelle est deja prise (on garde alors la nouvelle).
+export async function renommerCle(guildId: string, ancienneCle: string, nouvelleCle: string): Promise<void> {
+  if (await getDiscordId(guildId, nouvelleCle)) return;
+  await prisma.ressourceDiscord.updateMany({ where: { guildId, cle: ancienneCle }, data: { cle: nouvelleCle } });
 }
 
 export async function supprimerRole(guild: Guild, cle: string): Promise<void> {
