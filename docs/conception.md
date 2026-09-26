@@ -90,10 +90,12 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 | **Total métiers** | **13** |
 | **Sans métier** | **2 places restantes** |
 
-### Blessures & infection
-- Soin basique : réalisable par n'importe quel joueur
-- Soin avancé : réservé au métier médecin
-- Blessures : réduisent le **PA max** jusqu'à guérison (pas de malus séparé)
+### Points de vie, blessures & infection
+- Chaque joueur a **10 PV**, consultables dans `/personnage`. Les PV perdus représentent les blessures : chaque PV manquant réduit le **PA max** (pas de malus séparé ; chiffres dans le document d'équilibrage)
+- Perte de PV : attaque nocturne en défense insuffisante (aléatoire, la maison privée réduit la chance d'être touché), faim ou soif critique/vide (perte progressive à chaque phase), combat raté en territoire externe (gameplay de combat à définir, avec en plus un risque d'infection)
+- Soin basique : réalisable par n'importe quel joueur, rend des PV
+- Soin avancé : réservé au métier médecin, rend plus de PV
+- À 0 PV ou moins, le joueur meurt (voir Mort)
 
 **Infection** :
 - Déclenchement caché — seul le joueur infecté le sait, libre d'en parler ou non
@@ -105,7 +107,8 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 
 ### Mort
 - Statut **post-mortem jouable** : le joueur mort devient une âme avec une influence légère sur la partie en cours (pas un simple spectateur passif)
-- Le joueur mort (âme) reste bloqué dans cette partie jusqu'à la chute de la ville, mais peut rejoindre une **autre** ville en cours de création avec un nouveau personnage
+- Le joueur mort voit toujours sa ville (rôle Mort à la place de Citoyen) mais ne peut plus y interagir : écriture, réactions et vocal lui sont retirés sur les salons de la ville
+- Depuis `/action`, il peut **quitter la ville** (confirmation obligatoire) : suppression de son rôle-ville et de ses rôles Citoyen/Mort, perte de l'accès aux salons ; il peut alors rejoindre ou créer une **autre** ville avec un nouveau personnage. Tant qu'il ne l'a pas quittée, il reste engagé dans cette partie
 - **Objets à la mort** : les objets d'inventaire du joueur (dont une radio s'il en avait) deviennent **lootables sur place** par les autres joueurs présents dans la zone/ville
 
 ### Cycle de vie du joueur (hors mort)
@@ -127,9 +130,9 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 Principe directeur : maximiser les interactions via **components Discord V2** (boutons, menus déroulants) plutôt que des commandes à taper/retenir.
 
 ### Commandes de jeu
-- `/action` : menu des actions possibles selon la zone courante — inclut les boutons "aller" (avec confirmation avant de dépenser des PA) et "observer" ; en cas de rencontre, inclut aussi les boutons de combat/interaction (attaquer/fuir/parler-troquer)
+- `/action` : menu des actions possibles (Components V2) ; pour un joueur mort, bouton « Quitter la ville » — pour un joueur vivant, actions selon la zone courante (à venir) : inclut les boutons "aller" (avec confirmation avant de dépenser des PA) et "observer" ; en cas de rencontre, inclut aussi les boutons de combat/interaction (attaquer/fuir/parler-troquer)
 - `/inventaire` : affichage + troc (bouton "donner à" → sélection joueur → sélection objet) + craft simple avec ce qu'on a sur soi
-- `/personnage` : stats du perso (PA restant, métier, blessures, etc.), temps restant avant jour/nuit, historique des dernières actions
+- `/personnage` : stats du perso (PV, PA restant et PA max effectif, métier, etc.), temps restant avant jour/nuit, historique des dernières actions
 - `/partager-carte` : transmet sa carte de zones découvertes aux autres
 - `/carte` : consulte sa propre carte de zones découvertes
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
@@ -198,7 +201,7 @@ Règles :
 - Défense totale = bonus des chantiers construits + bonus par garde assigné cette nuit-là
 - Tout citoyen peut se porter volontaire pour monter la garde (bonus plus élevé pour le métier garde)
 - Se porter volontaire coûte des PA/du repos
-- Défense insuffisante → dégâts sur les chantiers ET risque de blessure/mort aléatoire parmi les citoyens en ville (formule de sévérité — proportion blessure/mort — chiffrée dans le document d'équilibrage : elle réutilise le ratio déficit/attaque pour distinguer les deux issues)
+- Défense insuffisante → dégâts sur les chantiers ET perte de PV aléatoire parmi les citoyens en ville (chance d'être touché et PV perdus proportionnels au ratio déficit/attaque, chance réduite par la maison privée — chiffrés dans le document d'équilibrage) ; la mort n'arrive qu'à 0 PV
 
 ---
 

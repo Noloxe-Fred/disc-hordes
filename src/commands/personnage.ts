@@ -1,10 +1,13 @@
-import { StatutVille, TypePhase } from "@prisma/client";
+import { StatutJoueur, StatutVille, TypePhase } from "@prisma/client";
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../client";
 import { DUREE_PHASE_HEURES } from "../config/cycle";
 import { NOM_METIER } from "../config/metiers";
+import { LIBELLE_CAUSE_MORT } from "../config/mort";
+import { PV_MAX } from "../config/sante";
 import { prisma } from "../db";
 import { calculerEtatInfection } from "../game/infection";
+import { paMaxEffectif } from "../game/sante";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
@@ -30,18 +33,23 @@ const command: Command = {
     }
 
     const ville = joueur.ville;
+    const vivant = joueur.statut === StatutJoueur.VIVANT;
+    const paMax = joueur.paMax !== null ? paMaxEffectif(joueur.paMax, joueur.pv) : null;
 
     const embed = new EmbedBuilder()
       .setTitle(`${interaction.user.username} — ${ville.nom}`)
-      .setColor(ville.statut === StatutVille.ACTIVE ? 0x2ecc71 : 0x95a5a6)
+      .setColor(!vivant ? 0xc0392b : ville.statut === StatutVille.ACTIVE ? 0x2ecc71 : 0x95a5a6)
       .addFields(
         { name: "Métier", value: joueur.metier ? NOM_METIER[joueur.metier] : "Sans métier", inline: true },
+        { name: "PV", value: `${Math.max(0, joueur.pv)} / ${PV_MAX}`, inline: true },
         {
           name: "PA",
-          value: joueur.paMax !== null ? `${joueur.paActuel} / ${joueur.paMax}` : "à déterminer à la fondation",
+          value:
+            joueur.paMax === null
+              ? "à déterminer à la fondation"
+              : `${joueur.paActuel} / ${paMax}` + (paMax !== joueur.paMax ? ` (${joueur.paMax} sans blessures)` : ""),
           inline: true,
         },
-        { name: "Blessures", value: `${joueur.blessures} / 3`, inline: true },
         { name: "Faim", value: `${joueur.faim} / 100`, inline: true },
         { name: "Soif", value: `${joueur.soif} / 100`, inline: true },
         { name: "XP", value: `${joueur.xp}`, inline: true },
@@ -49,7 +57,14 @@ const command: Command = {
         { name: "Position", value: joueur.zoneActuelle ? joueur.zoneActuelle.nom : "En ville", inline: true },
       );
 
-    if (joueur.infecteDepuis) {
+    if (!vivant) {
+      embed.setDescription(
+        `💀 **Vous êtes mort**${joueur.causeMort ? ` (${LIBELLE_CAUSE_MORT[joueur.causeMort]})` : ""}. ` +
+          "Vous voyez toujours votre ville mais ne pouvez plus y agir. Utilisez `/action` pour la quitter et en rejoindre une autre.",
+      );
+    }
+
+    if (vivant && joueur.infecteDepuis) {
       const etat = calculerEtatInfection(joueur.infecteDepuis);
       embed.addFields({
         name: "Infection (visible de vous seul)",

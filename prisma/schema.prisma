@@ -396,7 +396,8 @@ model Joueur {
   paActuel       Int?
   faim           Int          @default(100)
   soif           Int          @default(100)
-  blessures      Int          @default(0)
+  // Points de vie (equilibrage.md §1) : 0 ou moins = mort. Chaque PV manquant retire 5 % du PA max.
+  pv             Int          @default(10)
   // Date de declenchement de l'infection ; cachee aux autres joueurs. Le malus PA (0% a -30%
   // lineaire sur 96h) et la transformation en zombie a 96h se calculent a la volee depuis cette
   // date plutot que d'etre stockes (equilibrage.md §1).

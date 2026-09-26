@@ -38,14 +38,21 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 | État | Effet |
 |---|---|
 | Maison privée palier 2 | +15 % du PA max individuel (arrondi à l'inférieur) |
-| Par blessure légère (cumulable x3 max) | −15 % chacune (jusqu'à −45 %) |
-| 3 blessures cumulées | hospitalisation obligatoire (soin avancé requis, joueur immobilisé), quel que soit le résultat numérique |
+| Par PV manquant (voir « Points de vie » ci-dessous) | −5 % chacun (10 PV : 0 % ; 7 PV : −15 % ; 1 PV : −45 %) |
 | Infection (progression linéaire continue depuis le déclenchement) | de 0 % à −30 % du PA max, sur toute la durée de l'incubation (96h) — soit environ −0,3125 % par heure écoulée depuis l'infection ; −30 % atteint juste avant la transformation en zombie |
+
+### Points de vie (PV)
+- Chaque joueur a **10 PV** (maximum, et valeur de départ).
+- Les PV remplacent les anciennes « blessures légères » : il n'y a plus de blessure comptée à part ni d'hospitalisation, et **la mort n'arrive qu'à 0 PV ou moins**.
+- **Pertes de PV** : attaque nocturne en défense insuffisante (section 3), faim et soif critiques ou vides (section 2), combat raté en territoire externe (montant à définir avec le gameplay de combat).
+- **Soins** : soin basique ou bandage **+2 PV**, soin avancé (médecin) **+5 PV**, sans jamais dépasser 10.
+- **Mort** : le joueur voit toujours sa ville mais ne peut plus y agir ; il peut la quitter depuis `/action` pour rejoindre une autre ville. La mort du dernier habitant vivant fait tomber la ville.
 
 ### Déclenchement de l'infection
 Une infection se déclenche via un **"coup reçu"**, avec **10 % de chance** à chaque occurrence :
 - **En rencontre externe** : uniquement si le joueur choisit de combattre — aucune infection possible en cas de fuite (réussie ou non).
 - **En attaque de nuit** : si le citoyen est "touché" par le jet de risque de défense insuffisante (voir section 3), ce contact compte aussi comme un coup reçu.
+- **En combat raté** en territoire externe : en plus de la perte de PV.
 
 Une fois déclenchée, l'infection est cachée (seul le joueur le sait) et suit l'incubation de 2 cycles jour/nuit (96h) avec le malus PA linéaire ci-dessus.
 
@@ -67,7 +74,8 @@ Deux jauges séparées, 0–100.
 | Seuil d'alerte (message) | < 30 | < 30 |
 | Seuil critique (malus actif) | < 10 | < 10 |
 | Effet sous seuil critique | −30 % PA max, craft avancé et contribution aux chantiers bloqués | idem |
-| Effet à 0 | −15 % PA max par phase supplémentaire écoulée à 0 (cumulable), + risque de blessure aléatoire croissant | idem |
+| Perte de PV sous seuil critique | **−1 PV** par phase | idem |
+| Effet à 0 | −15 % PA max par phase supplémentaire écoulée à 0 (cumulable), **−2 PV** par phase | idem |
 
 → Sans consommer, un joueur atteint la faim critique en **~6 phases (~6 jours réels)** et la soif critique en **~5 phases (~5 jours réels)**.
 *(Décroissance doublée par rapport au premier jet de chiffrage, pour retomber sur l'objectif visé de "critique en 4-5 jours réels" — la faim reste légèrement plus longue que la soif, ce qui est cohérent : on peut tenir plus longtemps sans manger que sans boire.)*
@@ -121,17 +129,19 @@ Deux jauges séparées, 0–100.
 - **Dégâts sur chantiers** : proportionnels au déficit
 - **Risque par citoyen présent en ville** ("touché" ou non) : `min(50%, déficit / attaque)` par citoyen présent, jet indépendant.
 
-### Sévérité du risque (blessure légère vs mort)
-Si le jet ci-dessus indique qu'un citoyen est "touché", on **relance le même ratio `déficit / attaque`** (plafonné à 50 %) pour déterminer si le résultat est fatal plutôt qu'une simple blessure légère. Pas de nouvelle constante arbitraire — la sévérité suit la même courbe que le taux de "touché".
-
-- Probabilité globale de blessure légère = touché × (1 − ratio)
-- Probabilité globale de mort = touché × ratio
+### Blessures en défense insuffisante (PV perdus)
+Pour chaque citoyen présent en ville (pas en territoire externe), jet indépendant :
+- **Ratio** = `min(50 %, déficit / attaque)`.
+- **Chance d'être touché** = ratio × facteur maison ; la maison privée réduit cette chance de **25 % par palier au-delà du palier 1** (P1 : ×1 ; P2 : ×0,75 ; plancher ×0,25 si d'autres paliers arrivent).
+- **PV perdus si touché** = `ceil(ratio × 10)`, soit **1 à 5 PV** : un petit déficit égratigne, un déficit au plafond coûte 5 PV.
+- Être touché est aussi un coup reçu : 10 % de chance d'infection (section 1).
+- Il n'y a plus de jet « fatal » séparé : on meurt seulement si ces pertes font tomber à 0 PV.
 
 **Exemples** :
-- Déficit/attaque = 10 % → 10 % de touché, dont 10 % fatal → **1 % de mort / 9 % de blessure** au global.
-- Déficit/attaque au plafond (50 %) → 50 % de touché, dont 50 % fatal → **25 % de mort / 25 % de blessure** au global.
+- Attaque 20 contre défense 18 → ratio 10 % → 10 % de chance d'être touché (7,5 % avec une maison P2), 1 PV perdu.
+- Déficit au plafond (ratio 50 %) → 50 % de chance d'être touché (37,5 % en maison P2), 5 PV perdus : deux nuits de ce type suffisent à tuer un joueur en pleine santé.
 
-*Cette formule s'applique au jet de nuit, qui a un déficit/attaque mesurable. Pour la sieste en territoire externe (section 1), le jet de risque déclenche simplement une rencontre — c'est alors la table de rencontre (section 5) et le combat qui déterminent l'issue, pas cette formule.*
+*Pour la sieste en territoire externe (section 1), le jet de risque déclenche simplement une rencontre — c'est alors la table de rencontre (section 5) et le combat qui déterminent l'issue, pas cette formule.*
 
 ---
 
@@ -152,8 +162,8 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Craft avancé (atelier) | 4–8 PA selon recette + ingrédients | — (en ville uniquement) |
 | Contribution à un chantier (par unité de ressources déposées) | voir section 6 | — |
 | Se porter volontaire pour la garde | — | 6 PA |
-| Soin basique | 2 PA | 3 PA |
-| Soin avancé (médecin) | 4 PA + ingrédients | 6 PA |
+| Soin basique (+2 PV) | 2 PA | 3 PA |
+| Soin avancé, médecin (+5 PV) | 4 PA + ingrédients | 6 PA |
 | Craft remède infection (médecin, exclusif) | 6 PA + ingrédients rares | — |
 | Réparation voiture (ingénieur, atelier palier 1) | 8 PA + pièces | — |
 | Voiture — déplacement à plusieurs (bonus) | −50 % PA du trajet, partagé entre passagers | idem |
@@ -211,7 +221,7 @@ Coût PA symbolique (1 PA), coût réel = ingrédients. Liste évolutive.
 
 | Recette | Ingrédients | Effet |
 |---|---|---|
-| Bandage | 2 Tissu | Soigne 1 blessure légère |
+| Bandage | 2 Tissu | +2 PV |
 | Plat préparé | 1 Baies + 1 Gibier | +20 faim |
 | Feu | 2 Bois | Sécurise temporairement une zone (débloque la sieste, réduit le risque de rencontre) |
 | Arme de fortune | 1 Ferraille + 1 Bois | −1 PA de coût sur l'action "attaquer" |
