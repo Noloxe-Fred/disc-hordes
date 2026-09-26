@@ -89,26 +89,30 @@ const command: Command = {
     await ensureTextChannel(guild, SALON_GESTION.cle, SALON_GESTION.nom, categorieAdminMJ.id, overwritesAdmin);
 
     const categorieDiscHordes = await ensureCategory(guild, CATEGORIE_DISCHORDES.cle, CATEGORIE_DISCHORDES.nom);
-    await ensureTextChannel(guild, SALON_GENERAL.cle, SALON_GENERAL.nom, categorieDiscHordes.id);
-    await ensureTextChannel(guild, SALON_FONDER_COLONIE.cle, SALON_FONDER_COLONIE.nom, categorieDiscHordes.id);
-    await ensureTextChannel(guild, SALON_NOUVEL_ARRIVANT.cle, SALON_NOUVEL_ARRIVANT.nom, categorieDiscHordes.id, [
-      { id: everyoneId, deny: [PermissionFlagsBits.SendMessages] },
-    ]);
     // Salons publics en lecture seule : seuls MJ et Admins (et le bot) y ecrivent
     const overwritesLectureSeule: OverwriteResolvable[] = [
       { id: everyoneId, allow: [PermissionFlagsBits.ViewChannel], deny: [PermissionFlagsBits.SendMessages] },
       { id: mjId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
       { id: adminId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
     ];
-    await ensureTextChannel(guild, SALON_ANNONCES.cle, SALON_ANNONCES.nom, categorieDiscHordes.id, overwritesLectureSeule);
-    await ensureTextChannel(guild, SALON_REGLES.cle, SALON_REGLES.nom, categorieDiscHordes.id, overwritesLectureSeule);
-    await ensureTextChannel(
-      guild,
-      SALON_COMMEMORATION.cle,
-      SALON_COMMEMORATION.nom,
-      categorieDiscHordes.id,
-      overwritesLectureSeule,
-    );
+    // Crees dans l'ordre d'affichage voulu, puis reordonnes (les salons deja existants gardent sinon leur place)
+    const salonsDiscHordes = [
+      await ensureTextChannel(guild, SALON_GENERAL.cle, SALON_GENERAL.nom, categorieDiscHordes.id),
+      await ensureTextChannel(guild, SALON_ANNONCES.cle, SALON_ANNONCES.nom, categorieDiscHordes.id, overwritesLectureSeule),
+      await ensureTextChannel(guild, SALON_REGLES.cle, SALON_REGLES.nom, categorieDiscHordes.id, overwritesLectureSeule),
+      await ensureTextChannel(guild, SALON_FONDER_COLONIE.cle, SALON_FONDER_COLONIE.nom, categorieDiscHordes.id),
+      await ensureTextChannel(guild, SALON_NOUVEL_ARRIVANT.cle, SALON_NOUVEL_ARRIVANT.nom, categorieDiscHordes.id, [
+        { id: everyoneId, deny: [PermissionFlagsBits.SendMessages] },
+      ]),
+      await ensureTextChannel(
+        guild,
+        SALON_COMMEMORATION.cle,
+        SALON_COMMEMORATION.nom,
+        categorieDiscHordes.id,
+        overwritesLectureSeule,
+      ),
+    ];
+    await guild.channels.setPositions(salonsDiscHordes.map((channel, position) => ({ channel, position })));
 
     // Role Nomade sur les membres deja presents : donne a ceux sans ville en jeu, retire aux autres
     const membres = await guild.members.fetch();

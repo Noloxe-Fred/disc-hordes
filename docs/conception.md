@@ -140,7 +140,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
-- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons `général`, `fonder-une-colonie`, `nouvel-arrivant`, `annonces`, `règles` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
+- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons, dans cet ordre : `général`, `annonces`, `règles`, `fonder-une-colonie`, `nouvel-arrivant` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : explique le concept et redirige vers `fonder-une-colonie`
