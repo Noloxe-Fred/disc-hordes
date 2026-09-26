@@ -17,4 +17,5 @@ export const CATEGORIE_ADMIN_MJ = { cle: "categorie:admin-mj", nom: "Admin-MJ" }
 
 export const SALON_REGLES = { cle: "salon:regles", nom: "règles" } as const;
 export const SALON_SIGNALEMENTS = { cle: "salon:signalements", nom: "signalements" } as const;
+export const SALON_DISCUSSION_MJ = { cle: "salon:discussion-mj", nom: "discussion-mj" } as const;
 export const SALON_FONDER_COLONIE = { cle: "salon:fonder-une-colonie", nom: "fonder-une-colonie" } as const;

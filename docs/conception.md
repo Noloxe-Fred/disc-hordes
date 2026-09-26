@@ -10,7 +10,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 
 **Catégorie "Ville"** : mairie, place publique, chantiers, atelier, puits, maisons privées, **un salon vocal général lié au rôle-ville**.
 **Catégorie "Territoires externes"** : un salon par zone (ville en ruines, forêt, marécages, montagnes, etc.) — **partagée entre les villes d'un même groupe** (voir section Multi-villes ci-dessous). Pas de vocal par zone.
-**Catégorie "Admin-MJ"**, incluant un salon règles créé automatiquement par `/init` et un salon de signalements (voir section 4).
+**Catégorie "Admin-MJ"**, incluant un salon règles créé automatiquement par `/init`, un salon de signalements (voir section 4) et un salon `discussion-mj` réservé au rôle MJ/Admin pour la coordination entre MJ.
 
 **Rôles** :
 - **Citoyen** : appartenance générale à une ville.
@@ -131,7 +131,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
-- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création du salon `fonder-une-colonie`, du salon règles, et du salon de signalements
+- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création du salon `fonder-une-colonie`, du salon règles, du salon de signalements et du salon `discussion-mj`
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : explique le concept et redirige vers `fonder-une-colonie`

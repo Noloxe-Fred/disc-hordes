@@ -4,6 +4,7 @@ import { ensureCategory, ensureRole, ensureTextChannel, supprimerRole } from "..
 import {
   CATEGORIE_ADMIN_MJ,
   ROLES_DESIRES,
+  SALON_DISCUSSION_MJ,
   ROLES_OBSOLETES,
   SALON_FONDER_COLONIE,
   SALON_REGLES,
@@ -46,12 +47,26 @@ const command: Command = {
       { id: mjAdminId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
     ]);
 
-    await ensureTextChannel(guild, SALON_SIGNALEMENTS.cle, SALON_SIGNALEMENTS.nom, categorieAdminMJ.id);
+    await ensureTextChannel(
+      guild,
+      SALON_SIGNALEMENTS.cle,
+      SALON_SIGNALEMENTS.nom,
+      categorieAdminMJ.id,
+      overwritesAdminMJ,
+    );
+
+    await ensureTextChannel(
+      guild,
+      SALON_DISCUSSION_MJ.cle,
+      SALON_DISCUSSION_MJ.nom,
+      categorieAdminMJ.id,
+      overwritesAdminMJ,
+    );
 
     await ensureTextChannel(guild, SALON_FONDER_COLONIE.cle, SALON_FONDER_COLONIE.nom, null);
 
     await interaction.editReply(
-      "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (règles + signalements) et salon fonder-une-colonie.",
+      "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (règles + signalements + discussion-mj) et salon fonder-une-colonie.",
     );
   },
 };
