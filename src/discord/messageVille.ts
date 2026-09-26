@@ -11,8 +11,8 @@ import {
 } from "discord.js";
 import { JOUEURS_MAX_PAR_VILLE, NOM_METIER } from "../config/metiers";
 import { prisma } from "../db";
-import { trouverSalonTexte } from "./reconcile";
-import { SALON_FONDER_COLONIE, SALON_NOUVEL_ARRIVANT } from "./structure";
+import { trouverRole, trouverSalonTexte } from "./reconcile";
+import { ROLE_NOMADE, SALON_FONDER_COLONIE, SALON_NOUVEL_ARRIVANT } from "./structure";
 import { enCitation } from "./texteLibre";
 
 // Message de recrutement d'une ville en creation (Components V2), poste dans #fonder-une-colonie :
@@ -28,7 +28,9 @@ type VilleMessage = Prisma.VilleGetPayload<{ include: typeof INCLUDE_MESSAGE_VIL
 
 const COULEUR_MESSAGE_VILLE = 0x2ecc71;
 
-export function construireMessageVille(ville: VilleMessage) {
+// roleNomadeId : role Nomade mentionne en tete du message (les membres sans ville), notifie seulement
+// si "notifier" (premier envoi), pas a chaque mise a jour de la liste des inscrits.
+export function construireMessageVille(ville: VilleMessage, roleNomadeId: string | null, notifier = false) {
   const inscrits = ville.habitants
     .map((h) => `- <@${h.utilisateur.discordId}> — ${h.metier ? NOM_METIER[h.metier] : "sans métier"}`)
     .join("\n");
@@ -37,7 +39,8 @@ export function construireMessageVille(ville: VilleMessage) {
     .setAccentColor(COULEUR_MESSAGE_VILLE)
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `## ${ville.nom}\nVille en cours de création par <@${ville.createur.discordId}>`,
+        (roleNomadeId ? `<@&${roleNomadeId}> une nouvelle ville recrute !\n` : "") +
+          `## ${ville.nom}\nVille en cours de création par <@${ville.createur.discordId}>`,
       ),
     );
 
@@ -66,8 +69,8 @@ export function construireMessageVille(ville: VilleMessage) {
   return {
     components: [conteneur],
     flags: MessageFlags.IsComponentsV2 as const,
-    // Affiche les mentions sans notifier personne (le message est edite a chaque inscription)
-    allowedMentions: { parse: [] },
+    // Seul le role Nomade est notifie, et seulement au premier envoi ; les joueurs cites ne le sont jamais
+    allowedMentions: notifier && roleNomadeId ? { roles: [roleNomadeId] } : { parse: [] },
   };
 }
 
@@ -77,7 +80,8 @@ export async function rafraichirMessageVille(guild: Guild, villeId: number): Pro
   if (!ville?.messageAnnonceId) return;
   const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
   const message = await salon?.messages.fetch(ville.messageAnnonceId).catch(() => null);
-  const { components, allowedMentions } = construireMessageVille(ville);
+  const roleNomade = await trouverRole(guild, ROLE_NOMADE.cle);
+  const { components, allowedMentions } = construireMessageVille(ville, roleNomade?.id ?? null);
   await message?.edit({ components, allowedMentions }).catch(() => null);
 }
 

@@ -3,11 +3,13 @@ import { ContainerBuilder, MessageFlags, SeparatorBuilder, TextDisplayBuilder, t
 import { NOM_METIER } from "../config/metiers";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { prisma } from "../db";
+import { retirerJoueurDeVilleDiscord } from "./joueurDiscord";
 import { supprimerRessources, trouverSalonTexte } from "./reconcile";
 import { SALON_COMMEMORATION } from "./structure";
 
 // Chute d'une ville (conception.md §1, Multi-villes), declenchee par la mort de son dernier habitant
-// (game/mort.ts). Le recapitulatif est poste dans #commemoration. Les salons et roles d'une ville
+// (game/mort.ts). Le recapitulatif est poste dans #commemoration, puis tous les joueurs quittent la
+// ville (retour au role Nomade). Les salons et roles d'une ville
 // tombee restent en place tant que d'autres villes de son groupe sont en jeu ; quand toutes les villes
 // du groupe sont tombees, tout ce qui appartient au groupe est supprime : roles-ville, categories
 // Ville et leurs salons, categorie Territoires externes, salons de zone et roles Position.
@@ -21,7 +23,21 @@ export async function declarerChuteVille(guild: Guild, villeId: number): Promise
     console.error(`Recapitulatif de chute de la ville ${villeId} impossible`, error),
   );
 
+  await faireQuitterHabitants(guild, villeId);
+
   if (ville.groupeId !== null) await nettoyerGroupeSiTombe(guild, ville.groupeId);
+}
+
+// Tous les joueurs quittent la ville tombee : roles de la ville retires, retour au role Nomade
+async function faireQuitterHabitants(guild: Guild, villeId: number): Promise<void> {
+  const habitants = await prisma.joueur.findMany({
+    where: { villeId, dateSortie: null },
+    include: { utilisateur: true },
+  });
+  await prisma.joueur.updateMany({ where: { villeId, dateSortie: null }, data: { dateSortie: new Date() } });
+  for (const habitant of habitants) {
+    await retirerJoueurDeVilleDiscord(guild, habitant.utilisateur.discordId, villeId);
+  }
 }
 
 const COULEUR_COMMEMORATION = 0x2c3e50;

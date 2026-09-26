@@ -1,8 +1,8 @@
-import { TypeRessourceDiscord } from "@prisma/client";
+import { StatutVille, TypeRessourceDiscord } from "@prisma/client";
 import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { prisma } from "../db";
 import { trouverRole } from "./reconcile";
-import { ROLE_CITOYEN, ROLE_MORT } from "./structure";
+import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE } from "./structure";
 
 // Permissions retirees a un joueur mort sur les salons de sa ville : il les voit toujours
 // (conception.md §3, l'ame reste liee a sa partie) mais ne peut plus y interagir.
@@ -32,6 +32,27 @@ async function retirerRole(membre: GuildMember, cle: string) {
   if (role) await membre.roles.remove(role).catch(() => null);
 }
 
+async function ajouterRole(membre: GuildMember, cle: string) {
+  const role = await trouverRole(membre.guild, cle);
+  if (role) await membre.roles.add(role).catch(() => null);
+}
+
+// Role Nomade = membre sans ville en jeu (conception.md §1). Une ville en cours de creation ne compte
+// pas : le role n'est retire qu'a la fondation.
+export async function aUneVilleEnJeu(discordId: string): Promise<boolean> {
+  const joueur = await prisma.joueur.findFirst({
+    where: { utilisateur: { discordId }, dateSortie: null, ville: { statut: StatutVille.ACTIVE } },
+    select: { id: true },
+  });
+  return joueur !== null;
+}
+
+export async function synchroniserNomade(membre: GuildMember): Promise<void> {
+  if (membre.user.bot) return;
+  if (await aUneVilleEnJeu(membre.id)) await retirerRole(membre, ROLE_NOMADE.cle);
+  else await ajouterRole(membre, ROLE_NOMADE.cle);
+}
+
 // Mort d'un joueur : role Mort a la place de Citoyen, plus de position en territoire externe, et
 // ecriture bloquee sur les salons de sa ville (permission propre au membre, prioritaire sur les roles).
 export async function appliquerMortDiscord(
@@ -53,8 +74,9 @@ export async function appliquerMortDiscord(
   }
 }
 
-// Depart de la ville (joueur mort qui quitte sa partie) : retrait des roles lies a la ville et des
-// permissions propres posees a sa mort. Le role-ville retire lui enleve aussi la vue des salons.
+// Depart de la ville (joueur mort qui la quitte, ou chute de la ville) : retrait des roles lies a la ville
+// et des permissions propres posees a sa mort, retour du role Nomade. Le role-ville retire lui enleve
+// aussi la vue des salons.
 export async function retirerJoueurDeVilleDiscord(guild: Guild, discordId: string, villeId: number): Promise<void> {
   const membre = await guild.members.fetch(discordId).catch(() => null);
   if (!membre) return;
@@ -62,6 +84,7 @@ export async function retirerJoueurDeVilleDiscord(guild: Guild, discordId: strin
   await retirerRole(membre, `role:ville:${villeId}`);
   await retirerRole(membre, ROLE_CITOYEN.cle);
   await retirerRole(membre, ROLE_MORT.cle);
+  await ajouterRole(membre, ROLE_NOMADE.cle);
 
   for (const salon of await salonsDeVille(guild, villeId)) {
     await salon.permissionOverwrites.delete(membre).catch(() => null);

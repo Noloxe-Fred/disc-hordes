@@ -4,8 +4,8 @@ import type { Command } from "../client";
 import { NOM_METIER } from "../config/metiers";
 import { prisma } from "../db";
 import { INCLUDE_MESSAGE_VILLE, construireMessageVille } from "../discord/messageVille";
-import { trouverSalonTexte } from "../discord/reconcile";
-import { SALON_FONDER_COLONIE } from "../discord/structure";
+import { trouverRole, trouverSalonTexte } from "../discord/reconcile";
+import { ROLE_NOMADE, SALON_FONDER_COLONIE } from "../discord/structure";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteLibre";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
@@ -92,7 +92,8 @@ const command: Command = {
     const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
     if (salon) {
       const villeMessage = await prisma.ville.findUniqueOrThrow({ where: { id: ville.id }, include: INCLUDE_MESSAGE_VILLE });
-      const message = await salon.send(construireMessageVille(villeMessage));
+      const roleNomade = await trouverRole(guild, ROLE_NOMADE.cle);
+      const message = await salon.send(construireMessageVille(villeMessage, roleNomade?.id ?? null, true));
       await prisma.ville.update({ where: { id: ville.id }, data: { messageAnnonceId: message.id } });
     }
 

@@ -29,7 +29,7 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "./messageVille";
 import { estMjOuAdmin } from "./permissions";
 import { trouverRole, trouverSalonTexte } from "./reconcile";
-import { ROLE_CITOYEN, ROLE_MORT, SALON_NOUVEL_ARRIVANT } from "./structure";
+import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, SALON_NOUVEL_ARRIVANT } from "./structure";
 import { ensureTerritoiresGroupe } from "./territoires";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "./texteLibre";
 import { creerStructureVille } from "./villeStructure";
@@ -342,12 +342,15 @@ async function fonder(interaction: ButtonInteraction, guild: Guild, villeId: num
   const roleCitoyen = await trouverRole(guild, ROLE_CITOYEN.cle);
   // Role Mort d'une partie precedente (ville tombee) retire : le joueur recommence vivant
   const roleMort = await trouverRole(guild, ROLE_MORT.cle);
+  // Le joueur a desormais une ville : il n'est plus Nomade
+  const roleNomade = await trouverRole(guild, ROLE_NOMADE.cle);
   for (const habitant of ville.habitants) {
     const membre = await guild.members.fetch(habitant.utilisateur.discordId).catch(() => null);
     if (!membre) continue;
     await membre.roles.add(roleVille).catch(() => null);
     if (roleCitoyen) await membre.roles.add(roleCitoyen).catch(() => null);
     if (roleMort) await membre.roles.remove(roleMort).catch(() => null);
+    if (roleNomade) await membre.roles.remove(roleNomade).catch(() => null);
   }
 
   await supprimerMessagesRecrutement(guild, ville.id);

@@ -4,11 +4,22 @@
 
 export const ROLE_CITOYEN = { cle: "role:citoyen", nom: "Citoyen", couleur: 0x2ecc71 } as const; // vert : vivant
 export const ROLE_MORT = { cle: "role:mort", nom: "Mort", couleur: 0xc0392b } as const; // rouge
-export const ROLE_MJ = { cle: "role:mj", nom: "MJ", couleur: 0xf1c40f } as const; // or : staff jeu
-export const ROLE_ADMIN = { cle: "role:admin", nom: "Admin", couleur: 0xe67e22 } as const; // orange : staff serveur
+// Staff : affiche a part en haut de la liste des membres, Admin au-dessus de MJ (voir /init)
+export const ROLE_MJ = { cle: "role:mj", nom: "MJ", couleur: 0xf1c40f, separe: true } as const; // or : staff jeu
+export const ROLE_ADMIN = { cle: "role:admin", nom: "Admin", couleur: 0xe67e22, separe: true } as const; // orange : staff serveur
 export const ROLE_RADIO = { cle: "role:radio", nom: "Radio", couleur: 0x3498db } as const; // bleu : ondes
 
-export const ROLES_DESIRES = [ROLE_CITOYEN, ROLE_MORT, ROLE_MJ, ROLE_ADMIN, ROLE_RADIO] as const;
+// Membre sans ville : donne a l'arrivee sur le serveur et apres avoir quitte une ville, retire a la fondation
+export const ROLE_NOMADE = { cle: "role:nomade", nom: "Nomade", couleur: 0x95a5a6 } as const; // gris : sans ville
+
+export const ROLES_DESIRES: readonly { cle: string; nom: string; couleur: number; separe?: boolean }[] = [
+  ROLE_CITOYEN,
+  ROLE_MORT,
+  ROLE_MJ,
+  ROLE_ADMIN,
+  ROLE_RADIO,
+  ROLE_NOMADE,
+];
 
 // Roles d'anciennes versions, supprimes par /init s'ils existent encore. L'infection est une info
 // cachee (Joueur.infecteDepuis) : un role Discord la rendrait visible de tous les joueurs.

@@ -16,13 +16,21 @@ async function saveRessource(guildId: string, cle: string, type: TypeRessourceDi
 }
 
 // Sans couleur, le role garde la couleur par defaut de Discord (et on ne touche pas a l'existant).
-export async function ensureRole(guild: Guild, cle: string, nom: string, couleur?: number): Promise<Role> {
+// "separe" : membres affiches a part dans la liste du serveur (hoist) ; non precise = on ne touche pas.
+export async function ensureRole(
+  guild: Guild,
+  cle: string,
+  nom: string,
+  couleur?: number,
+  separe?: boolean,
+): Promise<Role> {
   const discordId = await getDiscordId(guild.id, cle);
   if (discordId) {
     const role = await guild.roles.fetch(discordId).catch(() => null);
     if (role) {
       if (role.name !== nom) await role.setName(nom);
       if (couleur !== undefined && role.colors.primaryColor !== couleur) await role.setColors({ primaryColor: couleur });
+      if (separe !== undefined && role.hoist !== separe) await role.setHoist(separe);
       return role;
     }
   }
@@ -30,6 +38,7 @@ export async function ensureRole(guild: Guild, cle: string, nom: string, couleur
   const role = await guild.roles.create({
     name: nom,
     colors: couleur !== undefined ? { primaryColor: couleur } : undefined,
+    hoist: separe,
   });
   await saveRessource(guild.id, cle, TypeRessourceDiscord.ROLE, role.id);
   return role;

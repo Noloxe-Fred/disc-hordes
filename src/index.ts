@@ -5,6 +5,7 @@ import { Events } from "discord.js";
 import { createClient, type Command } from "./client";
 import { prisma } from "./db";
 import { gererBouton } from "./discord/boutons";
+import { synchroniserNomade } from "./discord/joueurDiscord";
 import { demarrerHorlogeCycle } from "./scheduler/cycle";
 
 const client = createClient();
@@ -30,6 +31,11 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 
   demarrerHorlogeCycle(client);
+});
+
+// Nouvel arrivant sur le serveur : role Nomade (pas encore de ville)
+client.on(Events.GuildMemberAdd, async (membre) => {
+  await synchroniserNomade(membre).catch((error) => console.error("Attribution du role Nomade impossible", error));
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

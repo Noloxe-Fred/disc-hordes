@@ -19,9 +19,11 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - **Position:<zone>** (ex. `Position:Forêt proche · G1`) : rôle **propre à une zone d'un groupe** (12 par groupe, créés avec les territoires externes du groupe) — seul accès (lecture et écriture) au salon de la zone précise, attribué au joueur qui s'y déplace et retiré quand il en part. Un rôle de position ne donne donc jamais accès aux zones d'un autre groupe. Contrepartie : le nombre de rôles croît avec le nombre de groupes (Discord limite un serveur à 250 rôles ; avec 15 rôles par groupe — 12 positions + 3 rôles-ville — et les rôles fixes, le plafond est d'environ 16 groupes, soit 48 villes simultanées).
 - **Radio** : géré automatiquement par le bot selon la possession de l'objet radio en inventaire (ajout/retrait synchronisé, pas de commande d'activation). Permet de garder le droit d'écrire dans les salons de Ville même en étant positionné en territoire externe (normalement perdu en partant).
 - **Mort**.
+- **Nomade** : membre sans ville en jeu. Donné à chaque nouvel arrivant sur le serveur (et par `/init` aux membres déjà présents sans ville), retiré à la fondation de sa ville, rendu quand il quitte sa ville ou quand elle tombe. Mentionné dans l'annonce de chaque ville créée par `/creer-ville` (notification au premier envoi seulement).
 - **MJ** : animation et arbitrage du jeu ; accès aux salons MJ de la catégorie Admin-MJ.
 - **Admin** : gestion du serveur et du bot ; accès à tous les salons de la catégorie Admin-MJ, y compris `gestion` qui lui est réservé.
-- Couleurs des rôles fixes posés par `/init` : Citoyen vert, Mort rouge, MJ or, Admin orange, Radio bleu.
+- Admin et MJ sont placés par `/init` en haut de la liste des rôles (Admin au-dessus de MJ, juste sous le rôle du bot) et affichés séparément des autres membres.
+- Couleurs des rôles fixes posés par `/init` : Citoyen vert, Mort rouge, MJ or, Admin orange, Radio bleu, Nomade gris.
 - **Pas de rôle Infecté** : l'infection est cachée (seul le joueur le sait, voir Blessures & infection), elle est donc stockée uniquement en base et jamais exposée via un rôle Discord visible des autres joueurs.
 
 - Se déplacer entre zones = changement de rôle Discord (accès/retrait de salon)
@@ -40,7 +42,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - À la fondation, la nouvelle ville rejoint un groupe existant ayant moins de 3 villes, sinon crée un nouveau groupe (nouveaux salons de territoires externes + nouveaux rôles de zone si besoin).
 - **Le groupe reste figé une fois formé** : si une ville du groupe tombe, sa place ne se libère pas — aucune nouvelle ville ne rejoint ce groupe après coup, même redescendu à 1 ou 2 villes actives.
 - Un joueur peut changer de ville : vote dans la ville accueillante après qu'un candidat croisé en territoire externe ait été rapporté ; même système de vote que l'élection du maire.
-- **Chute d'une ville** : déclenchée par la mort de son dernier habitant vivant, quelle qu'en soit la cause (attaque nocturne, combat en territoire externe, faim, soif, infection) — fin de partie pour cette ville, récapitulatif posté dans `commémoration`. Ses salons et son rôle-ville restent en place tant que d'autres villes du groupe sont en jeu.
+- **Chute d'une ville** : déclenchée par la mort de son dernier habitant vivant, quelle qu'en soit la cause (attaque nocturne, combat en territoire externe, faim, soif, infection) — fin de partie pour cette ville, récapitulatif posté dans `commémoration`. **Tous ses joueurs la quittent automatiquement** (rôle-ville, Citoyen et Mort retirés, retour au rôle Nomade) et peuvent rejoindre une autre ville. Ses salons et son rôle-ville restent en place (sans membres) tant que d'autres villes du groupe sont en jeu.
 - **Chute de la dernière ville d'un groupe** : suppression de tout ce qui appartient au groupe — rôles-ville, catégories Ville et leurs salons, catégorie "Territoires externes", salons de zone et rôles Position du groupe.
 
 ---
@@ -108,7 +110,7 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 ### Mort
 - Statut **post-mortem jouable** : le joueur mort devient une âme avec une influence légère sur la partie en cours (pas un simple spectateur passif)
 - Le joueur mort voit toujours sa ville (rôle Mort à la place de Citoyen) mais ne peut plus y interagir : écriture, réactions et vocal lui sont retirés sur les salons de la ville
-- Depuis `/action`, il peut **quitter la ville** (confirmation obligatoire) : suppression de son rôle-ville et de ses rôles Citoyen/Mort, perte de l'accès aux salons ; il peut alors rejoindre ou créer une **autre** ville avec un nouveau personnage. Tant qu'il ne l'a pas quittée, il reste engagé dans cette partie
+- Depuis `/action`, il peut **quitter la ville** (confirmation obligatoire) : suppression de son rôle-ville et de ses rôles Citoyen/Mort, retour au rôle Nomade, perte de l'accès aux salons ; il peut alors rejoindre ou créer une **autre** ville avec un nouveau personnage. Tant qu'il ne l'a pas quittée, il reste engagé dans cette partie
 - **Objets à la mort** : les objets d'inventaire du joueur (dont une radio s'il en avait) deviennent **lootables sur place** par les autres joueurs présents dans la zone/ville
 
 ### Cycle de vie du joueur (hors mort)
