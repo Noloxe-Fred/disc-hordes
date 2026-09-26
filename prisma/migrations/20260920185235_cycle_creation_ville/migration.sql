@@ -1,4 +1,4 @@
-﻿-- DropForeignKey
+-- DropForeignKey
 ALTER TABLE `Ville` DROP FOREIGN KEY `Ville_groupeId_fkey`;
 
 -- AlterTable

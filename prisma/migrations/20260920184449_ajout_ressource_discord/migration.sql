@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE `RessourceDiscord` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `guildId` VARCHAR(191) NOT NULL,

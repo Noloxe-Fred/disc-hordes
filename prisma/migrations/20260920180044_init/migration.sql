@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE `Utilisateur` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `discordId` VARCHAR(191) NOT NULL,
