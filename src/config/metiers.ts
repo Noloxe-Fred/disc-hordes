@@ -32,6 +32,8 @@ export const NOM_METIER: Record<Metier, string> = {
 };
 
 export const JOUEURS_MAX_PAR_VILLE = 15;
+// Minimum d'habitants pour /fonder-ville ; un membre ayant le role MJ/Admin peut fonder en dessous (equilibrage.md §1)
+export const JOUEURS_MIN_FONDATION = 3;
 export const PA_CIBLE_VILLE = 180;
 export const PA_MAX_PLAFOND = 40;
 export const CYCLES_PAR_MANDAT_MAIRE = 4;

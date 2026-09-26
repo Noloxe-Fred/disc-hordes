@@ -6,12 +6,20 @@ import {
   PA_CIBLE_VILLE,
   PA_MAX_PLAFOND,
   GROUPES_VILLES_MAX,
+  JOUEURS_MIN_FONDATION,
 } from "../config/metiers";
 import { prisma } from "../db";
 import { trouverRole, trouverSalonTexte } from "../discord/reconcile";
-import { ROLE_CITOYEN, SALON_FONDER_COLONIE } from "../discord/structure";
+import { ROLE_CITOYEN, ROLE_MJ_ADMIN, SALON_FONDER_COLONIE } from "../discord/structure";
 import { creerStructureVille } from "../discord/villeStructure";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
+
+async function estMjAdmin(guild: Guild, userId: string): Promise<boolean> {
+  const roleMj = await trouverRole(guild, ROLE_MJ_ADMIN.cle);
+  if (!roleMj) return false;
+  const membre = await guild.members.fetch(userId).catch(() => null);
+  return membre?.roles.cache.has(roleMj.id) ?? false;
+}
 
 async function nettoyerMessagesRecrutement(guild: Guild, villeId: number, messageAnnonceId: string | null) {
   const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
@@ -61,9 +69,20 @@ const command: Command = {
       return;
     }
 
+    const nombreHabitants = ville.habitants.length;
+
+    if (nombreHabitants < JOUEURS_MIN_FONDATION && !(await estMjAdmin(guild, interaction.user.id))) {
+      await interaction.reply({
+        content:
+          `**${ville.nom}** compte ${nombreHabitants} habitant(s) : il en faut au moins ${JOUEURS_MIN_FONDATION} pour la fonder. ` +
+          "Acceptez d'autres demandes d'inscription avant de relancer `/fonder-ville`.",
+        ephemeral: true,
+      });
+      return;
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
-    const nombreHabitants = ville.habitants.length;
     const paMax = Math.min(PA_MAX_PLAFOND, Math.floor(PA_CIBLE_VILLE / nombreHabitants));
 
     const groupes = await prisma.groupe.findMany({ include: { _count: { select: { villes: true } } } });

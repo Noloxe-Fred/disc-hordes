@@ -15,6 +15,7 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 ### Budget de ville — PA cible
 - **PA cible par ville et par phase : 180.** Cette valeur représente ce qu'une ville a besoin de pouvoir produire collectivement pour fonctionner (chantiers, défense, exploration) — elle ne dépend pas du nombre d'habitants, c'est un paramètre de conception fixe (ajustable en admin plus tard si besoin).
 - **PA max individuel = floor(180 ÷ nombre d'habitants présents au lancement de la ville)**, plafonné à **40 PA** pour éviter qu'une ville lancée très réduite (1 à 4 fondateurs) n'obtienne des PA individuels absurdes.
+- **Minimum de 3 habitants pour lancer une ville** (`/fonder-ville`). Exception : un créateur ayant le rôle MJ/Admin peut fonder en dessous de ce minimum (villes de test) ; les lignes 1 et 2 du tableau ci-dessous ne concernent donc que ce cas.
 - **Ce calcul n'a lieu qu'une seule fois, à `/fonder-ville`.** Il n'est **jamais recalculé** ensuite, ni pour les morts, ni pour les départs (`/quitter-ville`, exclusion), ni pour les arrivées. La perte ou le gain d'habitants change la capacité collective réelle de la ville, mais ne modifie le PA max d'aucun joueur individuel déjà présent.
 
 | Habitants au lancement | PA max/joueur (floor(180/N), plafond 40) | PA collectif théorique au lancement |
