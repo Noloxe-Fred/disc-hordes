@@ -4,14 +4,18 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
+  ModalBuilder,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } from "discord.js";
 import type { Command } from "../client";
 import { NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../config/metiers";
 import { prisma } from "../db";
 import { trouverSalonTexte } from "../discord/reconcile";
-import { SALON_FONDER_COLONIE } from "../discord/structure";
+import { SALON_NOUVEL_ARRIVANT } from "../discord/structure";
+import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "../discord/texteLibre";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
@@ -126,11 +130,57 @@ const command: Command = {
 
     const metierChoisi = selectionMetier.values[0] === VALEUR_SANS_METIER ? null : (selectionMetier.values[0] as Metier);
 
+    // Formulaire des motivations (facultatif), ouvert directement depuis le choix du metier
+    const idFormulaire = `motivation:${selectionMetier.id}`;
+    await selectionMetier.showModal(
+      new ModalBuilder()
+        .setCustomId(idFormulaire)
+        .setTitle(`Rejoindre ${ville.nom}`.slice(0, 45))
+        .addComponents(
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("motivation")
+              .setLabel("Vos motivations")
+              .setPlaceholder("Pourquoi cette ville ? Votre style de jeu, vos disponibilités... (facultatif)")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(LONGUEUR_MAX_TEXTE_LIBRE),
+          ),
+        ),
+    );
+
+    const soumission = await selectionMetier
+      .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
+      .catch(() => null);
+
+    if (!soumission) {
+      await interaction.editReply({ content: "Formulaire non envoyé, demande annulée.", components: [] }).catch(() => null);
+      return;
+    }
+
+    const motivation = soumission.fields.getTextInputValue("motivation").trim() || null;
+
+    // Reverifications : la saisie peut durer plusieurs minutes
+    const villeActuelle = await prisma.ville.findUnique({ where: { id: ville.id } });
+    if (villeActuelle?.statut !== StatutVille.EN_CREATION) {
+      await soumission.reply({ content: `**${ville.nom}** n'accepte plus d'inscriptions.`, ephemeral: true });
+      await interaction.editReply({ components: [] }).catch(() => null);
+      return;
+    }
+    if (await utilisateurEstEngage(utilisateur.id)) {
+      await soumission.reply({
+        content: "Vous êtes déjà engagé dans une ville, ou une de vos demandes est encore en attente.",
+        ephemeral: true,
+      });
+      await interaction.editReply({ components: [] }).catch(() => null);
+      return;
+    }
+
     const demande = await prisma.demandeInscription.create({
-      data: { villeId: ville.id, utilisateurId: utilisateur.id, metierDemande: metierChoisi ?? undefined },
+      data: { villeId: ville.id, utilisateurId: utilisateur.id, metierDemande: metierChoisi ?? undefined, motivation },
     });
 
-    const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
+    const salon = await trouverSalonTexte(guild, SALON_NOUVEL_ARRIVANT.cle);
     if (salon) {
       const boutons = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId(`demande:accepter:${demande.id}`).setLabel("Accepter").setStyle(ButtonStyle.Success),
@@ -139,16 +189,23 @@ const command: Command = {
       const message = await salon.send({
         content:
           `<@${ville.createur.discordId}> — ${interaction.user} demande à rejoindre **${ville.nom}** ` +
-          `(métier : ${metierChoisi ? NOM_METIER[metierChoisi] : "sans métier"}).`,
+          `(métier : ${metierChoisi ? NOM_METIER[metierChoisi] : "sans métier"}).` +
+          (motivation ? `\n\n**Motivations :**\n${enCitation(motivation)}` : ""),
         components: [boutons],
+        // Seuls le createur et le joueur sont notifies, quel que soit le contenu des motivations
+        allowedMentions: { users: [ville.createur.discordId, interaction.user.id] },
       });
       await prisma.demandeInscription.update({ where: { id: demande.id }, data: { messageId: message.id } });
     }
 
-    await selectionMetier.update({
-      content: `Demande envoyée pour rejoindre **${ville.nom}**. En attente de validation par le créateur (\`/annuler-demande\` pour annuler).`,
+    const confirmation = {
+      content:
+        `Demande envoyée pour rejoindre **${ville.nom}**. En attente de validation par le créateur ` +
+        `(\`/annuler-demande\` pour annuler).${salon ? "" : " (Salon #nouvel-arrivant introuvable : un admin doit lancer /init.)"}`,
       components: [],
-    });
+    };
+    if (soumission.isFromMessage()) await soumission.update(confirmation);
+    else await soumission.reply({ ...confirmation, ephemeral: true });
   },
 };
 

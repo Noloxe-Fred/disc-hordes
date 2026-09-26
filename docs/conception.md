@@ -10,6 +10,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 
 **Catégorie "Ville"** : mairie, place publique, chantiers, atelier, puits, maisons privées, **un salon vocal général lié au rôle-ville**.
 **Catégorie "Territoires externes"** : un salon par zone (ville en ruines, forêt, marécages, montagnes, etc.) — **partagée entre les villes d'un même groupe** (voir section Multi-villes ci-dessous). Pas de vocal par zone.
+**Catégorie "Disc'Hordes"** (publique, créée par `/init`) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs).
 **Catégorie "Admin-MJ"**, incluant un salon règles créé automatiquement par `/init`, un salon de signalements (voir section 4), un salon `discussion-mj` pour la coordination entre MJ, et un salon `gestion` réservé aux Admins. Les salons de la catégorie accessibles aux MJ le sont aussi aux Admins.
 
 **Rôles** :
@@ -133,15 +134,15 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
-- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création du salon `fonder-une-colonie`, du salon règles, du salon de signalements, du salon `discussion-mj` et du salon `gestion`
+- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons `général`, `fonder-une-colonie` et `nouvel-arrivant`), du salon règles, du salon de signalements, du salon `discussion-mj` et du salon `gestion`
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : explique le concept et redirige vers `fonder-une-colonie`
 - **Message d'accueil** posté au joueur au moment où il rejoint effectivement une ville via `/fonder-ville` : résume les bases (PA, faim/soif, `/action`, `/aide`)
 
-### Commandes pré-jeu (salon dédié "fonder-une-colonie", créé via `/init`)
-- `/creer-ville` : création d'une ville, paramètre = nom de la ville
-- `/rejoindre` : liste sélectionnable des villes en cours de création ; le joueur choisit un métier (grisé si complet) ou "simple citoyen" ; envoie une demande au créateur de la ville sur le salon (avec user et métier choisi) pour validation manuelle — pas d'inscription à la volée, le créateur peut refuser ; pas de délai automatique de réponse en V1, le joueur peut annuler sa demande pour la déposer ailleurs
+### Commandes pré-jeu (salon dédié "fonder-une-colonie", catégorie "Disc'Hordes", créé via `/init`)
+- `/creer-ville` : création d'une ville, paramètres = nom de la ville et métier du créateur ; ouvre un formulaire facultatif où le créateur expose son **projet de ville** (1000 caractères max), repris dans l'annonce postée sur `fonder-une-colonie`
+- `/rejoindre` : liste sélectionnable des villes en cours de création ; le joueur choisit un métier (grisé si complet) ou "simple citoyen" ; remplit un formulaire facultatif de **motivations** (1000 caractères max) ; la demande est postée dans le salon `nouvel-arrivant` en mentionnant le créateur de la ville et le joueur (avec métier choisi et motivations) pour validation manuelle — pas d'inscription à la volée, le créateur peut refuser ; pas de délai automatique de réponse en V1, le joueur peut annuler sa demande pour la déposer ailleurs
 - `/fonder-ville` : réservée au créateur de la ville, lance le jeu — création de la catégorie au nom de la ville puis des salons, accessibles aux membres ayant rejoint ; création du rôle-ville et rattachement à un groupe de territoires externes (existant ou nouveau, voir section 1) ; le créateur devient automatiquement le premier maire (mandat de 4 cycles, destituable ensuite comme n'importe quel maire) ; **minimum de 3 habitants** pour lancer (voir document d'équilibrage), sauf si le créateur a le rôle MJ ou Admin, qui peut fonder avec moins (y compris seul, pour les tests) ; on ne peut plus rejoindre une ville après lancement, sauf déménagement depuis une autre ville en jeu ; une fois la ville fondée, ses messages de création/inscription sont supprimés/archivés du salon commun
 - Nombre de joueurs max par ville : **15** (évolutif)
 

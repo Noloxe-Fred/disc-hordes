@@ -1,10 +1,11 @@
 import { Metier } from "@prisma/client";
-import { SlashCommandBuilder } from "discord.js";
+import { ActionRowBuilder, ModalBuilder, SlashCommandBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import type { Command } from "../client";
 import { NOM_METIER } from "../config/metiers";
 import { prisma } from "../db";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { SALON_FONDER_COLONIE } from "../discord/structure";
+import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "../discord/texteLibre";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
@@ -33,18 +34,54 @@ const command: Command = {
     const nom = interaction.options.getString("nom", true).trim();
     const metier = interaction.options.getString("metier") as Metier | null;
 
-    await interaction.deferReply({ ephemeral: true });
-
     const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
 
     if (await utilisateurEstEngage(utilisateur.id)) {
-      await interaction.editReply("Vous êtes déjà engagé dans une ville (en jeu ou en cours de création).");
+      await interaction.reply({
+        content: "Vous êtes déjà engagé dans une ville (en jeu ou en cours de création).",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Formulaire du projet de ville (facultatif) avant la creation
+    const idFormulaire = `projet-ville:${interaction.id}`;
+    await interaction.showModal(
+      new ModalBuilder()
+        .setCustomId(idFormulaire)
+        .setTitle("Projet de ville")
+        .addComponents(
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("projet")
+              .setLabel(`Présentez votre projet pour ${nom}`.slice(0, 45))
+              .setPlaceholder("Ambiance, stratégie, rythme de jeu attendu... (facultatif)")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(LONGUEUR_MAX_TEXTE_LIBRE),
+          ),
+        ),
+    );
+
+    const soumission = await interaction
+      .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
+      .catch(() => null);
+    if (!soumission) return; // formulaire ferme ou delai depasse : rien n'est cree
+
+    const projet = soumission.fields.getTextInputValue("projet").trim() || null;
+
+    await soumission.deferReply({ ephemeral: true });
+
+    // Reverification : une autre commande a pu engager le joueur pendant la saisie
+    if (await utilisateurEstEngage(utilisateur.id)) {
+      await soumission.editReply("Vous êtes déjà engagé dans une ville (en jeu ou en cours de création).");
       return;
     }
 
     const ville = await prisma.ville.create({
       data: {
         nom,
+        projet,
         createurUtilisateurId: utilisateur.id,
         habitants: { create: { utilisateurId: utilisateur.id, metier: metier ?? undefined } },
       },
@@ -52,15 +89,19 @@ const command: Command = {
 
     const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
     if (salon) {
-      const message = await salon.send(
-        `**${nom}** est en cours de création par ${interaction.user} !\n` +
+      const message = await salon.send({
+        content:
+          `**${nom}** est en cours de création par ${interaction.user} !\n` +
           `Métier du fondateur : ${metier ? NOM_METIER[metier] : "sans métier"}\n` +
-          "Utilisez `/rejoindre` pour la rejoindre.",
-      );
+          "Utilisez `/rejoindre` pour la rejoindre." +
+          (projet ? `\n\n**Projet de ville :**\n${enCitation(projet)}` : ""),
+        // Le texte libre ne doit pas pouvoir mentionner @everyone ou d'autres joueurs
+        allowedMentions: { users: [interaction.user.id] },
+      });
       await prisma.ville.update({ where: { id: ville.id }, data: { messageAnnonceId: message.id } });
     }
 
-    await interaction.editReply(
+    await soumission.editReply(
       `Ville **${nom}** créée${salon ? "" : " (le salon #fonder-une-colonie est introuvable, pensez à lancer /init)"}. ` +
         "Utilisez `/fonder-ville` quand vous êtes prêt à lancer la partie.",
     );

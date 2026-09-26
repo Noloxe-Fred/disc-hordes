@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from "discord.js";
 import type { Command } from "../client";
 import { prisma } from "../db";
 import { trouverSalonTexte } from "../discord/reconcile";
-import { SALON_FONDER_COLONIE } from "../discord/structure";
+import { SALON_NOUVEL_ARRIVANT } from "../discord/structure";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 const command: Command = {
@@ -28,7 +28,7 @@ const command: Command = {
     });
 
     if (demande.messageId && interaction.guild) {
-      const salon = await trouverSalonTexte(interaction.guild, SALON_FONDER_COLONIE.cle);
+      const salon = await trouverSalonTexte(interaction.guild, SALON_NOUVEL_ARRIVANT.cle);
       const message = await salon?.messages.fetch(demande.messageId).catch(() => null);
       await message?.delete().catch(() => null);
     }

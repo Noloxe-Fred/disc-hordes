@@ -164,6 +164,8 @@ model Ville {
   // Message d'annonce poste dans #fonder-une-colonie a /creer-ville ; supprime avec les
   // messages de demande a /fonder-ville (conception.md §4 : "messages ... supprimes/archives").
   messageAnnonceId      String?
+  // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
+  projet                String?     @db.Text
 
   createur   Utilisateur          @relation("CreateurVille", fields: [createurUtilisateurId], references: [id])
   groupe     Groupe?              @relation(fields: [groupeId], references: [id])
@@ -192,7 +194,10 @@ model DemandeInscription {
   villeId       Int
   utilisateurId Int
   metierDemande Metier?
+  // Motivations saisies par le joueur a /rejoindre (formulaire facultatif)
+  motivation    String?       @db.Text
   statut        StatutDemande @default(EN_ATTENTE)
+  // Message de la demande dans #nouvel-arrivant
   messageId     String?
   dateCreation  DateTime      @default(now())
   dateReponse   DateTime?

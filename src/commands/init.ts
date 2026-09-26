@@ -3,6 +3,7 @@ import type { Command } from "../client";
 import { ensureCategory, ensureRole, ensureTextChannel, renommerCle, supprimerRole } from "../discord/reconcile";
 import {
   CATEGORIE_ADMIN_MJ,
+  CATEGORIE_DISCHORDES,
   CLES_RENOMMEES,
   ROLE_ADMIN,
   ROLE_MJ,
@@ -10,7 +11,9 @@ import {
   ROLES_OBSOLETES,
   SALON_DISCUSSION_MJ,
   SALON_FONDER_COLONIE,
+  SALON_GENERAL,
   SALON_GESTION,
+  SALON_NOUVEL_ARRIVANT,
   SALON_REGLES,
   SALON_SIGNALEMENTS,
 } from "../discord/structure";
@@ -70,10 +73,16 @@ const command: Command = {
     await ensureTextChannel(guild, SALON_DISCUSSION_MJ.cle, SALON_DISCUSSION_MJ.nom, categorieAdminMJ.id, overwritesMJ);
     await ensureTextChannel(guild, SALON_GESTION.cle, SALON_GESTION.nom, categorieAdminMJ.id, overwritesAdmin);
 
-    await ensureTextChannel(guild, SALON_FONDER_COLONIE.cle, SALON_FONDER_COLONIE.nom, null);
+    const categorieDiscHordes = await ensureCategory(guild, CATEGORIE_DISCHORDES.cle, CATEGORIE_DISCHORDES.nom);
+    await ensureTextChannel(guild, SALON_GENERAL.cle, SALON_GENERAL.nom, categorieDiscHordes.id);
+    await ensureTextChannel(guild, SALON_FONDER_COLONIE.cle, SALON_FONDER_COLONIE.nom, categorieDiscHordes.id);
+    await ensureTextChannel(guild, SALON_NOUVEL_ARRIVANT.cle, SALON_NOUVEL_ARRIVANT.nom, categorieDiscHordes.id, [
+      { id: everyoneId, deny: [PermissionFlagsBits.SendMessages] },
+    ]);
 
     await interaction.editReply(
-      "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (règles + signalements + discussion-mj + gestion) et salon fonder-une-colonie.",
+      "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (règles + signalements + discussion-mj + gestion) " +
+        "et catégorie Disc'Hordes (général + fonder-une-colonie + nouvel-arrivant).",
     );
   },
 };

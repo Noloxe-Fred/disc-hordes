@@ -24,4 +24,9 @@ export const SALON_REGLES = { cle: "salon:regles", nom: "règles" } as const;
 export const SALON_SIGNALEMENTS = { cle: "salon:signalements", nom: "signalements" } as const;
 export const SALON_DISCUSSION_MJ = { cle: "salon:discussion-mj", nom: "discussion-mj" } as const;
 export const SALON_GESTION = { cle: "salon:gestion", nom: "gestion" } as const; // Admin uniquement
+// Categorie publique d'accueil
+export const CATEGORIE_DISCHORDES = { cle: "categorie:dischordes", nom: "Disc'Hordes" } as const;
+export const SALON_GENERAL = { cle: "salon:general", nom: "général" } as const;
 export const SALON_FONDER_COLONIE = { cle: "salon:fonder-une-colonie", nom: "fonder-une-colonie" } as const;
+// Demandes d'inscription aux villes, postees par le bot (lecture seule pour les joueurs)
+export const SALON_NOUVEL_ARRIVANT = { cle: "salon:nouvel-arrivant", nom: "nouvel-arrivant" } as const;

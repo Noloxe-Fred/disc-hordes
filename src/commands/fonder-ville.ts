@@ -10,7 +10,7 @@ import {
 } from "../config/metiers";
 import { prisma } from "../db";
 import { trouverRole, trouverSalonTexte } from "../discord/reconcile";
-import { ROLE_ADMIN, ROLE_CITOYEN, ROLE_MJ, SALON_FONDER_COLONIE } from "../discord/structure";
+import { ROLE_ADMIN, ROLE_CITOYEN, ROLE_MJ, SALON_FONDER_COLONIE, SALON_NOUVEL_ARRIVANT } from "../discord/structure";
 import { creerStructureVille } from "../discord/villeStructure";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
@@ -24,25 +24,25 @@ async function estMjOuAdmin(guild: Guild, userId: string): Promise<boolean> {
   return false;
 }
 
-async function nettoyerMessagesRecrutement(guild: Guild, villeId: number, messageAnnonceId: string | null) {
-  const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
+async function supprimerMessages(guild: Guild, cleSalon: string, ids: string[]) {
+  const salon = await trouverSalonTexte(guild, cleSalon);
   if (!salon) return;
+  for (const id of ids) {
+    const message = await salon.messages.fetch(id).catch(() => null);
+    await message?.delete().catch(() => null);
+  }
+}
 
-  const idsASupprimer: string[] = [];
-  if (messageAnnonceId) idsASupprimer.push(messageAnnonceId);
+// Annonce de la ville dans #fonder-une-colonie, demandes d'inscription dans #nouvel-arrivant
+async function nettoyerMessagesRecrutement(guild: Guild, villeId: number, messageAnnonceId: string | null) {
+  if (messageAnnonceId) await supprimerMessages(guild, SALON_FONDER_COLONIE.cle, [messageAnnonceId]);
 
   const demandes = await prisma.demandeInscription.findMany({
     where: { villeId, messageId: { not: null } },
     select: { messageId: true },
   });
-  for (const { messageId } of demandes) {
-    if (messageId) idsASupprimer.push(messageId);
-  }
-
-  for (const id of idsASupprimer) {
-    const message = await salon.messages.fetch(id).catch(() => null);
-    await message?.delete().catch(() => null);
-  }
+  const idsDemandes = demandes.flatMap(({ messageId }) => (messageId ? [messageId] : []));
+  await supprimerMessages(guild, SALON_NOUVEL_ARRIVANT.cle, idsDemandes);
 }
 
 const command: Command = {
