@@ -1,11 +1,11 @@
 import { PermissionFlagsBits, type Guild, type Role, type TextChannel } from "discord.js";
 import { ensureCategory, ensureRole, ensureTextChannel, ensureVoiceChannel } from "./reconcile";
 
-// Structure de la categorie "Ville" a /fonder-ville (conception.md §1) : mairie, place
+// Structure de la categorie "Ville" a la fondation (conception.md §1) : mairie, place
 // publique, chantiers, atelier, puits, un salon "maisons privees" (un seul salon partage,
 // la gestion par joueur se fait via Joueur.maisonPalier plutot que par salon dedie), et un
 // salon vocal general lie au role-ville. La categorie "Territoires externes" du groupe reste
-// hors scope ici (systeme d'exploration a construire plus tard).
+// geree par territoires.ts.
 
 export interface StructureVille {
   roleVille: Role;

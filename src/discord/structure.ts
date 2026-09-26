@@ -1,6 +1,6 @@
 // Etat souhaite du serveur, tel que fixe par conception.md §1 et §4. Ne couvre que la
 // structure globale posee par /init : la categorie "Ville" et la categorie "Territoires
-// externes" d'un groupe sont creees dynamiquement a /fonder-ville, pas ici.
+// externes" d'un groupe sont creees dynamiquement a la fondation (bouton « Fonder la ville »), pas ici.
 
 export const ROLE_CITOYEN = { cle: "role:citoyen", nom: "Citoyen", couleur: 0x2ecc71 } as const; // vert : vivant
 export const ROLE_MORT = { cle: "role:mort", nom: "Mort", couleur: 0xc0392b } as const; // rouge
@@ -30,3 +30,4 @@ export const SALON_GENERAL = { cle: "salon:general", nom: "général" } as const
 export const SALON_FONDER_COLONIE = { cle: "salon:fonder-une-colonie", nom: "fonder-une-colonie" } as const;
 // Demandes d'inscription aux villes, postees par le bot (lecture seule pour les joueurs)
 export const SALON_NOUVEL_ARRIVANT = { cle: "salon:nouvel-arrivant", nom: "nouvel-arrivant" } as const;
+export const SALON_COMMEMORATION = { cle: "salon:commemoration", nom: "commémoration" } as const; // recaps de chute de ville

@@ -3,9 +3,10 @@ import { ActionRowBuilder, ModalBuilder, SlashCommandBuilder, TextInputBuilder, 
 import type { Command } from "../client";
 import { NOM_METIER } from "../config/metiers";
 import { prisma } from "../db";
+import { INCLUDE_MESSAGE_VILLE, construireMessageVille } from "../discord/messageVille";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { SALON_FONDER_COLONIE } from "../discord/structure";
-import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "../discord/texteLibre";
+import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteLibre";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
@@ -87,23 +88,19 @@ const command: Command = {
       },
     });
 
+    // Message de recrutement avec les boutons Rejoindre / Quitter / Fonder / Annuler
     const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);
     if (salon) {
-      const message = await salon.send({
-        content:
-          `**${nom}** est en cours de création par ${interaction.user} !\n` +
-          `Métier du fondateur : ${metier ? NOM_METIER[metier] : "sans métier"}\n` +
-          "Utilisez `/rejoindre` pour la rejoindre." +
-          (projet ? `\n\n**Projet de ville :**\n${enCitation(projet)}` : ""),
-        // Le texte libre ne doit pas pouvoir mentionner @everyone ou d'autres joueurs
-        allowedMentions: { users: [interaction.user.id] },
-      });
+      const villeMessage = await prisma.ville.findUniqueOrThrow({ where: { id: ville.id }, include: INCLUDE_MESSAGE_VILLE });
+      const message = await salon.send(construireMessageVille(villeMessage));
       await prisma.ville.update({ where: { id: ville.id }, data: { messageAnnonceId: message.id } });
     }
 
     await soumission.editReply(
-      `Ville **${nom}** créée${salon ? "" : " (le salon #fonder-une-colonie est introuvable, pensez à lancer /init)"}. ` +
-        "Utilisez `/fonder-ville` quand vous êtes prêt à lancer la partie.",
+      salon
+        ? `Ville **${nom}** créée : ${salon}. Les demandes d'inscription arriveront dans #nouvel-arrivant ; ` +
+            "utilisez le bouton « Fonder la ville » quand vous êtes prêt à lancer la partie."
+        : `Ville **${nom}** créée, mais le salon #fonder-une-colonie est introuvable : un admin doit lancer /init.`,
     );
   },
 };

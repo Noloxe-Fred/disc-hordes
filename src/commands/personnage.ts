@@ -23,7 +23,7 @@ const command: Command = {
 
     if (!joueur || !joueur.ville) {
       await interaction.reply({
-        content: "Vous n'avez pas de personnage actif. Utilisez `/creer-ville` ou `/rejoindre`.",
+        content: "Vous n'avez pas de personnage actif. Créez une ville avec `/creer-ville` ou rejoignez-en une depuis #fonder-une-colonie.",
         ephemeral: true,
       });
       return;

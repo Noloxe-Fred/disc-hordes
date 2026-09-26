@@ -2,6 +2,8 @@ import { StatutDemande } from "@prisma/client";
 import type { ButtonInteraction } from "discord.js";
 import { JOUEURS_MAX_PAR_VILLE, NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../config/metiers";
 import { prisma } from "../db";
+import { gererBoutonVille } from "./boutonsVille";
+import { rafraichirMessageVille } from "./messageVille";
 
 async function gererDemande(interaction: ButtonInteraction, action: "accepter" | "refuser", idBrut: string) {
   const demandeId = Number(idBrut);
@@ -73,11 +75,17 @@ async function gererDemande(interaction: ButtonInteraction, action: "accepter" |
     content: `✅ <@${demande.utilisateur.discordId}> a rejoint **${demande.ville.nom}** !`,
     components: [],
   });
+
+  if (interaction.guild) await rafraichirMessageVille(interaction.guild, demande.villeId);
 }
 
 export async function gererBouton(interaction: ButtonInteraction) {
   const [prefixe, action, id] = interaction.customId.split(":");
-  if (prefixe !== "demande" || (action !== "accepter" && action !== "refuser") || !id) return;
+  if (!action || !id) return;
 
-  await gererDemande(interaction, action, id);
+  if (prefixe === "demande" && (action === "accepter" || action === "refuser")) {
+    await gererDemande(interaction, action, id);
+  } else if (prefixe === "ville") {
+    await gererBoutonVille(interaction, action, id);
+  }
 }

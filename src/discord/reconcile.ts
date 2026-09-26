@@ -49,6 +49,34 @@ export async function supprimerRole(guild: Guild, cle: string): Promise<void> {
   await prisma.ressourceDiscord.delete({ where: { guildId_cle: { guildId: guild.id, cle } } });
 }
 
+// Supprime sur Discord puis en base toutes les ressources dont la cle est listee ou commence par
+// un des prefixes. Salons d'abord, categories ensuite (une categorie non vide ne se supprime pas
+// proprement), roles en dernier.
+export async function supprimerRessources(guild: Guild, cles: string[], prefixes: string[] = []): Promise<void> {
+  const ressources = await prisma.ressourceDiscord.findMany({
+    where: {
+      guildId: guild.id,
+      OR: [{ cle: { in: cles } }, ...prefixes.map((prefixe) => ({ cle: { startsWith: prefixe } }))],
+    },
+  });
+
+  const ordre: TypeRessourceDiscord[] = [
+    TypeRessourceDiscord.SALON,
+    TypeRessourceDiscord.CATEGORIE,
+    TypeRessourceDiscord.ROLE,
+  ];
+  for (const type of ordre) {
+    for (const ressource of ressources.filter((r) => r.type === type)) {
+      const cible =
+        type === TypeRessourceDiscord.ROLE
+          ? await guild.roles.fetch(ressource.discordId).catch(() => null)
+          : await guild.channels.fetch(ressource.discordId).catch(() => null);
+      await cible?.delete().catch((error) => console.error(`Suppression de ${ressource.cle} impossible`, error));
+      await prisma.ressourceDiscord.delete({ where: { id: ressource.id } });
+    }
+  }
+}
+
 export async function ensureCategory(
   guild: Guild,
   cle: string,

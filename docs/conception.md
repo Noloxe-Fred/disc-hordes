@@ -9,14 +9,14 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 ## 1. Structure Discord
 
 **Catégorie "Ville"** : mairie, place publique, chantiers, atelier, puits, maisons privées, **un salon vocal général lié au rôle-ville**.
-**Catégorie "Territoires externes"** : un salon par zone (ville en ruines, forêt, marécages, montagnes, etc.) — **partagée entre les villes d'un même groupe** (voir section Multi-villes ci-dessous). Pas de vocal par zone.
-**Catégorie "Disc'Hordes"** (publique, créée par `/init`) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs).
-**Catégorie "Admin-MJ"**, incluant un salon règles créé automatiquement par `/init`, un salon de signalements (voir section 4), un salon `discussion-mj` pour la coordination entre MJ, et un salon `gestion` réservé aux Admins. Les salons de la catégorie accessibles aux MJ le sont aussi aux Admins.
+**Catégorie "Territoires externes"** (une par groupe de villes, créée à la fondation de la première ville du groupe) : 12 salons de zone, un par type de zone (ville en ruines, forêt, marécages, montagnes) et par palier (proche, moyenne, éloignée), ex. `forêt-proche` — **partagée entre les villes d'un même groupe** (voir section Multi-villes ci-dessous). La catégorie n'est visible que par les rôles-ville du groupe ; chaque salon de zone reste masqué tant que le joueur ne s'y est pas déplacé. Pas de vocal par zone.
+**Catégorie "Disc'Hordes"** (publique, créée par `/init`) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs), salon `règles` et salon `commémoration` (récapitulatifs des villes tombées) — ces deux derniers en lecture seule, seuls MJ et Admins y écrivent.
+**Catégorie "Admin-MJ"**, incluant un salon de signalements (voir section 4), un salon `discussion-mj` pour la coordination entre MJ, et un salon `gestion` réservé aux Admins. Les salons de la catégorie accessibles aux MJ le sont aussi aux Admins.
 
 **Rôles** :
 - **Citoyen** : appartenance générale à une ville.
-- **Rôle-ville** (créé à `/fonder-ville`, un par ville) : donne la visibilité de la catégorie "Territoires externes" du groupe auquel la ville appartient, et la visibilité/écriture de base dans sa propre catégorie Ville.
-- **Position:<zone>** (ex. Position:Forêt) : rôle **global**, pas dupliqué par ville ni par groupe — donne le droit d'écrire dans le salon de la zone précise (overwrite au niveau salon, qui prime sur la visibilité de catégorie donnée par le rôle-ville). Comme les rôles de zone sont globaux mais que la visibilité de catégorie est filtrée par rôle-ville, il n'y a pas de fuite entre groupes malgré ce partage — et le nombre de rôles ne scale ni avec le nombre de villes ni avec le nombre de groupes.
+- **Rôle-ville** (créé à la fondation de la ville, un par ville) : donne la visibilité de la catégorie "Territoires externes" du groupe auquel la ville appartient, et la visibilité/écriture de base dans sa propre catégorie Ville.
+- **Position:<zone>** (ex. `Position:Forêt proche · G1`) : rôle **propre à une zone d'un groupe** (12 par groupe, créés avec les territoires externes du groupe) — seul accès (lecture et écriture) au salon de la zone précise, attribué au joueur qui s'y déplace et retiré quand il en part. Un rôle de position ne donne donc jamais accès aux zones d'un autre groupe. Contrepartie : le nombre de rôles croît avec le nombre de groupes (Discord limite un serveur à 250 rôles ; avec 15 rôles par groupe — 12 positions + 3 rôles-ville — et les rôles fixes, le plafond est d'environ 16 groupes, soit 48 villes simultanées).
 - **Radio** : géré automatiquement par le bot selon la possession de l'objet radio en inventaire (ajout/retrait synchronisé, pas de commande d'activation). Permet de garder le droit d'écrire dans les salons de Ville même en étant positionné en territoire externe (normalement perdu en partant).
 - **Mort**.
 - **MJ** : animation et arbitrage du jeu ; accès aux salons MJ de la catégorie Admin-MJ.
@@ -37,10 +37,11 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 ### Multi-villes (activé dès la V1)
 
 - Jusqu'à **3 villes max** partagent les mêmes territoires externes, regroupées en **groupes fixes**.
-- À `/fonder-ville`, la nouvelle ville rejoint un groupe existant ayant moins de 3 villes, sinon crée un nouveau groupe (nouveaux salons de territoires externes + nouveaux rôles de zone si besoin).
+- À la fondation, la nouvelle ville rejoint un groupe existant ayant moins de 3 villes, sinon crée un nouveau groupe (nouveaux salons de territoires externes + nouveaux rôles de zone si besoin).
 - **Le groupe reste figé une fois formé** : si une ville du groupe tombe, sa place ne se libère pas — aucune nouvelle ville ne rejoint ce groupe après coup, même redescendu à 1 ou 2 villes actives.
 - Un joueur peut changer de ville : vote dans la ville accueillante après qu'un candidat croisé en territoire externe ait été rapporté ; même système de vote que l'élection du maire.
-- **Chute d'une ville** : fin de partie pour cette ville — affichage des stats de fin de partie **et** nettoyage de son rôle-ville et de tout ce qui en dépend.
+- **Chute d'une ville** : déclenchée par la mort de son dernier habitant vivant, quelle qu'en soit la cause (attaque nocturne, combat en territoire externe, faim, soif, infection) — fin de partie pour cette ville, récapitulatif posté dans `commémoration`. Ses salons et son rôle-ville restent en place tant que d'autres villes du groupe sont en jeu.
+- **Chute de la dernière ville d'un groupe** : suppression de tout ce qui appartient au groupe — rôles-ville, catégories Ville et leurs salons, catégorie "Territoires externes", salons de zone et rôles Position du groupe.
 
 ---
 
@@ -134,16 +135,18 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
-- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons `général`, `fonder-une-colonie` et `nouvel-arrivant`), du salon règles, du salon de signalements, du salon `discussion-mj` et du salon `gestion`
+- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons `général`, `fonder-une-colonie`, `nouvel-arrivant`, `règles` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : explique le concept et redirige vers `fonder-une-colonie`
-- **Message d'accueil** posté au joueur au moment où il rejoint effectivement une ville via `/fonder-ville` : résume les bases (PA, faim/soif, `/action`, `/aide`)
+- **Message d'accueil** posté au joueur au moment où il rejoint effectivement une ville, à sa fondation : résume les bases (PA, faim/soif, `/action`, `/aide`)
 
 ### Commandes pré-jeu (salon dédié "fonder-une-colonie", catégorie "Disc'Hordes", créé via `/init`)
-- `/creer-ville` : création d'une ville, paramètres = nom de la ville et métier du créateur ; ouvre un formulaire facultatif où le créateur expose son **projet de ville** (1000 caractères max), repris dans l'annonce postée sur `fonder-une-colonie`
-- `/rejoindre` : liste sélectionnable des villes en cours de création ; le joueur choisit un métier (grisé si complet) ou "simple citoyen" ; remplit un formulaire facultatif de **motivations** (1000 caractères max) ; la demande est postée dans le salon `nouvel-arrivant` en mentionnant le créateur de la ville et le joueur (avec métier choisi et motivations) pour validation manuelle — pas d'inscription à la volée, le créateur peut refuser ; pas de délai automatique de réponse en V1, le joueur peut annuler sa demande pour la déposer ailleurs
-- `/fonder-ville` : réservée au créateur de la ville, lance le jeu — création de la catégorie au nom de la ville puis des salons, accessibles aux membres ayant rejoint ; création du rôle-ville et rattachement à un groupe de territoires externes (existant ou nouveau, voir section 1) ; le créateur devient automatiquement le premier maire (mandat de 4 cycles, destituable ensuite comme n'importe quel maire) ; **minimum de 3 habitants** pour lancer (voir document d'équilibrage), sauf si le créateur a le rôle MJ ou Admin, qui peut fonder avec moins (y compris seul, pour les tests) ; on ne peut plus rejoindre une ville après lancement, sauf déménagement depuis une autre ville en jeu ; une fois la ville fondée, ses messages de création/inscription sont supprimés/archivés du salon commun
+- `/creer-ville` : seule commande pré-jeu. Paramètres = nom de la ville et métier du créateur ; ouvre un formulaire facultatif où le créateur expose son **projet de ville** (1000 caractères max). Poste dans `fonder-une-colonie` un **message de ville** (Components V2) : nom, créateur, projet, liste des inscrits avec leur métier (mise à jour à chaque arrivée/départ), et quatre boutons :
+  - **Rejoindre la ville** (tout utilisateur non engagé dans une ville ni ayant une demande en attente) : choix du métier (seuls les métiers encore libres sont proposés) ou "simple citoyen", puis formulaire facultatif de **motivations** (1000 caractères max) ; la demande est postée dans le salon `nouvel-arrivant` en mentionnant le créateur de la ville et le joueur (avec métier choisi et motivations), avec des boutons Accepter/Refuser réservés au créateur — pas d'inscription à la volée ; pas de délai automatique de réponse en V1
+  - **Quitter la ville** (inscrits, hors créateur) : quitte la ville avant sa fondation, ou retire sa demande en attente pour la déposer ailleurs
+  - **Fonder la ville** (créateur) : lance le jeu — création de la catégorie au nom de la ville puis des salons, accessibles aux membres ayant rejoint ; création du rôle-ville et rattachement à un groupe de territoires externes (existant ou nouveau, voir section 1), dont la catégorie et les 12 salons de zone sont créés s'ils n'existent pas encore ; le créateur devient automatiquement le premier maire (mandat de 4 cycles, destituable ensuite comme n'importe quel maire) ; **minimum de 3 habitants** pour lancer (voir document d'équilibrage), sauf si le créateur a le rôle MJ ou Admin, qui peut fonder avec moins (y compris seul, pour les tests) ; on ne peut plus rejoindre une ville après lancement, sauf déménagement depuis une autre ville en jeu ; les demandes encore en attente sont refusées, et le message de ville ainsi que les demandes postées dans `nouvel-arrivant` sont supprimés
+  - **Annuler la ville** (créateur, ou MJ/Admin) : après confirmation, supprime la ville, ses inscriptions, ses demandes et leurs messages. Aucun rôle n'est attribué avant la fondation, il n'y a donc rien à retirer aux inscrits
 - Nombre de joueurs max par ville : **15** (évolutif)
 
 ### Commandes admin
@@ -249,8 +252,8 @@ Règles :
 ## 8. Fin de partie
 
 - Format infini/survie : pas de durée fixe, l'objectif est de tenir le plus longtemps possible
-- La ville tombe quand les attaques de zombies deviennent trop fortes chaque nuit (augmentation progressive) ; reset possible, utile en V1 pendant l'équilibrage
-- Stats de fin de partie postées dans un salon dédié "Une Ville Tombe", avec récapitulatif détaillé ; déclenche aussi le nettoyage du rôle-ville et de tout ce qui en dépend
+- La ville tombe à la mort de son dernier habitant vivant — en pratique surtout quand les attaques de zombies deviennent trop fortes chaque nuit (augmentation progressive) ; reset possible, utile en V1 pendant l'équilibrage
+- Stats de fin de partie postées dans le salon `commémoration` (catégorie "Disc'Hordes") : dates de fondation et de chute, nuits survécues, dernier maire, plus forte attaque subie, dernier survivant, et liste des habitants avec métier et cause de mort ; si c'était la dernière ville de son groupe, déclenche aussi la suppression des rôles et salons du groupe (voir section 1)
 - Classement entre villes (nommées par les joueurs), classées par nombre de cycles tenus ; historique des joueurs ayant fait partie des villes visitées
 - Scénarios avec objectifs et gestion narrative par IA envisagés en V2, le temps de tester les fonctionnalités de base
 

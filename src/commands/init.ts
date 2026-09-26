@@ -9,6 +9,7 @@ import {
   ROLE_MJ,
   ROLES_DESIRES,
   ROLES_OBSOLETES,
+  SALON_COMMEMORATION,
   SALON_DISCUSSION_MJ,
   SALON_FONDER_COLONIE,
   SALON_GENERAL,
@@ -63,12 +64,6 @@ const command: Command = {
 
     const categorieAdminMJ = await ensureCategory(guild, CATEGORIE_ADMIN_MJ.cle, CATEGORIE_ADMIN_MJ.nom, overwritesMJ);
 
-    await ensureTextChannel(guild, SALON_REGLES.cle, SALON_REGLES.nom, categorieAdminMJ.id, [
-      { id: everyoneId, allow: [PermissionFlagsBits.ViewChannel], deny: [PermissionFlagsBits.SendMessages] },
-      { id: mjId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-      { id: adminId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-    ]);
-
     await ensureTextChannel(guild, SALON_SIGNALEMENTS.cle, SALON_SIGNALEMENTS.nom, categorieAdminMJ.id, overwritesMJ);
     await ensureTextChannel(guild, SALON_DISCUSSION_MJ.cle, SALON_DISCUSSION_MJ.nom, categorieAdminMJ.id, overwritesMJ);
     await ensureTextChannel(guild, SALON_GESTION.cle, SALON_GESTION.nom, categorieAdminMJ.id, overwritesAdmin);
@@ -79,10 +74,24 @@ const command: Command = {
     await ensureTextChannel(guild, SALON_NOUVEL_ARRIVANT.cle, SALON_NOUVEL_ARRIVANT.nom, categorieDiscHordes.id, [
       { id: everyoneId, deny: [PermissionFlagsBits.SendMessages] },
     ]);
+    // Salons publics en lecture seule : seuls MJ et Admins (et le bot) y ecrivent
+    const overwritesLectureSeule: OverwriteResolvable[] = [
+      { id: everyoneId, allow: [PermissionFlagsBits.ViewChannel], deny: [PermissionFlagsBits.SendMessages] },
+      { id: mjId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+      { id: adminId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+    ];
+    await ensureTextChannel(guild, SALON_REGLES.cle, SALON_REGLES.nom, categorieDiscHordes.id, overwritesLectureSeule);
+    await ensureTextChannel(
+      guild,
+      SALON_COMMEMORATION.cle,
+      SALON_COMMEMORATION.nom,
+      categorieDiscHordes.id,
+      overwritesLectureSeule,
+    );
 
     await interaction.editReply(
-      "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (règles + signalements + discussion-mj + gestion) " +
-        "et catégorie Disc'Hordes (général + fonder-une-colonie + nouvel-arrivant).",
+      "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (signalements + discussion-mj + gestion) " +
+        "et catégorie Disc'Hordes (général + fonder-une-colonie + nouvel-arrivant + règles + commémoration).",
     );
   },
 };

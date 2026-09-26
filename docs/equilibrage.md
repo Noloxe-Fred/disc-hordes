@@ -10,13 +10,13 @@ Base de référence : ville de **15 joueurs max**, cycle de **48h réelles** (24
 
 ## 1. Points d'action (PA)
 
-Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le PA max individuel n'est plus une constante universelle, mais il reste fixe pour un joueur donné une fois attribué**. On fixe un budget total dont une ville a besoin par phase, ce budget est réparti à parts égales entre les habitants présents **au lancement de la ville** (`/fonder-ville`), et cette valeur individuelle ne bouge plus ensuite pour la durée de la partie.
+Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le PA max individuel n'est plus une constante universelle, mais il reste fixe pour un joueur donné une fois attribué**. On fixe un budget total dont une ville a besoin par phase, ce budget est réparti à parts égales entre les habitants présents **au lancement de la ville** (bouton « Fonder la ville »), et cette valeur individuelle ne bouge plus ensuite pour la durée de la partie.
 
 ### Budget de ville — PA cible
 - **PA cible par ville et par phase : 180.** Cette valeur représente ce qu'une ville a besoin de pouvoir produire collectivement pour fonctionner (chantiers, défense, exploration) — elle ne dépend pas du nombre d'habitants, c'est un paramètre de conception fixe (ajustable en admin plus tard si besoin).
 - **PA max individuel = floor(180 ÷ nombre d'habitants présents au lancement de la ville)**, plafonné à **40 PA** pour éviter qu'une ville lancée très réduite (1 à 4 fondateurs) n'obtienne des PA individuels absurdes.
-- **Minimum de 3 habitants pour lancer une ville** (`/fonder-ville`). Exception : un créateur ayant le rôle MJ ou Admin peut fonder en dessous de ce minimum (villes de test) ; les lignes 1 et 2 du tableau ci-dessous ne concernent donc que ce cas.
-- **Ce calcul n'a lieu qu'une seule fois, à `/fonder-ville`.** Il n'est **jamais recalculé** ensuite, ni pour les morts, ni pour les départs (`/quitter-ville`, exclusion), ni pour les arrivées. La perte ou le gain d'habitants change la capacité collective réelle de la ville, mais ne modifie le PA max d'aucun joueur individuel déjà présent.
+- **Minimum de 3 habitants pour lancer une ville** (bouton « Fonder la ville »). Exception : un créateur ayant le rôle MJ ou Admin peut fonder en dessous de ce minimum (villes de test) ; les lignes 1 et 2 du tableau ci-dessous ne concernent donc que ce cas.
+- **Ce calcul n'a lieu qu'une seule fois, à la fondation de la ville.** Il n'est **jamais recalculé** ensuite, ni pour les morts, ni pour les départs (`/quitter-ville`, exclusion), ni pour les arrivées. La perte ou le gain d'habitants change la capacité collective réelle de la ville, mais ne modifie le PA max d'aucun joueur individuel déjà présent.
 
 | Habitants au lancement | PA max/joueur (floor(180/N), plafond 40) | PA collectif théorique au lancement |
 |---|---|---|
@@ -32,7 +32,7 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 
 **Lecture** : le PA max individuel dépend uniquement de la taille de la ville **au moment où elle a été fondée**. Une ville lancée à 15 aura des citoyens à 12 PA pour toute la partie, même si elle retombe ensuite à 5 survivants (elle perd alors de la capacité collective réelle, sans que les survivants en soient individuellement compensés). Inversement, une ville lancée petite conserve des individus puissants même si elle grossit ensuite par déménagement. C'est ce budget de 180 (au format plein, N≥5) qui a servi de base à tous les coûts de chantiers de la section 7.
 
-**Déménagement (`/rejoindre` une ville en cours de recrutement, ou changement de ville en cours de partie)** : le joueur garde le PA max qu'il avait déjà — jamais recalculé sur la base de la nouvelle ville. Un fondateur venu d'une ville de 15 (12 PA) qui rejoint ensuite une ville de 5 (36 PA) reste à 12 PA, et inversement. Ça crée volontairement une hétérogénéité durable entre citoyens d'une même ville selon leur ville d'origine.
+**Déménagement (rejoindre une ville en cours de recrutement, ou changement de ville en cours de partie)** : le joueur garde le PA max qu'il avait déjà — jamais recalculé sur la base de la nouvelle ville. Un fondateur venu d'une ville de 15 (12 PA) qui rejoint ensuite une ville de 5 (36 PA) reste à 12 PA, et inversement. Ça crée volontairement une hétérogénéité durable entre citoyens d'une même ville selon leur ville d'origine.
 
 ### Modificateurs (exprimés en % du PA max individuel calculé ci-dessus, pas en valeur fixe — pour rester cohérents quel que soit le PA de base du joueur)
 | État | Effet |

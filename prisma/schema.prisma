@@ -24,6 +24,15 @@ enum Metier {
   DIPLOMATE
 }
 
+// Causes de mort d'un joueur ; la mort du dernier habitant vivant fait tomber la ville.
+enum CauseMort {
+  ATTAQUE_NOCTURNE
+  COMBAT_EXTERIEUR
+  FAIM
+  SOIF
+  INFECTION
+}
+
 enum StatutJoueur {
   VIVANT
   MORT // mort "classique", devient une ame jouable (conception.md §3)
@@ -396,6 +405,9 @@ model Joueur {
   xp             Int          @default(0)
   dateArrivee    DateTime     @default(now())
   dateSortie     DateTime?
+  // Renseignes a la mort (MORT ou ZOMBIFIE) ; servent au recapitulatif de chute de la ville.
+  dateMort       DateTime?
+  causeMort      CauseMort?
 
   utilisateur       Utilisateur        @relation(fields: [utilisateurId], references: [id])
   ville             Ville?             @relation("HabitantsVille", fields: [villeId], references: [id])
