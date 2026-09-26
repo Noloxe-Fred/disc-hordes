@@ -17,7 +17,9 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - **Rôle-ville** (créé à `/fonder-ville`, un par ville) : donne la visibilité de la catégorie "Territoires externes" du groupe auquel la ville appartient, et la visibilité/écriture de base dans sa propre catégorie Ville.
 - **Position:<zone>** (ex. Position:Forêt) : rôle **global**, pas dupliqué par ville ni par groupe — donne le droit d'écrire dans le salon de la zone précise (overwrite au niveau salon, qui prime sur la visibilité de catégorie donnée par le rôle-ville). Comme les rôles de zone sont globaux mais que la visibilité de catégorie est filtrée par rôle-ville, il n'y a pas de fuite entre groupes malgré ce partage — et le nombre de rôles ne scale ni avec le nombre de villes ni avec le nombre de groupes.
 - **Radio** : géré automatiquement par le bot selon la possession de l'objet radio en inventaire (ajout/retrait synchronisé, pas de commande d'activation). Permet de garder le droit d'écrire dans les salons de Ville même en étant positionné en territoire externe (normalement perdu en partant).
-- **Infecté**, **Mort**, **MJ/Admin**.
+- **Mort**, **MJ/Admin**.
+- Couleurs des rôles fixes posés par `/init` : Citoyen vert, Mort rouge, MJ/Admin or, Radio bleu.
+- **Pas de rôle Infecté** : l'infection est cachée (seul le joueur le sait, voir Blessures & infection), elle est donc stockée uniquement en base et jamais exposée via un rôle Discord visible des autres joueurs.
 
 - Se déplacer entre zones = changement de rôle Discord (accès/retrait de salon)
 - Déplacement par **adjacence** : on traverse les zones intermédiaires plutôt que de sauter directement, pour permettre des événements en chemin et complexifier l'accès aux zones éloignées

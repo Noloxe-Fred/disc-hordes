@@ -15,16 +15,31 @@ async function saveRessource(guildId: string, cle: string, type: TypeRessourceDi
   });
 }
 
-export async function ensureRole(guild: Guild, cle: string, nom: string): Promise<Role> {
+// Sans couleur, le role garde la couleur par defaut de Discord (et on ne touche pas a l'existant).
+export async function ensureRole(guild: Guild, cle: string, nom: string, couleur?: number): Promise<Role> {
   const discordId = await getDiscordId(guild.id, cle);
   if (discordId) {
     const role = await guild.roles.fetch(discordId).catch(() => null);
-    if (role) return role;
+    if (role) {
+      if (couleur !== undefined && role.colors.primaryColor !== couleur) await role.setColors({ primaryColor: couleur });
+      return role;
+    }
   }
 
-  const role = await guild.roles.create({ name: nom });
+  const role = await guild.roles.create({
+    name: nom,
+    colors: couleur !== undefined ? { primaryColor: couleur } : undefined,
+  });
   await saveRessource(guild.id, cle, TypeRessourceDiscord.ROLE, role.id);
   return role;
+}
+
+export async function supprimerRole(guild: Guild, cle: string): Promise<void> {
+  const discordId = await getDiscordId(guild.id, cle);
+  if (!discordId) return;
+  const role = await guild.roles.fetch(discordId).catch(() => null);
+  if (role) await role.delete();
+  await prisma.ressourceDiscord.delete({ where: { guildId_cle: { guildId: guild.id, cle } } });
 }
 
 export async function ensureCategory(

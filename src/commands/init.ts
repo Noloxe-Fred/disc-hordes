@@ -1,7 +1,14 @@
 import { PermissionFlagsBits, SlashCommandBuilder, type OverwriteResolvable, type Role } from "discord.js";
 import type { Command } from "../client";
-import { ensureCategory, ensureRole, ensureTextChannel } from "../discord/reconcile";
-import { CATEGORIE_ADMIN_MJ, ROLES_DESIRES, SALON_FONDER_COLONIE, SALON_REGLES, SALON_SIGNALEMENTS } from "../discord/structure";
+import { ensureCategory, ensureRole, ensureTextChannel, supprimerRole } from "../discord/reconcile";
+import {
+  CATEGORIE_ADMIN_MJ,
+  ROLES_DESIRES,
+  ROLES_OBSOLETES,
+  SALON_FONDER_COLONIE,
+  SALON_REGLES,
+  SALON_SIGNALEMENTS,
+} from "../discord/structure";
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -19,8 +26,11 @@ const command: Command = {
     await interaction.deferReply({ ephemeral: true });
 
     const roles: Record<string, Role> = {};
-    for (const { cle, nom } of ROLES_DESIRES) {
-      roles[cle] = await ensureRole(guild, cle, nom);
+    for (const { cle, nom, couleur } of ROLES_DESIRES) {
+      roles[cle] = await ensureRole(guild, cle, nom, couleur);
+    }
+    for (const cle of ROLES_OBSOLETES) {
+      await supprimerRole(guild, cle);
     }
 
     const mjAdminId = roles["role:mj-admin"].id;
