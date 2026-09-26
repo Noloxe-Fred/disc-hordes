@@ -1,8 +1,8 @@
-import { MessageFlags, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../client";
 import { estMjOuAdmin } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
-import { lierSalons, lireMessagesRegles } from "../discord/reglesJoueurs";
+import { construireSommaire, lierSalons, lireMessagesRegles } from "../discord/reglesJoueurs";
 import {
   SALON_ANNONCES,
   SALON_COMMEMORATION,
@@ -11,6 +11,8 @@ import {
   SALON_NOUVEL_ARRIVANT,
   SALON_REGLES,
 } from "../discord/structure";
+
+const COULEUR_SOMMAIRE = 0x2ecc71;
 
 const SALONS_LIABLES = [
   SALON_GENERAL,
@@ -68,12 +70,24 @@ const command: Command = {
       if (salon) salons.set(nom, salon.id);
     }
 
+    // Sommaire poste en premier (sans liens), puis complete une fois les messages publies et leurs liens connus
+    const embedSommaire = (liens: (string | null)[]) =>
+      new EmbedBuilder()
+        .setTitle("📖 Sommaire")
+        .setColor(COULEUR_SOMMAIRE)
+        .setDescription(construireSommaire(messages, liens))
+        .setFooter({ text: "Cliquez sur un titre pour aller à la section." });
+    const sommaire = await salonRegles.send({ embeds: [embedSommaire(messages.map(() => null))] });
+    const liens: string[] = [];
     for (const message of messages) {
-      await salonRegles.send({ content: lierSalons(message, salons), allowedMentions: { parse: [] } });
+      const publie = await salonRegles.send({ content: lierSalons(message, salons), allowedMentions: { parse: [] } });
+      liens.push(publie.url);
     }
+    await sommaire.edit({ embeds: [embedSommaire(liens)] });
 
     await interaction.editReply(
-      `Règles mises à jour dans ${salonRegles} : ${aSupprimer.size} ancien(s) message(s) supprimé(s), ${messages.length} publié(s).`,
+      `Règles mises à jour dans ${salonRegles} : ${aSupprimer.size} ancien(s) message(s) supprimé(s), ` +
+        `sommaire + ${messages.length} message(s) publié(s).`,
     );
   },
 };
