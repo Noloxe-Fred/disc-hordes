@@ -155,6 +155,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - Nombre de joueurs max par ville : **15** (évolutif)
 
 ### Commandes admin
+- `/maj-règles` (MJ et Admins) : republie les règles joueurs dans le salon `règles` — supprime les anciens messages du bot dans ce salon puis poste le contenu à jour de `docs/regles-joueurs.md` (un message Discord par bloc, noms de salons transformés en liens)
 - Effacer une ville en cours de création (accessible au créateur de la ville et aux admins)
 - **Format retenu** : une commande unique par famille, ouvrant une interface **Components V2** avec un bouton par action (plutôt que des commandes séparées par action). Ciblage (quel joueur/quelle ville/quel objet) via **menu déroulant** après le clic sur le bouton, jamais de champ texte à taper. **Confirmation obligatoire** (bouton) avant toute action destructive (effacer ville, forcer chute, reset).
 

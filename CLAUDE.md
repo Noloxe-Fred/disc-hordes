@@ -17,4 +17,5 @@ Stack : Node.js/TypeScript, hébergé sur TeoHeberg (panel Pterodactyl), MySQL.
 ## Notes pour Claude Code
 
 - Toute nouvelle règle de jeu ou changement de valeur d'équilibrage doit être répercuté dans `docs/equilibrage.md`, pas seulement dans le code.
+- Les règles affichées aux joueurs vivent dans `docs/regles-joueurs.md` (publiées dans #règles par `/maj-règles`) : les mettre à jour à chaque mécanique ajoutée ou modifiée, en ne décrivant que ce qui fonctionne en jeu.
 - La table complète des rencontres humaines/bandits est explicitement hors scope V1 (voir section 11 du document d'équilibrage) — ne pas l'implémenter sans demande explicite.
