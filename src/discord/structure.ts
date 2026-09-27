@@ -1,10 +1,10 @@
 // Etat souhaite du serveur, tel que fixe par conception.md §1 et §4. Ne couvre que la
-// structure globale posee par /init : la categorie "Ville" et la categorie "Territoires
+// structure globale posee par l'initialisation (discord/initialisation.ts) : la categorie "Ville" et la categorie "Territoires
 // externes" d'un groupe sont creees dynamiquement a la fondation (bouton « Fonder la ville »), pas ici.
 
 export const ROLE_CITOYEN = { cle: "role:citoyen", nom: "Citoyen", couleur: 0x2ecc71 } as const; // vert : vivant
 export const ROLE_MORT = { cle: "role:mort", nom: "Mort", couleur: 0xc0392b } as const; // rouge
-// Staff : affiche a part en haut de la liste des membres, Admin au-dessus de MJ (voir /init)
+// Staff : affiche a part en haut de la liste des membres, Admin au-dessus de MJ (voir initialisation.ts)
 export const ROLE_MJ = { cle: "role:mj", nom: "MJ", couleur: 0xf1c40f, separe: true } as const; // or : staff jeu
 export const ROLE_ADMIN = { cle: "role:admin", nom: "Admin", couleur: 0xe67e22, separe: true } as const; // orange : staff serveur
 export const ROLE_RADIO = { cle: "role:radio", nom: "Radio", couleur: 0x3498db } as const; // bleu : ondes
@@ -21,11 +21,11 @@ export const ROLES_DESIRES: readonly { cle: string; nom: string; couleur: number
   ROLE_NOMADE,
 ];
 
-// Roles d'anciennes versions, supprimes par /init s'ils existent encore. L'infection est une info
+// Roles d'anciennes versions, supprimes a l'initialisation s'ils existent encore. L'infection est une info
 // cachee (Joueur.infecteDepuis) : un role Discord la rendrait visible de tous les joueurs.
 export const ROLES_OBSOLETES = ["role:infecte"] as const;
 
-// Cles renommees : /init reprend la ressource existante sous sa nouvelle cle (le role garde ses
+// Cles renommees : l'initialisation reprend la ressource existante sous sa nouvelle cle (le role garde ses
 // membres et est renomme/recolore par ensureRole). L'ancien role MJ/Admin devient le role MJ.
 export const CLES_RENOMMEES = [["role:mj-admin", ROLE_MJ.cle]] as const;
 

@@ -1,5 +1,5 @@
 <!--
-Règles affichées aux joueurs dans le salon #règles, publiées par la commande /maj-règles.
+Règles affichées aux joueurs dans le salon #règles, publiées par le bouton « Publier les règles » du panneau /moderation.
 - Chaque bloc séparé par la ligne de commentaire « nouveau message » devient un message Discord (2000 caractères max).
 - Les noms de salons (#général, #annonces, #règles, #fonder-une-colonie, #nouvel-arrivant, #commémoration)
   deviennent des liens cliquables à la publication.

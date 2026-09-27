@@ -106,7 +106,7 @@ const command: Command = {
       salon
         ? `Ville **${nom}** créée : ${salon}. Les demandes d'inscription arriveront dans #nouvel-arrivant ; ` +
             "utilisez le bouton « Fonder la ville » quand vous êtes prêt à lancer la partie."
-        : `Ville **${nom}** créée, mais le salon #fonder-une-colonie est introuvable : un admin doit lancer /init.`,
+        : `Ville **${nom}** créée, mais le salon #fonder-une-colonie est introuvable : un Admin doit initialiser le serveur (panneau /admin).`,
     );
   },
 };

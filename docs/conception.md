@@ -10,7 +10,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 
 **Catégorie "Ville"** : mairie, place publique, chantiers, atelier, puits, maisons privées, **un salon vocal général lié au rôle-ville**.
 **Catégorie "Territoires externes"** (une par groupe de villes, créée à la fondation de la première ville du groupe) : 12 salons de zone, un par type de zone (ville en ruines, forêt, marécages, montagnes) et par palier (proche, moyenne, éloignée), ex. `forêt-proche` — **partagée entre les villes d'un même groupe** (voir section Multi-villes ci-dessous). La catégorie n'est visible que par les rôles-ville du groupe ; chaque salon de zone reste masqué tant que le joueur ne s'y est pas déplacé. Pas de vocal par zone.
-**Catégorie "Disc'Hordes"** (publique, créée par `/init`) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs), salon `annonces`, salon `règles` et salon `commémoration` (récapitulatifs des villes tombées) — ces trois derniers consultables par tous, en lecture seule : seuls MJ et Admins y écrivent.
+**Catégorie "Disc'Hordes"** (publique, créée par l'initialisation du serveur) : salon `général` de discussion, salon `fonder-une-colonie` (commandes pré-jeu et annonces des villes en création), salon `nouvel-arrivant` (demandes d'inscription aux villes postées par le bot, en lecture seule pour les joueurs), salon `annonces`, salon `règles` et salon `commémoration` (récapitulatifs des villes tombées) — ces trois derniers consultables par tous, en lecture seule : seuls MJ et Admins y écrivent.
 **Catégorie "Admin-MJ"**, incluant un salon de signalements (voir section 4), un salon `discussion-mj` pour la coordination entre MJ, et un salon `gestion` réservé aux Admins. Les salons de la catégorie accessibles aux MJ le sont aussi aux Admins.
 
 **Rôles** :
@@ -19,11 +19,11 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - **Position:<zone>** (ex. `Position:Forêt proche · G1`) : rôle **propre à une zone d'un groupe** (12 par groupe, créés avec les territoires externes du groupe) — seul accès (lecture et écriture) au salon de la zone précise, attribué au joueur qui s'y déplace et retiré quand il en part. Un rôle de position ne donne donc jamais accès aux zones d'un autre groupe. Contrepartie : le nombre de rôles croît avec le nombre de groupes (Discord limite un serveur à 250 rôles ; avec 15 rôles par groupe — 12 positions + 3 rôles-ville — et les rôles fixes, le plafond est d'environ 16 groupes, soit 48 villes simultanées).
 - **Radio** : géré automatiquement par le bot selon la possession de l'objet radio en inventaire (ajout/retrait synchronisé, pas de commande d'activation). Permet de garder le droit d'écrire dans les salons de Ville même en étant positionné en territoire externe (normalement perdu en partant).
 - **Mort**.
-- **Nomade** : membre sans ville en jeu. Donné à chaque nouvel arrivant sur le serveur (et par `/init` aux membres déjà présents sans ville), retiré à la fondation de sa ville, rendu quand il quitte sa ville ou quand elle tombe. Mentionné dans l'annonce de chaque ville créée par `/creer-ville` (notification au premier envoi seulement).
+- **Nomade** : membre sans ville en jeu. Donné à chaque nouvel arrivant sur le serveur (et par l'initialisation du serveur aux membres déjà présents sans ville), retiré à la fondation de sa ville, rendu quand il quitte sa ville ou quand elle tombe. Mentionné dans l'annonce de chaque ville créée par `/creer-ville` (notification au premier envoi seulement).
 - **MJ** : animation et arbitrage du jeu ; accès aux salons MJ de la catégorie Admin-MJ.
 - **Admin** : gestion du serveur et du bot ; accès à tous les salons de la catégorie Admin-MJ, y compris `gestion` qui lui est réservé.
-- Admin et MJ sont placés par `/init` en haut de la liste des rôles (Admin au-dessus de MJ, juste sous le rôle du bot) et affichés séparément des autres membres.
-- Couleurs des rôles fixes posés par `/init` : Citoyen vert, Mort rouge, MJ or, Admin orange, Radio bleu, Nomade gris.
+- Admin et MJ sont placés par l'initialisation du serveur en haut de la liste des rôles (Admin au-dessus de MJ, juste sous le rôle du bot) et affichés séparément des autres membres.
+- Couleurs des rôles fixes posés par l'initialisation du serveur : Citoyen vert, Mort rouge, MJ or, Admin orange, Radio bleu, Nomade gris.
 - **Pas de rôle Infecté** : l'infection est cachée (seul le joueur le sait, voir Blessures & infection), elle est donc stockée uniquement en base et jamais exposée via un rôle Discord visible des autres joueurs.
 
 - Se déplacer entre zones = changement de rôle Discord (accès/retrait de salon)
@@ -140,13 +140,13 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
-- `/init` : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons, dans cet ordre : `général`, `annonces`, `règles`, `fonder-une-colonie`, `nouvel-arrivant` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
+- **Initialiser le serveur** (bouton du panneau `/admin`) : paramètre tout le Discord (salons, rôles, permissions) ; approche par **diff** entre état souhaité (config en base) et état réel du serveur, pour ne pas casser les salons "maison" ou les positions courantes en territoire externe — permet aussi une mise à jour simple, pas seulement une création initiale ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons, dans cet ordre : `général`, `annonces`, `règles`, `fonder-une-colonie`, `nouvel-arrivant` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : explique le concept et redirige vers `fonder-une-colonie`
 - **Message d'accueil** posté au joueur au moment où il rejoint effectivement une ville, à sa fondation : résume les bases (PA, faim/soif, `/action`, `/aide`)
 
-### Commandes pré-jeu (salon dédié "fonder-une-colonie", catégorie "Disc'Hordes", créé via `/init`)
+### Commandes pré-jeu (salon dédié "fonder-une-colonie", catégorie "Disc'Hordes", créé à l'initialisation du serveur)
 - `/creer-ville` : seule commande pré-jeu. Paramètres = nom de la ville et métier du créateur ; ouvre un formulaire facultatif où le créateur expose son **projet de ville** (1000 caractères max). Poste dans `fonder-une-colonie` un **message de ville** (Components V2) : nom, créateur, projet, liste des inscrits avec leur métier (mise à jour à chaque arrivée/départ), et quatre boutons :
   - **Rejoindre la ville** (tout utilisateur non engagé dans une ville ni ayant une demande en attente) : choix du métier (seuls les métiers encore libres sont proposés) ou "simple citoyen", puis formulaire facultatif de **motivations** (1000 caractères max) ; la demande est postée dans le salon `nouvel-arrivant` en mentionnant le créateur de la ville et le joueur (avec métier choisi et motivations), avec des boutons Accepter/Refuser réservés au créateur — pas d'inscription à la volée ; pas de délai automatique de réponse en V1
   - **Quitter la ville** (inscrits, hors créateur) : quitte la ville avant sa fondation, ou retire sa demande en attente pour la déposer ailleurs
@@ -155,9 +155,12 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - Nombre de joueurs max par ville : **15** (évolutif)
 
 ### Commandes admin
-- `/maj-règles` (MJ et Admins) : republie les règles joueurs dans le salon `règles` — supprime les anciens messages du bot dans ce salon puis poste un sommaire (embed dont chaque titre est un lien vers le message de la section) suivi du contenu à jour de `docs/regles-joueurs.md` (un message Discord par bloc, noms de salons transformés en liens)
+- `/moderation` (MJ et Admins) : ouvre un panneau de modération (Components V2, éphémère) dont chaque action est un bouton ; les droits sont revérifiés à chaque clic. Actions disponibles :
+  - **Publier les règles** : republie les règles joueurs dans le salon `règles` — supprime les anciens messages du bot dans ce salon puis poste un sommaire (embed dont chaque titre est un lien vers le message de la section) suivi du contenu à jour de `docs/regles-joueurs.md` (un message Discord par bloc, noms de salons transformés en liens)
 - Effacer une ville en cours de création (accessible au créateur de la ville et aux admins)
-- `/reset-base` (Admins uniquement, après confirmation) : efface toutes les parties — villes (en création, en jeu, tombées), joueurs, demandes, groupes et territoires — ainsi que leurs salons et rôles Discord (catégories Ville, Territoires externes, rôles-ville et Position), retire Citoyen et Mort et rend le rôle Nomade à tous. Conserve le catalogue (objets, recettes, succès) et la structure posée par `/init` ; les comptes joueurs et leurs succès sont conservés sauf avec l'option `comptes`
+- `/admin` (Admins uniquement) : ouvre un panneau d'administration (Components V2, éphémère) dont chaque action est un bouton ; les droits sont revérifiés à chaque clic. Actions disponibles :
+  - **Initialiser le serveur** : met en place ou à jour la structure fixe du serveur (voir plus haut)
+  - **Réinitialiser la base** (après confirmation) : efface toutes les parties — villes (en création, en jeu, tombées), joueurs, demandes, groupes et territoires — ainsi que leurs salons et rôles Discord (catégories Ville, Territoires externes, rôles-ville et Position), retire Citoyen et Mort et rend le rôle Nomade à tous. Conserve le catalogue (objets, recettes, succès) et la structure posée par l'initialisation du serveur. La confirmation propose « Effacer les parties » (comptes joueurs et succès obtenus conservés) ou « Effacer aussi les comptes »
 - **Format retenu** : une commande unique par famille, ouvrant une interface **Components V2** avec un bouton par action (plutôt que des commandes séparées par action). Ciblage (quel joueur/quelle ville/quel objet) via **menu déroulant** après le clic sur le bouton, jamais de champ texte à taper. **Confirmation obligatoire** (bouton) avant toute action destructive (effacer ville, forcer chute, reset).
 
 | Commande | Boutons/actions |

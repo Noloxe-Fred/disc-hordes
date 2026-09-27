@@ -533,11 +533,11 @@ model JournalEntree {
 }
 
 // =========================================================================
-// Structure Discord (/init)
+// Structure Discord (initialisation, panneau /admin)
 // =========================================================================
 
 // "Config en base" de conception.md §4 : associe chaque ressource Discord logique et fixe
-// (un role, un salon...) a l'id Discord reellement cree, pour que /init puisse comparer l'etat
+// (un role, un salon...) a l'id Discord reellement cree, pour que l'initialisation puisse comparer l'etat
 // souhaite a l'etat reel (diff) et mettre a jour sans dupliquer ni casser les salons "maison".
 model RessourceDiscord {
   id        Int                  @id @default(autoincrement())

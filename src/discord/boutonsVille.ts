@@ -179,7 +179,7 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
     content:
       `Demande envoyée pour rejoindre **${ville.nom}**. En attente de validation par le créateur ` +
       `(bouton « Quitter la ville » pour la retirer).` +
-      (salon ? "" : " (Salon #nouvel-arrivant introuvable : un admin doit lancer /init.)"),
+      (salon ? "" : " (Salon #nouvel-arrivant introuvable : un Admin doit initialiser le serveur (panneau /admin).)"),
     components: [],
   };
   if (soumission.isFromMessage()) await soumission.update(confirmation);

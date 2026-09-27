@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Texte des regles joueurs (docs/regles-joueurs.md), decoupe en messages Discord pour /maj-regles.
+// Texte des regles joueurs (docs/regles-joueurs.md), decoupe en messages Discord pour publicationRegles.ts.
 // Chemin valable depuis src/discord (dev) comme depuis dist/discord (build).
 const CHEMIN_REGLES = join(__dirname, "..", "..", "docs", "regles-joueurs.md");
 const SEPARATEUR = /^<!--\s*nouveau message\s*-->\s*$/m;
