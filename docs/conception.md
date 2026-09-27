@@ -157,6 +157,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 ### Commandes admin
 - `/maj-règles` (MJ et Admins) : republie les règles joueurs dans le salon `règles` — supprime les anciens messages du bot dans ce salon puis poste un sommaire (embed dont chaque titre est un lien vers le message de la section) suivi du contenu à jour de `docs/regles-joueurs.md` (un message Discord par bloc, noms de salons transformés en liens)
 - Effacer une ville en cours de création (accessible au créateur de la ville et aux admins)
+- `/reset-base` (Admins uniquement, après confirmation) : efface toutes les parties — villes (en création, en jeu, tombées), joueurs, demandes, groupes et territoires — ainsi que leurs salons et rôles Discord (catégories Ville, Territoires externes, rôles-ville et Position), retire Citoyen et Mort et rend le rôle Nomade à tous. Conserve le catalogue (objets, recettes, succès) et la structure posée par `/init` ; les comptes joueurs et leurs succès sont conservés sauf avec l'option `comptes`
 - **Format retenu** : une commande unique par famille, ouvrant une interface **Components V2** avec un bouton par action (plutôt que des commandes séparées par action). Ciblage (quel joueur/quelle ville/quel objet) via **menu déroulant** après le clic sur le bouton, jamais de champ texte à taper. **Confirmation obligatoire** (bouton) avant toute action destructive (effacer ville, forcer chute, reset).
 
 | Commande | Boutons/actions |
