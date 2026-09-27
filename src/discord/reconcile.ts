@@ -122,7 +122,7 @@ export async function ensureTextChannel(
     const salon = await guild.channels.fetch(discordId).catch(() => null);
     if (salon && salon.type === ChannelType.GuildText) {
       await salon.permissionOverwrites.set(overwrites);
-      if (salon.parentId !== parentId) await salon.setParent(parentId);
+      if (salon.parentId !== parentId) await salon.setParent(parentId, { lockPermissions: false });
       return salon;
     }
   }
@@ -162,7 +162,7 @@ export async function ensureVoiceChannel(
     const salon = await guild.channels.fetch(discordId).catch(() => null);
     if (salon && salon.type === ChannelType.GuildVoice) {
       await salon.permissionOverwrites.set(overwrites);
-      if (salon.parentId !== parentId) await salon.setParent(parentId);
+      if (salon.parentId !== parentId) await salon.setParent(parentId, { lockPermissions: false });
       return salon;
     }
   }

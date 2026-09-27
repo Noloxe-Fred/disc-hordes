@@ -112,10 +112,15 @@ const command: Command = {
         overwritesLectureSeule,
       ),
     ];
-    // Categorie reprecisee : sans parent, Discord peut sortir un salon de sa categorie en le repositionnant
-    await guild.channels.setPositions(
-      salonsDiscHordes.map((channel, position) => ({ channel, position, parent: categorieDiscHordes.id })),
-    );
+    await guild.channels.setPositions(salonsDiscHordes.map((channel, position) => ({ channel, position })));
+    // Discord peut sortir un salon de sa categorie en le repositionnant, et refuse de changer la categorie de
+    // plusieurs salons dans le meme appel : verification et rattachement salon par salon
+    for (const salon of salonsDiscHordes) {
+      const aJour = await guild.channels.fetch(salon.id, { force: true }).catch(() => null);
+      if (aJour && "setParent" in aJour && aJour.parentId !== categorieDiscHordes.id) {
+        await aJour.setParent(categorieDiscHordes.id, { lockPermissions: false });
+      }
+    }
 
     // Role Nomade sur les membres deja presents : donne a ceux sans ville en jeu, retire aux autres
     const membres = await guild.members.fetch();
