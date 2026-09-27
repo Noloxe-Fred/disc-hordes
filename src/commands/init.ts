@@ -112,7 +112,10 @@ const command: Command = {
         overwritesLectureSeule,
       ),
     ];
-    await guild.channels.setPositions(salonsDiscHordes.map((channel, position) => ({ channel, position })));
+    // Categorie reprecisee : sans parent, Discord peut sortir un salon de sa categorie en le repositionnant
+    await guild.channels.setPositions(
+      salonsDiscHordes.map((channel, position) => ({ channel, position, parent: categorieDiscHordes.id })),
+    );
 
     // Role Nomade sur les membres deja presents : donne a ceux sans ville en jeu, retire aux autres
     const membres = await guild.members.fetch();
