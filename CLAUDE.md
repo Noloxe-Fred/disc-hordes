@@ -18,4 +18,5 @@ Stack : Node.js/TypeScript, hébergé sur TeoHeberg (panel Pterodactyl), MySQL.
 
 - Toute nouvelle règle de jeu ou changement de valeur d'équilibrage doit être répercuté dans `docs/equilibrage.md`, pas seulement dans le code.
 - Les règles affichées aux joueurs vivent dans `docs/regles-joueurs.md` (publiées dans #règles par le bouton « Publier les règles » du panneau `/moderation`) : les mettre à jour à chaque mécanique ajoutée ou modifiée, en ne décrivant que ce qui fonctionne en jeu.
+- **Interface des commandes** : aucune commande slash ne prend de paramètre. Toute saisie passe par des composants Discord — modals (champs texte, selects), boutons, selects et messages Components V2. Regrouper la saisie dans un seul modal quand c'est possible (un modal accepte champs texte et selects via des labels). Les actions admin/modération sont des boutons des panneaux `/admin` et `/moderation`, pas de nouvelles commandes.
 - La table complète des rencontres humaines/bandits est explicitement hors scope V1 (voir section 11 du document d'équilibrage) — ne pas l'implémenter sans demande explicite.

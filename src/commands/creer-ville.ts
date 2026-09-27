@@ -1,5 +1,13 @@
 import { Metier } from "@prisma/client";
-import { ActionRowBuilder, ModalBuilder, SlashCommandBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
+import {
+  LabelBuilder,
+  MessageFlags,
+  ModalBuilder,
+  SlashCommandBuilder,
+  StringSelectMenuBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from "discord.js";
 import type { Command } from "../client";
 import { NOM_METIER } from "../config/metiers";
 import { prisma } from "../db";
@@ -11,72 +19,88 @@ import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 const VALEUR_SANS_METIER = "AUCUN";
-const CHOIX_METIER = [
-  { name: "Simple citoyen (sans métier)", value: VALEUR_SANS_METIER },
-  ...Object.values(Metier).map((metier) => ({ name: NOM_METIER[metier], value: metier })),
-];
+const LONGUEUR_MAX_NOM = 50;
+
+// Formulaire unique de creation : nom, metier du createur et projet de ville (facultatif)
+function construireFormulaire(idFormulaire: string): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(idFormulaire)
+    .setTitle("Créer une ville")
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel("Nom de la ville")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("nom")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(LONGUEUR_MAX_NOM),
+        ),
+      new LabelBuilder()
+        .setLabel("Votre métier")
+        .setDescription("Le créateur est inscrit d'office dans sa ville")
+        .setStringSelectMenuComponent(
+          new StringSelectMenuBuilder()
+            .setCustomId("metier")
+            .setPlaceholder("Choisissez un métier")
+            .setRequired(true)
+            .addOptions(
+              { label: "Simple citoyen (sans métier)", value: VALEUR_SANS_METIER },
+              ...Object.values(Metier).map((metier) => ({ label: NOM_METIER[metier], value: metier })),
+            ),
+        ),
+      new LabelBuilder()
+        .setLabel("Projet de ville")
+        .setDescription("Ambiance, stratégie, rythme de jeu attendu... (facultatif)")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("projet")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false)
+            .setMaxLength(LONGUEUR_MAX_TEXTE_LIBRE),
+        ),
+    );
+}
 
 const command: Command = {
-  data: new SlashCommandBuilder()
-    .setName("creer-ville")
-    .setDescription("Crée une nouvelle ville en cours de recrutement")
-    .addStringOption((option) => option.setName("nom").setDescription("Nom de la ville").setRequired(true).setMaxLength(50))
-    .addStringOption((option) =>
-      option
-        .setName("metier")
-        .setDescription("Votre métier")
-        .setRequired(true)
-        .addChoices(...CHOIX_METIER),
-    ),
+  data: new SlashCommandBuilder().setName("creer-ville").setDescription("Crée une nouvelle ville en cours de recrutement"),
 
   async execute(interaction) {
     const guild = interaction.guild;
     if (!guild) {
-      await interaction.reply({ content: "Cette commande doit être utilisée sur un serveur.", ephemeral: true });
+      await interaction.reply({ content: "Cette commande doit être utilisée sur un serveur.", flags: MessageFlags.Ephemeral });
       return;
     }
-
-    const nom = interaction.options.getString("nom", true).trim();
-    const valeurMetier = interaction.options.getString("metier", true);
-    const metier = valeurMetier === VALEUR_SANS_METIER ? null : (valeurMetier as Metier);
 
     const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
 
     if (await utilisateurEstEngage(utilisateur.id)) {
       await interaction.reply({
         content: "Vous êtes déjà engagé dans une ville (en jeu ou en cours de création).",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    // Formulaire du projet de ville (facultatif) avant la creation
-    const idFormulaire = `projet-ville:${interaction.id}`;
-    await interaction.showModal(
-      new ModalBuilder()
-        .setCustomId(idFormulaire)
-        .setTitle("Projet de ville")
-        .addComponents(
-          new ActionRowBuilder<TextInputBuilder>().addComponents(
-            new TextInputBuilder()
-              .setCustomId("projet")
-              .setLabel(`Présentez votre projet pour ${nom}`.slice(0, 45))
-              .setPlaceholder("Ambiance, stratégie, rythme de jeu attendu... (facultatif)")
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(false)
-              .setMaxLength(LONGUEUR_MAX_TEXTE_LIBRE),
-          ),
-        ),
-    );
+    const idFormulaire = `creer-ville:${interaction.id}`;
+    await interaction.showModal(construireFormulaire(idFormulaire));
 
     const soumission = await interaction
       .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
       .catch(() => null);
     if (!soumission) return; // formulaire ferme ou delai depasse : rien n'est cree
 
+    const nom = soumission.fields.getTextInputValue("nom").trim();
+    const valeurMetier = soumission.fields.getStringSelectValues("metier")[0];
+    const metier = valeurMetier === VALEUR_SANS_METIER ? null : (valeurMetier as Metier);
     const projet = soumission.fields.getTextInputValue("projet").trim() || null;
 
-    await soumission.deferReply({ ephemeral: true });
+    await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+
+    if (!nom) {
+      await soumission.editReply("Le nom de la ville ne peut pas être vide.");
+      return;
+    }
 
     // Reverification : une autre commande a pu engager le joueur pendant la saisie
     if (await utilisateurEstEngage(utilisateur.id)) {

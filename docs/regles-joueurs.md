@@ -34,7 +34,7 @@ Ton seul espoir : **rejoindre une ville**, la faire tenir, et survivre le plus l
 # 🏗️ Fonder ou rejoindre une ville
 
 ## ✨ Créer une ville
-Tape `/creer-ville`, choisis un **nom** et ton **métier**, puis présente ton **projet de ville** (facultatif).
+Tape `/creer-ville` : un formulaire s'ouvre pour donner le **nom** de ta ville, choisir ton **métier** et présenter ton **projet de ville** (facultatif).
 Ta ville apparaît dans #fonder-une-colonie avec quatre boutons :
 
 🔵 **Rejoindre la ville** : choisis ton métier parmi les places libres et explique tes motivations. Ta demande part dans #nouvel-arrivant.
