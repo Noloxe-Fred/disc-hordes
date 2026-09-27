@@ -35,6 +35,8 @@ import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "./tex
 import { creerStructureVille } from "./villeStructure";
 
 // Boutons du message de recrutement d'une ville (messageVille.ts) : customId "ville:<action>:<villeId>"
+// Les reponses a ces boutons sont collectees sur leur propre message (withResponse) : sur une reponse a un
+// bouton, discord.js collecterait sinon les clics du message de recrutement.
 
 const VALEUR_SANS_METIER = "AUCUN";
 const DELAI_SELECTION_MS = 120_000;
@@ -93,11 +95,13 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
       ),
     ],
     flags: MessageFlags.Ephemeral,
+    withResponse: true,
   });
 
-  const selectionMetier = await reponse
-    .awaitMessageComponent({ componentType: ComponentType.StringSelect, time: DELAI_SELECTION_MS })
-    .catch(() => null);
+  const selectionMetier =
+    (await reponse.resource?.message
+      ?.awaitMessageComponent({ componentType: ComponentType.StringSelect, time: DELAI_SELECTION_MS })
+      .catch(() => null)) ?? null;
   if (!selectionMetier) {
     await interaction.editReply({ content: "Délai dépassé, demande annulée.", components: [] });
     return;
@@ -247,11 +251,13 @@ async function annuler(interaction: ButtonInteraction, guild: Guild, villeId: nu
       ),
     ],
     flags: MessageFlags.Ephemeral,
+    withResponse: true,
   });
 
-  const choix = await reponse
-    .awaitMessageComponent({ componentType: ComponentType.Button, time: DELAI_CONFIRMATION_MS })
-    .catch(() => null);
+  const choix =
+    (await reponse.resource?.message
+      ?.awaitMessageComponent({ componentType: ComponentType.Button, time: DELAI_CONFIRMATION_MS })
+      .catch(() => null)) ?? null;
   if (choix?.customId !== "confirmer") {
     const abandon = { content: "Annulation abandonnée.", components: [] };
     if (choix) await choix.update(abandon);

@@ -86,6 +86,8 @@ const command: Command = {
       .catch(() => null);
     if (!clic) return;
 
+    // Collecte sur le message de reponse lui-meme : sur une reponse a un bouton, discord.js collecterait
+    // sinon les clics du message portant ce bouton
     const confirmation = await clic.reply({
       content: `Quitter **${ville.nom}** ? Vous perdrez l'accès à ses salons, sans retour possible.`,
       components: [
@@ -95,11 +97,13 @@ const command: Command = {
         ),
       ],
       flags: MessageFlags.Ephemeral,
+      withResponse: true,
     });
 
-    const choix = await confirmation
-      .awaitMessageComponent({ componentType: ComponentType.Button, time: DELAI_CHOIX_MS })
-      .catch(() => null);
+    const choix =
+      (await confirmation.resource?.message
+        ?.awaitMessageComponent({ componentType: ComponentType.Button, time: DELAI_CHOIX_MS })
+        .catch(() => null)) ?? null;
     if (choix?.customId !== "confirmer") {
       if (choix) await choix.update({ content: "Vous restez dans votre ville.", components: [] });
       return;
