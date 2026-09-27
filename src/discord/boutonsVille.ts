@@ -259,9 +259,12 @@ async function annuler(interaction: ButtonInteraction, guild: Guild, villeId: nu
     return;
   }
 
+  // Suppression des messages + base : plus long que les 3 s accordees par Discord pour repondre
+  await choix.deferUpdate();
+
   // La ville a pu etre fondee pendant la confirmation
   if (!(await villeEnCreation(villeId))) {
-    await choix.update({ content: "Cette ville n'est plus en cours de création.", components: [] });
+    await choix.editReply({ content: "Cette ville n'est plus en cours de création.", components: [] });
     return;
   }
 
@@ -272,7 +275,7 @@ async function annuler(interaction: ButtonInteraction, guild: Guild, villeId: nu
     prisma.ville.delete({ where: { id: villeId } }), // demandes supprimees en cascade
   ]);
 
-  await choix.update({ content: `**${ville.nom}** a été annulée.`, components: [] });
+  await choix.editReply({ content: `**${ville.nom}** a été annulée.`, components: [] });
 }
 
 // --- Fonder : createur, minimum d'habitants sauf MJ/Admin (equilibrage.md §1) ---

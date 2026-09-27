@@ -10,7 +10,11 @@ import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteL
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
-const CHOIX_METIER = Object.values(Metier).map((metier) => ({ name: NOM_METIER[metier], value: metier }));
+const VALEUR_SANS_METIER = "AUCUN";
+const CHOIX_METIER = [
+  { name: "Simple citoyen (sans métier)", value: VALEUR_SANS_METIER },
+  ...Object.values(Metier).map((metier) => ({ name: NOM_METIER[metier], value: metier })),
+];
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -20,8 +24,8 @@ const command: Command = {
     .addStringOption((option) =>
       option
         .setName("metier")
-        .setDescription("Votre métier (par défaut : sans métier)")
-        .setRequired(false)
+        .setDescription("Votre métier")
+        .setRequired(true)
         .addChoices(...CHOIX_METIER),
     ),
 
@@ -33,7 +37,8 @@ const command: Command = {
     }
 
     const nom = interaction.options.getString("nom", true).trim();
-    const metier = interaction.options.getString("metier") as Metier | null;
+    const valeurMetier = interaction.options.getString("metier", true);
+    const metier = valeurMetier === VALEUR_SANS_METIER ? null : (valeurMetier as Metier);
 
     const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
 
