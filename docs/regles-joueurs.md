@@ -95,9 +95,9 @@ Dans `/action`, le bouton **Se déplacer** te propose les destinations possibles
 🔇 Dehors, tu ne peux plus écrire dans les salons de ta ville, et tu ne récupères pas tes PA au changement de phase. Tu retrouves le salon de chaque zone où tu te trouves.
 
 ## 🗺️ Ta carte
-Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consulter avec `/carte`.
+Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consulter avec le bouton **Carte** de `/action`. Elle montre aussi, en bleu, les citoyens de ta ville partis dehors.
 👁️ Le bouton **Observer** de `/action` te montre les zones voisines sans t'y rendre : tu vois combien de survivants s'y trouvent, et elles rejoignent ta carte. Coût : **1 PA** (2 la nuit) ; pour un **Éclaireur**, c'est gratuit le jour et **1 PA** la nuit.
-🤝 De retour en ville, `/partager-carte` transmet gratuitement ta carte à un ou plusieurs citoyens, ou à toute la ville. Le partage est annoncé sur la place publique.
+🤝 De retour en ville, le bouton **Partager la carte** de `/action` transmet gratuitement ta carte à un ou plusieurs citoyens, ou à toute la ville. Le partage est annoncé sur la place publique.
 
 <!-- nouveau message -->
 
@@ -117,9 +117,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, ou quitter ta ville si tu es mort)
-🗺️ `/carte` : les zones que tu as découvertes
-🤝 `/partager-carte` : transmet ta carte à d'autres citoyens (en ville)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, voir et partager ta carte, ou quitter ta ville si tu es mort)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 

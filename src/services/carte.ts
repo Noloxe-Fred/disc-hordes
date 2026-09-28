@@ -1,4 +1,4 @@
-import type { PalierZone } from "@prisma/client";
+import { StatutJoueur, type PalierZone } from "@prisma/client";
 import { PALIERS_ZONE, TYPES_ZONE } from "../config/zones";
 import { prisma } from "../db";
 import { nomZone } from "./zones";
@@ -48,4 +48,20 @@ export async function grilleCarte(
         : [];
     }),
   }));
+}
+
+// Citoyens de la ville hors les murs (vivants ou exclus, ni en ville ni sortis), sauf le joueur lui-meme :
+// la carte d'un joueur montre ou sont ses concitoyens, jamais les joueurs des autres villes (conception.md §1)
+export function citoyensDehors(villeId: number, joueurId: number) {
+  return prisma.joueur.findMany({
+    where: {
+      villeId,
+      id: { not: joueurId },
+      zoneActuelleId: { not: null },
+      statut: { in: [StatutJoueur.VIVANT, StatutJoueur.EXCLU] },
+      dateSortie: null,
+    },
+    include: { utilisateur: true, zoneActuelle: true },
+    orderBy: { id: "asc" },
+  });
 }

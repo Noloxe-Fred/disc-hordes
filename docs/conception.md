@@ -31,9 +31,10 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - **Graphe des zones** (identique pour tous les groupes) : la ville donne accès aux 4 zones proches ; chaque type de zone relie proche ↔ moyenne ↔ éloignée ; à chaque palier, les types voisins forment un anneau (ville en ruines – forêt – marécages – montagnes – ville en ruines). On ne rentre en ville que depuis une zone proche
 - Trajet joué zone par zone, une commande par étape (pas de trajet multi-zones simulé d'un coup)
 - Dans une nouvelle zone, le joueur voit les zones adjacentes accessibles depuis là → un éclaireur peut constituer une "carte"
-- Découverte de zones individuelle ; commande `/partager-carte` pour la transmettre aux autres en rentrant d'une zone ; commande `/carte` pour consulter sa propre carte découverte à tout moment
+- Découverte de zones individuelle ; bouton « Partager la carte » de `/action` pour la transmettre aux autres en rentrant d'une zone ; bouton « Carte » de `/action` pour consulter sa propre carte découverte à tout moment
 - Une zone rejoint la carte quand le joueur y entre, quand il l'**observe** depuis une zone adjacente (ou depuis la ville pour les zones proches) via le bouton « Observer » de `/action` — qui indique aussi le nombre de survivants présents dans chaque zone voisine, et coûte moins cher à l'éclaireur (voir document d'équilibrage §4) — ou quand un autre citoyen la lui partage
-- `/partager-carte` : réservé aux citoyens vivants présents en ville ; destinataires choisis parmi les citoyens vivants de la ville (un menu à choix multiples, ou « toute la ville »), où qu'ils soient ; chacun reçoit les zones qu'il ne connaissait pas ; le partage est annoncé sur la place publique et inscrit au journal des destinataires
+- Partage de la carte : réservé aux citoyens vivants présents en ville ; destinataires choisis parmi les citoyens vivants de la ville (un menu à choix multiples, ou « toute la ville »), où qu'ils soient ; chacun reçoit les zones qu'il ne connaissait pas ; le partage est annoncé sur la place publique et inscrit au journal des destinataires
+- **Rendu de la carte** : image générée par le bot (SVG rastérisé par `@resvg/resvg-js`, police PT Sans embarquée dans `assets/fonts`) : la ville au centre, un anneau par palier, les 4 types de zone en diagonale ; zones inconnues en pointillés, position du joueur cerclée d'or. Des points bleus montrent les **concitoyens hors les murs** (vivants ou exclus) ; jamais les joueurs des autres villes, ni ceux restés en ville
 - **Inventaire de ville** : dépôt d'objets sans passer par le troc direct (fait aussi office de banque)
 - **Capacité de zone** : pas de limite artificielle de joueurs simultanés dans un même salon de territoire externe en V1
 
@@ -135,11 +136,9 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 Principe directeur : maximiser les interactions via **components Discord V2** (boutons, menus déroulants) plutôt que des commandes à taper/retenir.
 
 ### Commandes de jeu
-- `/action` : menu des actions possibles (Components V2) ; pour un joueur mort, bouton « Quitter la ville » — pour un joueur vivant, actions selon la zone courante (à venir) : inclut les boutons "aller" (avec confirmation avant de dépenser des PA) et "observer" ; en cas de rencontre, inclut aussi les boutons de combat/interaction (attaquer/fuir/parler-troquer)
+- `/action` : menu des actions possibles (Components V2) ; pour un joueur mort, bouton « Quitter la ville » — pour un joueur vivant, actions selon la zone courante (à venir) : inclut les boutons "aller" (avec confirmation avant de dépenser des PA), "observer", "carte" (image de sa carte des zones découvertes) et "partager la carte" (en ville uniquement) ; en cas de rencontre, inclut aussi les boutons de combat/interaction (attaquer/fuir/parler-troquer)
 - `/inventaire` : affichage + troc (bouton "donner à" → sélection joueur → sélection objet) + craft simple avec ce qu'on a sur soi
 - `/personnage` : stats du perso (PV, PA restant et PA max effectif, métier, etc.), temps restant avant jour/nuit, historique des dernières actions
-- `/partager-carte` : transmet sa carte de zones découvertes aux autres
-- `/carte` : consulte sa propre carte de zones découvertes
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
 - `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements

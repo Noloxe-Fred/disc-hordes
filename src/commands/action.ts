@@ -15,6 +15,7 @@ import {
 import type { Command } from "../client";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { prisma } from "../db";
+import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
 import { deplacerJoueur } from "../discord/deplacement";
 import { retirerJoueurDeVilleDiscord } from "../discord/joueurDiscord";
 import { trouverSalonTexte } from "../discord/reconcile";
@@ -26,7 +27,8 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
-// ouvrant son ecran (« Se deplacer », « Observer »), avec confirmation avant de depenser des PA ; fouille
+// ouvrant son ecran (« Se deplacer », « Observer » avec confirmation avant de depenser des PA ; « Carte »,
+// « Partager la carte ») ; fouille
 // et combat s'y ajouteront. Mort : quitter sa ville pour en rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
@@ -80,6 +82,11 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("deplacer").setLabel("Se déplacer").setEmoji("🧭").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId("observer").setLabel("Observer").setEmoji("👁️").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId("carte").setLabel("Carte").setEmoji("🗺️").setStyle(ButtonStyle.Secondary),
+      // Partage reserve aux citoyens vivants en ville
+      ...(empechementPartage(joueur) === null
+        ? [new ButtonBuilder().setCustomId("partager").setLabel("Partager la carte").setEmoji("🤝").setStyle(ButtonStyle.Secondary)]
+        : []),
     ),
   );
 
@@ -129,7 +136,17 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     if (!clic) return;
 
     if (clic.customId === "retour") {
-      await clic.update({ components: [menu] });
+      await clic.update({ components: [menu], attachments: [] }); // retire l'image de la carte le cas echeant
+    } else if (clic.customId === "carte") {
+      const { conteneur, fichiers } = await ecranCarte(joueurId, boutonRetour());
+      await clic.update({ components: [conteneur], files: fichiers });
+    } else if (clic.customId === "partager") {
+      await clic.update({ components: [await ecranPartage(joueurId, boutonRetour())] });
+    } else if (clic.customId === "destinataires" || clic.customId === "toute-la-ville") {
+      const destinataireIds = clic.isStringSelectMenu() ? clic.values.map(Number) : null;
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await partagerCarte(guild, joueurId, destinataireIds))] });
+      return;
     } else if (clic.customId === "deplacer") {
       await clic.update({ components: [ecranDeplacement] });
     } else if (clic.customId === "observer") {
