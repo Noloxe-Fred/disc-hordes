@@ -6,7 +6,8 @@ import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { PV_MAX } from "../config/sante";
 import { prisma } from "../db";
 import { calculerEtatInfection } from "../game/infection";
-import { paMaxEffectif } from "../game/sante";
+import { niveauJauge, type NiveauJauge } from "../game/faimSoif";
+import { calculerPaMax } from "../game/pa";
 import { prochaineBascule } from "../scheduler/cycle";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
@@ -16,6 +17,9 @@ function formatDureeHeures(heures: number): string {
   const m = Math.round((heures - h) * 60);
   return `${h}h${m.toString().padStart(2, "0")}`;
 }
+
+// Faim/soif sous le seuil d'alerte, sous le seuil critique (malus actifs) ou a 0
+const ICONE_NIVEAU: Record<NiveauJauge, string> = { normal: "", alerte: " ⚠️", critique: " 🔴", vide: " ☠️" };
 
 const command: Command = {
   data: new SlashCommandBuilder().setName("personnage").setDescription("Affiche les statistiques de votre personnage"),
@@ -34,7 +38,15 @@ const command: Command = {
 
     const ville = joueur.ville;
     const vivant = joueur.statut === StatutJoueur.VIVANT;
-    const paMax = joueur.paMax !== null ? paMaxEffectif(joueur.paMax, joueur.pv) : null;
+    const pa = calculerPaMax(joueur);
+    // Detail des modificateurs de PA max, ex. "18 de base : blessures −15 %, faim −30 %"
+    const detailPa =
+      pa.modificateurs.length > 0
+        ? `\n${pa.paMaxBase} de base : ` +
+          pa.modificateurs
+            .map((m) => `${m.libelle} ${m.fraction > 0 ? "+" : "−"}${Math.round(Math.abs(m.fraction) * 100)} %`)
+            .join(", ")
+        : "";
 
     const embed = new EmbedBuilder()
       .setTitle(`${interaction.user.username} — ${ville.nom}`)
@@ -47,13 +59,13 @@ const command: Command = {
           value:
             joueur.paMax === null
               ? "à déterminer à la fondation"
-              : `${joueur.paActuel} / ${paMax}` + (paMax !== joueur.paMax ? ` (${joueur.paMax} sans blessures)` : ""),
+              : `${joueur.paActuel} / ${pa.paMax}${detailPa}`,
           inline: true,
         },
-        { name: "Faim", value: `${joueur.faim} / 100`, inline: true },
-        { name: "Soif", value: `${joueur.soif} / 100`, inline: true },
+        { name: "Faim", value: `${joueur.faim} / 100${ICONE_NIVEAU[niveauJauge(joueur.faim)]}`, inline: true },
+        { name: "Soif", value: `${joueur.soif} / 100${ICONE_NIVEAU[niveauJauge(joueur.soif)]}`, inline: true },
         { name: "XP", value: `${joueur.xp}`, inline: true },
-        { name: "Maison", value: `Palier ${joueur.maisonPalier} / 2`, inline: true },
+        { name: "Maison", value: joueur.maisonPalier > 0 ? `Palier ${joueur.maisonPalier} / 2` : "Pas encore de maison", inline: true },
         { name: "Position", value: joueur.zoneActuelle ? joueur.zoneActuelle.nom : "En ville", inline: true },
       );
 

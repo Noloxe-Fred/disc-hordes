@@ -216,9 +216,11 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
           paActuel: h.paMax,
           faim: 100,
           soif: 100,
+          phasesFaimVide: 0,
+          phasesSoifVide: 0,
           pv: PV_MAX,
           infecteDepuis: null,
-          maisonPalier: 1,
+          maisonPalier: 0,
           xp: 0,
           dateMort: null,
           causeMort: null,
@@ -248,7 +250,7 @@ async function reset(interaction: ButtonInteraction, guild: Guild) {
   const choix = await confirmer(
     soumission,
     `⚠️ **Reset de ${ville.nom}** : la ville repart au cycle 1 (jour) avec ses habitants actuels, tous vivants, à pleine ` +
-      "santé, faim et soif à 100, PA au maximum, ramenés en ville. Inventaires, cartes, bâtiments, banque, élections et " +
+      "santé, faim et soif à 100, PA au maximum, sans maison, ramenés en ville. Inventaires, cartes, bâtiments, banque, élections et " +
       "historique des attaques sont effacés ; le maire est conservé. Action irréversible.",
     "Réinitialiser la ville",
   );

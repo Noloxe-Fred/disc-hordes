@@ -1,14 +1,8 @@
 import type { CauseMort } from "@prisma/client";
 import type { Guild } from "discord.js";
-import { CHANCE_INFECTION_PAR_COUP, MALUS_PA_PAR_PV_MANQUANT, PV_MAX } from "../config/sante";
+import { CHANCE_INFECTION_PAR_COUP, PV_MAX } from "../config/sante";
 import { prisma } from "../db";
 import { enregistrerMort } from "./mort";
-
-// PA max effectif : chaque PV manquant retire 5 % du PA max individuel (arrondi a l'inferieur)
-export function paMaxEffectif(paMax: number, pv: number): number {
-  const pvManquants = Math.min(PV_MAX, Math.max(0, PV_MAX - pv));
-  return Math.floor(paMax * (1 - pvManquants * MALUS_PA_PAR_PV_MANQUANT));
-}
 
 export interface ResultatDegats {
   pvRestants: number;

@@ -40,6 +40,9 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 | Maison privée palier 2 | +15 % du PA max individuel (arrondi à l'inférieur) |
 | Par PV manquant (voir « Points de vie » ci-dessous) | −5 % chacun (10 PV : 0 % ; 7 PV : −15 % ; 1 PV : −45 %) |
 | Infection (progression linéaire continue depuis le déclenchement) | de 0 % à −30 % du PA max, sur toute la durée de l'incubation (96h) — soit environ −0,3125 % par heure écoulée depuis l'infection ; −30 % atteint juste avant la transformation en zombie |
+| Faim ou soif sous le seuil critique (voir section 2) | −30 % par jauge concernée, puis −15 % de plus par phase supplémentaire passée à 0 |
+
+**Cumul** : les modificateurs s'additionnent (en points de % du PA max individuel), puis le total est appliqué une seule fois, arrondi à l'inférieur et jamais sous 0. Exemple : PA max 20, 7 PV (−15 %) et faim critique (−30 %) → 20 × 0,55 = 11 PA max effectif.
 
 ### Points de vie (PV)
 - Chaque joueur a **10 PV** (maximum, et valeur de départ).
@@ -71,11 +74,13 @@ Deux jauges séparées, 0–100.
 | | Faim | Soif |
 |---|---|---|
 | Décroissance par phase (24h) | **−16** | **−20** |
-| Seuil d'alerte (message) | < 30 | < 30 |
+| Seuil d'alerte (message dans la mairie) | < 30 | < 30 |
 | Seuil critique (malus actif) | < 10 | < 10 |
 | Effet sous seuil critique | −30 % PA max, craft avancé et contribution aux chantiers bloqués | idem |
 | Perte de PV sous seuil critique | **−1 PV** par phase | idem |
 | Effet à 0 | −15 % PA max par phase supplémentaire écoulée à 0 (cumulable), **−2 PV** par phase | idem |
+
+Le −30 % du seuil critique reste actif à 0 : une jauge vide depuis 2 phases supplémentaires coûte donc −60 % de PA max. Faim et soif se comptent séparément. Le passage à chaque palier plus grave (alerte, critique, vide) est annoncé dans la mairie en mentionnant le joueur.
 
 → Sans consommer, un joueur atteint la faim critique en **~6 phases (~6 jours réels)** et la soif critique en **~5 phases (~5 jours réels)**.
 *(Décroissance doublée par rapport au premier jet de chiffrage, pour retomber sur l'objectif visé de "critique en 4-5 jours réels" — la faim reste légèrement plus longue que la soif, ce qui est cohérent : on peut tenir plus longtemps sans manger que sans boire.)*
@@ -132,7 +137,7 @@ Deux jauges séparées, 0–100.
 ### Blessures en défense insuffisante (PV perdus)
 Pour chaque citoyen présent en ville (pas en territoire externe), jet indépendant :
 - **Ratio** = `min(50 %, déficit / attaque)`.
-- **Chance d'être touché** = ratio × facteur maison ; la maison privée réduit cette chance de **25 % par palier au-delà du palier 1** (P1 : ×1 ; P2 : ×0,75 ; plancher ×0,25 si d'autres paliers arrivent).
+- **Chance d'être touché** = ratio × facteur maison ; la maison privée réduit cette chance de **25 % par palier au-delà du palier 1** (sans maison ou P1 : ×1 ; P2 : ×0,75 ; plancher ×0,25 si d'autres paliers arrivent).
 - **PV perdus si touché** = `ceil(ratio × 10)`, soit **1 à 5 PV** : un petit déficit égratigne, un déficit au plafond coûte 5 PV.
 - Être touché est aussi un coup reçu : 10 % de chance d'infection (section 1).
 - Il n'y a plus de jet « fatal » séparé : on meurt seulement si ces pertes font tomber à 0 PV.
@@ -251,7 +256,7 @@ Coût par palier en **ressources déposées dans l'inventaire de ville**, puis *
 | | 2 | 90 Pierre + 40 Ferraille | 26 | +25 % capacité d'eau de ville / −20 % conso de soif collective |
 | **Place publique** | 1 | 50 Bois + 30 Tissu | 16 | Stockage de ville (40 objets) |
 | | 2 | 90 Bois + 60 Tissu | 30 | Stockage ×2 (80 objets) |
-| **Maison privée** (perso) | 1 | 30 Bois + 15 Tissu | 9 | (fonctionnel) |
+| **Maison privée** (perso) | 1 | 30 Bois + 15 Tissu | 9 | (fonctionnel) — chaque joueur arrive sans maison (palier 0) et la construit |
 | | 2 | 50 Bois + 30 Tissu | 16 | +15 % du PA max personnel |
 | **Mairie** | unique | 80 Bois + 40 Pierre | 24 | Fonctionnel uniquement (élections, décisions, rationnement) |
 

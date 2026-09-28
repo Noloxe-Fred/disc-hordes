@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Joueur` ADD COLUMN `phasesFaimVide` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `phasesSoifVide` INTEGER NOT NULL DEFAULT 0;

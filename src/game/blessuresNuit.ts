@@ -14,7 +14,8 @@ export function ratioDeficit(forceAttaque: number, defenseTotale: number): numbe
   return Math.min(RATIO_TOUCHE_MAX, deficit / forceAttaque);
 }
 
-// Chance d'etre touche, reduite de 25 % par palier de maison au-dela du premier (plancher x0,25)
+// Chance d'etre touche, reduite de 25 % par palier de maison au-dela du premier (plancher x0,25) ; sans maison
+// (palier 0) comme au palier 1, pas de reduction
 export function chanceTouche(ratio: number, maisonPalier: number): number {
   const facteurMaison = Math.max(
     FACTEUR_TOUCHE_MAISON_MIN,

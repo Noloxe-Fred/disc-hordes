@@ -4,7 +4,7 @@ import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
 import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
-import { appliquerPhaseFaimSoif } from "../game/faimSoif";
+import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { posterDansMairie } from "../discord/villeStructure";
 
@@ -30,24 +30,50 @@ function habitantsVivants(villeId: number) {
   });
 }
 
-// Faim/soif a chaque changement de phase ; les jauges critiques ou vides font perdre des PV.
-// Renvoie true si la ville est tombee (dernier habitant mort de faim ou de soif).
-async function appliquerFaimSoif(guild: Guild, villeId: number): Promise<boolean> {
-  for (const joueur of await habitantsVivants(villeId)) {
-    const effet = appliquerPhaseFaimSoif(joueur.faim, joueur.soif);
-    await prisma.joueur.update({ where: { id: joueur.id }, data: { faim: effet.faim, soif: effet.soif } });
-    if (effet.pvPerdus === 0) continue;
+const TEXTE_ALERTE: Record<Jauge, Record<Exclude<NiveauJauge, "normal">, string>> = {
+  faim: {
+    alerte: "commence à avoir faim",
+    critique: "est affamé : PA max réduits, et il perd des PV à chaque phase",
+    vide: "meurt de faim : PA max encore réduits à chaque phase, et il perd des PV",
+  },
+  soif: {
+    alerte: "commence à avoir soif",
+    critique: "est assoiffé : PA max réduits, et il perd des PV à chaque phase",
+    vide: "meurt de soif : PA max encore réduits à chaque phase, et il perd des PV",
+  },
+};
 
-    const resultat = await infligerDegats(guild, joueur.id, effet.pvPerdus, effet.cause);
-    if (resultat.mort) {
+// Faim/soif a chaque changement de phase ; les jauges critiques ou vides font perdre des PV, et le passage a un
+// palier plus grave est annonce dans la mairie. Renvoie true si la ville est tombee (dernier habitant mort de
+// faim ou de soif).
+async function appliquerFaimSoif(guild: Guild, villeId: number): Promise<boolean> {
+  const alertes: string[] = [];
+  for (const joueur of await habitantsVivants(villeId)) {
+    const effet = appliquerPhaseFaimSoif(joueur);
+    await prisma.joueur.update({
+      where: { id: joueur.id },
+      data: { faim: effet.faim, soif: effet.soif, phasesFaimVide: effet.phasesFaimVide, phasesSoifVide: effet.phasesSoifVide },
+    });
+
+    const resultat = effet.pvPerdus > 0 ? await infligerDegats(guild, joueur.id, effet.pvPerdus, effet.cause) : null;
+    if (resultat?.mort) {
       await posterDansMairie(
         guild,
         villeId,
         `💀 <@${joueur.utilisateur.discordId}> est ${effet.cause === CauseMort.FAIM ? "mort de faim" : "mort de soif"}.`,
       );
+      if (resultat.villeTombee) return true;
+      continue;
     }
-    if (resultat.villeTombee) return true;
+
+    for (const { jauge, niveau, valeur } of effet.alertes) {
+      if (niveau === "normal") continue;
+      const icone = jauge === "faim" ? "🍖" : "💧";
+      alertes.push(`${icone} <@${joueur.utilisateur.discordId}> ${TEXTE_ALERTE[jauge][niveau]} (${jauge} ${valeur}/100).`);
+    }
   }
+
+  if (alertes.length > 0) await posterDansMairie(guild, villeId, alertes.join("\n"));
   return false;
 }
 

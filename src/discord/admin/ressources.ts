@@ -1,7 +1,7 @@
 import { StatutJoueur, StatutVille } from "@prisma/client";
 import { ButtonStyle, type ButtonInteraction } from "discord.js";
 import { prisma } from "../../db";
-import { paMaxEffectif } from "../../game/sante";
+import { calculerPaMax } from "../../game/pa";
 import {
   champMembre,
   champTexte,
@@ -117,7 +117,7 @@ async function ajusterJauges(interaction: ButtonInteraction) {
     return;
   }
 
-  const paMax = paMaxEffectif(joueur.paMax ?? 0, joueur.pv);
+  const { paMax } = calculerPaMax(joueur);
   const paActuel = joueur.paActuel ?? 0;
   const faim = lireAjustement(soumission.fields.getTextInputValue("faim"), joueur.faim, 0, JAUGE_MAX);
   const soif = lireAjustement(soumission.fields.getTextInputValue("soif"), joueur.soif, 0, JAUGE_MAX);
@@ -131,7 +131,17 @@ async function ajusterJauges(interaction: ButtonInteraction) {
     return;
   }
 
-  await prisma.joueur.update({ where: { id: joueur.id }, data: { faim, soif, paActuel: pa } });
+  await prisma.joueur.update({
+    where: { id: joueur.id },
+    data: {
+      faim,
+      soif,
+      paActuel: pa,
+      // Une jauge remontee au-dessus de 0 remet a zero son compteur de phases a vide (malus de PA)
+      ...(faim !== undefined && faim > 0 ? { phasesFaimVide: 0 } : {}),
+      ...(soif !== undefined && soif > 0 ? { phasesSoifVide: 0 } : {}),
+    },
+  });
 
   const changements = [
     faim !== undefined ? `faim ${joueur.faim} → ${faim}` : null,

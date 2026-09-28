@@ -72,12 +72,12 @@ Tu as **10 PV**. Chaque PV perdu réduit tes **PA max de 5 %** : un survivant bl
 💀 À **0 PV**, tu meurs.
 
 ## 🍖 Faim et 💧 soif
-Deux jauges de **0 à 100**, qui baissent à chaque changement de phase.
-⚠️ **Sous 10**, tu perds **1 PV** par phase et par jauge.
-☠️ **À 0**, tu perds **2 PV** par phase et par jauge.
+Deux jauges de **0 à 100**, qui baissent à chaque changement de phase. La mairie te prévient quand tu passes sous 30.
+⚠️ **Sous 10**, tes **PA max baissent de 30 %** et tu perds **1 PV** par phase, pour chaque jauge.
+☠️ **À 0**, tu perds **2 PV** par phase, et tes PA max baissent encore de **15 %** à chaque phase passée à vide.
 
 ## 🏠 Ta maison
-Une maison améliorée réduit tes chances d'être blessé pendant les attaques.
+Tu arrives **sans maison**. Une maison améliorée réduit tes chances d'être blessé pendant les attaques.
 
 ## 🦠 L'infection
 Chaque blessure peut t'**infecter** (10 % de chance). L'infection est **secrète** : toi seul le sais, grâce à `/personnage`.
