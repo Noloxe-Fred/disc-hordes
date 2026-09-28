@@ -13,22 +13,23 @@ import {
   SlashCommandBuilder,
   StringSelectMenuBuilder,
   TextDisplayBuilder,
-  TextInputBuilder,
-  TextInputStyle,
   type ButtonInteraction,
   type Guild,
 } from "discord.js";
 import type { Command } from "../client";
 import { emojiObjet } from "../config/objets";
 import { prisma } from "../db";
+import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
+import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { rendreInventaire } from "../discord/renduInventaire";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
-// « donner a » un autre survivant present au meme endroit. Le menu montre le sac en image (renduInventaire.ts) ;
-// le menu et chaque ecran remplacent le meme message, « Retour » ramene au menu.
+// « donner a » un autre survivant present au meme endroit, et, en ville, acces a la banque (discord/banque.ts).
+// Le menu montre le sac en image (renduInventaire.ts) ; le menu et chaque ecran remplacent le meme message,
+// « Retour » ramene au menu.
 
 const DELAI_CHOIX_MS = 120_000;
 const COULEUR = 0x95a5a6;
@@ -112,31 +113,39 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
   const actif = peutAgir(joueur);
   const paActuel = joueur.paActuel ?? 0;
 
-  const sac = await contenuSac(joueurId);
   const entete = `## 🎒 Inventaire — ${interaction.user.username}` + (actif ? `\n⚡ ${paActuel} PA` : "");
-  const png = rendreInventaire(`Sac — ${interaction.user.username}`, sac.map((e) => ({ ...e.objet, quantite: e.quantite })));
-  const image = () => [new AttachmentBuilder(png, { name: FICHIER_SAC })];
-  const menu = encadre(entete)
-    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${FICHIER_SAC}`)))
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        sac.length > 0 ? `-# ${sac.map((e) => `${objetAvecEmoji(e.objet.nom)} ×${e.quantite}`).join(" · ")}` : "-# Votre sac est vide.",
-      ),
-    );
-  if (actif) {
-    menu.addActionRowComponents(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId("fabriquer").setLabel("Fabriquer").setEmoji("🔨").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId("donner").setLabel("Donner").setEmoji("🤝").setStyle(ButtonStyle.Secondary),
-      ),
-    );
-  }
 
-  const reponse = await interaction.reply({ components: [menu], files: image(), flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+  // Menu du sac, recharge a chaque retour : un depot ou un retrait a la banque change son contenu
+  let sac = await contenuSac(joueurId);
+  const construireMenu = () => {
+    const png = rendreInventaire(`Sac — ${interaction.user.username}`, sac.map((e) => ({ ...e.objet, quantite: e.quantite })));
+    const menu = encadre(entete)
+      .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${FICHIER_SAC}`)))
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          sac.length > 0 ? `-# ${sac.map((e) => `${objetAvecEmoji(e.objet.nom)} ×${e.quantite}`).join(" · ")}` : "-# Votre sac est vide.",
+        ),
+      );
+    if (actif) {
+      menu.addActionRowComponents(
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder().setCustomId("fabriquer").setLabel("Fabriquer").setEmoji("🔨").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("donner").setLabel("Donner").setEmoji("🤝").setStyle(ButtonStyle.Secondary),
+          // Banque reservee aux citoyens vivants en ville
+          ...(empechementBanque(joueur) === null
+            ? [new ButtonBuilder().setCustomId("banque").setLabel("Banque").setEmoji("🏦").setStyle(ButtonStyle.Secondary)]
+            : []),
+        ),
+      );
+    }
+    return { components: [menu], files: [new AttachmentBuilder(png, { name: FICHIER_SAC })] };
+  };
+
+  const reponse = await interaction.reply({ ...construireMenu(), flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
   if (!actif) return;
 
   const recettes = await recettesSimples();
-  const quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
+  let quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
   let recette: RecetteSimple | undefined;
 
   for (;;) {
@@ -144,7 +153,20 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
     if (!clic) return;
 
     if (clic.customId === "retour") {
-      await clic.update({ components: [menu], files: image() });
+      sac = await contenuSac(joueurId);
+      quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
+      await clic.update({ ...construireMenu(), attachments: [] }); // remplace l'image de la banque le cas echeant
+    } else if (clic.customId === "banque") {
+      const { conteneur, fichiers } = await ecranBanque(joueurId, boutonRetour());
+      await clic.update({ components: [conteneur], attachments: [], files: fichiers });
+    } else if (clic.isButton() && (clic.customId === "deposer" || clic.customId === "retirer")) {
+      // Apres un depot ou un retrait, retour sur l'ecran de la banque rafraichi, le resultat en tete
+      const resultat = await formulaireBanque(clic, joueurId, clic.customId);
+      if (resultat === null) continue; // formulaire ferme ou expire : l'ecran de la banque reste en place
+      const { conteneur, fichiers } = await ecranBanque(joueurId, boutonRetour(), resultat.texte);
+      const ecran = { components: [conteneur], attachments: [], files: fichiers };
+      if (!resultat.soumission) await clic.update(ecran);
+      else if (resultat.soumission.isFromMessage()) await resultat.soumission.update(ecran);
     } else if (clic.customId === "fabriquer") {
       await clic.update({
         components: [
@@ -267,6 +289,7 @@ async function formulaireDon(
     return null;
   }
 
+  const champsObjets = champsObjetsPossedes(sac);
   const idFormulaire = `don:${clic.id}`;
   await clic.showModal(
     new ModalBuilder()
@@ -281,21 +304,8 @@ async function formulaireDon(
               .setRequired(true)
               .addOptions(destinataires.map((d) => ({ label: nomJoueur(d).slice(0, 100), value: String(d.id) }))),
           ),
-        new LabelBuilder()
-          .setLabel("Quel objet ?")
-          .setStringSelectMenuComponent(
-            new StringSelectMenuBuilder()
-              .setCustomId("objet")
-              .setRequired(true)
-              .addOptions(
-                sac.slice(0, OPTIONS_MAX).map((e) => ({ label: `${e.objet.nom} (× ${e.quantite})`.slice(0, 100), value: String(e.objetId), emoji: emojiObjet(e.objet.nom) })),
-              ),
-          ),
-        new LabelBuilder()
-          .setLabel("Combien ?")
-          .setTextInputComponent(
-            new TextInputBuilder().setCustomId("quantite").setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(4).setPlaceholder("1"),
-          ),
+        ...champsObjets,
+        champQuantite(),
       ),
   );
   const soumission = await clic
@@ -304,13 +314,14 @@ async function formulaireDon(
   if (!soumission) return null;
 
   const destinataireId = Number(soumission.fields.getStringSelectValues("destinataire")[0]);
-  const objetId = Number(soumission.fields.getStringSelectValues("objet")[0]);
-  const saisie = soumission.fields.getTextInputValue("quantite").trim();
-  const quantite = saisie === "" ? 1 : Number(saisie);
+  const objetId = lireObjetPossede(soumission, champsObjets.length);
+  const quantite = lireQuantite(soumission);
   const texte =
-    Number.isInteger(quantite) && quantite > 0
-      ? await donner(clic.guild!, joueurId, destinataireId, objetId, quantite)
-      : "La quantité doit être un nombre entier positif.";
+    objetId === null
+      ? "Choisissez un seul objet."
+      : quantite === null
+        ? "La quantité doit être un nombre entier positif."
+        : await donner(clic.guild!, joueurId, destinataireId, objetId, quantite);
   return { soumission, texte };
 }
 

@@ -315,4 +315,6 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 
 ## 12. Points ouverts restants
 
+- **Capacité de stockage (sac et banque de ville)** : principe retenu, trois classes de poids d'objet — **petit = 1, moyen = 2, lourd = 3** — qui comptent de la même façon dans le sac et dans la banque. Restent à trancher : la classe de chaque objet, la capacité du sac, et la capacité de la banque selon le palier de la place publique (les « 40 / 80 objets » de la section 7 sont à reconvertir en poids), y compris sans place publique (palier 0). **En attendant, le sac et la banque ne sont pas plafonnés.**
+
 - **Effet mécanique des objets de loot sans recette** (section 5) : Médicament basique, Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.

@@ -124,6 +124,10 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 Le bouton **Donner** ouvre un formulaire : choisis **à qui**, **quel objet** et **combien**. C'est gratuit.
 Tu ne peux donner qu'à un survivant **au même endroit** que toi : un citoyen de ta ville si tu es en ville, n'importe quel survivant de ta zone si tu es dehors. Le don est annoncé dans le salon du lieu.
 
+## 🏦 La banque
+En ville, le bouton **Banque** montre la réserve commune de ta ville. **Déposer** y range des objets de ton sac, **Retirer** en reprend : c'est gratuit, et tous les citoyens vivants présents en ville y ont accès.
+📜 Chaque dépôt et chaque retrait est inscrit au journal de la ville.
+
 
 # 💀 La mort et la chute
 
