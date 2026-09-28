@@ -119,6 +119,7 @@ Le −30 % du seuil critique reste actif à 0 : une jauge vide depuis 2 phases s
 - Force de base, nuit 1 : **15**
 - Croissance : **+10 % composé** par cycle nuit suivant — validé tel quel pour le lancement V1 (cohérent avec l'objectif d'une palissade palier 8 atteinte juste avant que l'attaque dépasse le mur passif, voir section 9)
 - Modificateur météo : mauvais temps = **+15 %** sur la force d'attaque
+- Alerte : la mairie de chaque ville en nuit est prévenue **1 h** avant l'attaque de l'aube (en plus des annonces de bascule jour/nuit, qui mentionnent le rôle-ville)
 
 | Cycle (nuit n°) | Force d'attaque (base, hors météo) |
 |---|---|

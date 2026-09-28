@@ -9,3 +9,6 @@ export const BONUS_PALISSADE_CUMULE: readonly number[] = [0, 5, 10, 16, 22, 29, 
 export const FORCE_ATTAQUE_BASE = 15;
 export const CROISSANCE_ATTAQUE_PAR_CYCLE = 0.1; // +10% compose par cycle
 export const MODIFICATEUR_METEO_MAUVAIS = 0.15; // +15%
+
+// Alerte postee dans la mairie des villes en nuit, avant l'attaque de l'aube (minuit)
+export const AVANCE_ALERTE_ATTAQUE_MINUTES = 60;

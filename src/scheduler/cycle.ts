@@ -2,9 +2,11 @@ import { CauseMort, MeteoType, StatutJoueur, StatutVille, TypeBatiment, TypePhas
 import type { Guild } from "discord.js";
 import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
+import { AVANCE_ALERTE_ATTAQUE_MINUTES } from "../config/defense";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
 import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
+import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { posterDansMairie } from "../discord/villeStructure";
 
@@ -19,8 +21,12 @@ export function prochaineBascule(maintenant: Date = new Date()): Date {
   return prochainMinuit;
 }
 
+// Marge contre un minuteur declenche quelques ms en avance : sans elle, le "prochain minuit" recalcule juste
+// apres une bascule serait encore le meme, et la bascule s'executerait deux fois
+const MARGE_REPLANIFICATION_MS = 60_000;
+
 function msJusquauProchainMinuit(): number {
-  return prochaineBascule().getTime() - Date.now();
+  return prochaineBascule(new Date(Date.now() + MARGE_REPLANIFICATION_MS)).getTime() - Date.now();
 }
 
 function habitantsVivants(villeId: number) {
@@ -77,14 +83,36 @@ async function appliquerFaimSoif(guild: Guild, villeId: number): Promise<boolean
   return false;
 }
 
+// Regeneration complete des PA a chaque changement de phase pour les habitants vivants qui ont dormi en ville
+// (equilibrage.md §1) : retour au PA max effectif, calcule apres la faim/soif et les blessures de la phase.
+// En territoire externe, pas de regeneration (la sieste partielle viendra avec les deplacements).
+async function regenererPa(villeId: number) {
+  for (const joueur of await habitantsVivants(villeId)) {
+    if (joueur.zoneActuelleId !== null || joueur.paMax === null) continue;
+    await prisma.joueur.update({ where: { id: joueur.id }, data: { paActuel: calculerPaMax(joueur).paMax } });
+  }
+}
+
+// Effets de chaque changement de phase sur les habitants : faim/soif, puis regeneration des PA
+async function appliquerEffetsPhase(guild: Guild, villeId: number) {
+  if (await appliquerFaimSoif(guild, villeId)) return;
+  await regenererPa(villeId);
+}
+
 async function basculerVersNuit(guild: Guild, ville: Ville) {
   await prisma.ville.update({
     where: { id: ville.id },
     data: { phaseActuelle: TypePhase.NUIT, phaseDepuis: new Date() },
   });
 
-  await posterDansMairie(guild, ville.id, `🌙 La nuit tombe sur **${ville.nom}**.`);
-  await appliquerFaimSoif(guild, ville.id);
+  const aube = Math.floor(prochaineBascule().getTime() / 1000);
+  await posterDansMairie(
+    guild,
+    ville.id,
+    `🌙 La nuit tombe sur **${ville.nom}**. Les zombies attaqueront à l'aube, <t:${aube}:R>.`,
+    { mentionnerVille: true },
+  );
+  await appliquerEffetsPhase(guild, ville.id);
 }
 
 // Jets de l'attaque sur les citoyens presents en ville (pas en territoire externe). Renvoie les lignes
@@ -162,7 +190,7 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   const { compteRendu, villeTombee } = await resoudreAttaque(guild, ville, true);
 
   if (villeTombee) {
-    await posterDansMairie(guild, ville.id, `${compteRendu}\n\n**${ville.nom}** est tombée.`);
+    await posterDansMairie(guild, ville.id, `${compteRendu}\n\n**${ville.nom}** est tombée.`, { mentionnerVille: true });
     return;
   }
 
@@ -172,8 +200,10 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
     data: { phaseActuelle: TypePhase.JOUR, phaseDepuis: new Date(), cycleActuel: nouveauCycle },
   });
 
-  await posterDansMairie(guild, ville.id, `${compteRendu}\n☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`);
-  await appliquerFaimSoif(guild, ville.id);
+  await posterDansMairie(guild, ville.id, `${compteRendu}\n☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`, {
+    mentionnerVille: true,
+  });
+  await appliquerEffetsPhase(guild, ville.id);
 }
 
 // Changement de phase d'une ville : a minuit (horloge commune) ou force depuis le panneau /admin
@@ -194,6 +224,29 @@ async function executerTick(guild: Guild) {
   }
 }
 
+// Alerte d'attaque : chaque ville en nuit est prevenue un peu avant l'aube
+async function alerterAttaque(guild: Guild) {
+  const villes = await prisma.ville.findMany({ where: { statut: StatutVille.ACTIVE, phaseActuelle: TypePhase.NUIT } });
+  const aube = Math.floor(prochaineBascule().getTime() / 1000);
+  for (const ville of villes) {
+    await posterDansMairie(
+      guild,
+      ville.id,
+      `⚠️ Les zombies approchent de **${ville.nom}** : l'attaque frappera <t:${aube}:R>. Rentrez en ville et tenez les murs !`,
+      { mentionnerVille: true },
+    );
+  }
+}
+
+// Delai jusqu'a la prochaine alerte d'attaque (minuit moins l'avance) ; si elle est deja passee pour ce
+// minuit (bot demarre dans l'heure precedente), elle vise le minuit suivant.
+function msJusquaProchaineAlerte(): number {
+  const avanceMs = AVANCE_ALERTE_ATTAQUE_MINUTES * 60_000;
+  let alerte = prochaineBascule().getTime() - avanceMs;
+  if (alerte <= Date.now() + MARGE_REPLANIFICATION_MS) alerte += 24 * 3_600_000;
+  return alerte - Date.now();
+}
+
 export function demarrerHorlogeCycle(client: DiscHordesClient): void {
   const planifierProchainTick = () => {
     setTimeout(async () => {
@@ -204,4 +257,14 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
   };
 
   planifierProchainTick();
+
+  const planifierProchaineAlerte = () => {
+    setTimeout(async () => {
+      const guild = client.guilds.cache.first();
+      if (guild) await alerterAttaque(guild).catch((error) => console.error("Alerte d'attaque impossible", error));
+      planifierProchaineAlerte();
+    }, msJusquaProchaineAlerte());
+  };
+
+  planifierProchaineAlerte();
 }
