@@ -212,6 +212,23 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Médicament basique, Arme simple, Arme avancée, Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
 
+### Poids et capacité (sac et banque de ville)
+
+Chaque objet a une classe de poids, qui compte de la même façon dans le sac et dans la banque de ville :
+
+| Classe | Poids | Objets |
+|---|---|---|
+| **Petit** | 1 | Tissu, Baies, Plante médicinale, Ingrédient de remède, Munitions, Pièces mécaniques, Pièces mécaniques rouillées, Minerai rare, Radio, Médicament basique, Bandage, Torche, Ration d'eau purifiée, Remède contre l'infection, Infusion médicinale, Conserve longue durée |
+| **Moyen** | 2 | Bois, Ferraille, Eau brute, Gibier, Petit gibier, Bois rare, Objet rare, Arme simple, Arme de fortune, Plat préparé, Ragoût fortifiant, Piège simple, Feu |
+| **Lourd** | 3 | Pierre, Gros gibier, Gibier rare, Arme avancée, Pièces pour voiture, Pièges avancés, Structures de défense avancées, Armes/outils avancés, Réparation voiture |
+
+- **Sac : capacité 12.** Une fouille rapporte en moyenne 3–4 objets de poids 2 (≈ 7) : une à deux fouilles avant de devoir rentrer, avec de la place pour une ration et une torche. Bonus de capacité (métier, sac à dos) : piste pour plus tard.
+- **Banque de ville : 40 sans place publique, 80 au palier 1, 160 au palier 2** (reconversion des 40 / 80 objets de la section 7 avec un poids moyen de 2). Les ressources déposées pour un chantier ne passent pas par la banque et n'en consomment pas la capacité.
+- **Fouille** : refusée sans coût en PA si le sac est plein (plus de place même pour un objet de poids 1). Sinon, les objets entrent dans l'ordre du tirage tant qu'ils rentrent ; ceux qui ne rentrent pas restent sur place et sont perdus (pas encore d'objets au sol dans les zones). Un objet plus léger tiré après un objet trop lourd peut encore entrer.
+- **Don, fabrication, dépôt et retrait à la banque** : refusés si le résultat fait dépasser la capacité de celui qui reçoit (le destinataire du don, le sac pour la fabrication et le retrait, la banque pour le dépôt). Le poids d'une fabrication se compte après retrait des ingrédients : une fabrication qui allège le sac reste toujours possible.
+- **Déposer un objet** (`/inventaire`, gratuit) : l'objet quitte le sac et disparaît, pour alléger un sac trop lourd. Gestion des objets au sol reportée.
+- **Inventaire déjà au-dessus de sa capacité** (mise en place de la limite, ajout par un admin) : rien n'est supprimé, mais il n'accepte plus rien qui l'alourdisse tant qu'il n'est pas repassé sous la limite.
+
 ### Rencontres en territoire externe (stub v0.1 — confirmé suffisant pour le lancement V1)
 Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au palier de la zone (aucune rencontre humaine/bandit encore implémentée — la table complète est confirmée hors scope V1, voir section 11) :
 
@@ -260,8 +277,8 @@ Coût par palier en **ressources déposées dans l'inventaire de ville**, puis *
 | | 2 | 40 Bois + 100 Ferraille + 30 Pièces mécaniques | 34 | Recettes avancées supplémentaires |
 | **Puits** | 1 | 50 Pierre + 20 Ferraille | 14 | (fonctionnel, pas de bonus passif) |
 | | 2 | 90 Pierre + 40 Ferraille | 26 | +25 % capacité d'eau de ville / −20 % conso de soif collective |
-| **Place publique** | 1 | 50 Bois + 30 Tissu | 16 | Stockage de ville (40 objets) |
-| | 2 | 90 Bois + 60 Tissu | 30 | Stockage ×2 (80 objets) |
+| **Place publique** | 1 | 50 Bois + 30 Tissu | 16 | Banque de ville : capacité 80 en poids (40 sans place publique, section 5) |
+| | 2 | 90 Bois + 60 Tissu | 30 | Banque de ville : capacité ×2, soit 160 en poids |
 | **Maison privée** (perso) | 1 | 30 Bois + 15 Tissu | 9 | (fonctionnel) — chaque joueur arrive sans maison (palier 0) et la construit |
 | | 2 | 50 Bois + 30 Tissu | 16 | +15 % du PA max personnel |
 | **Mairie** | unique | 80 Bois + 40 Pierre | 24 | Fonctionnel uniquement (élections, décisions, rationnement) |
@@ -308,13 +325,12 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 - **Équilibre cuisinier** : les 3 recettes avancées sont gardées telles quelles, à surveiller en bêta plutôt qu'à nerfer a priori (section 8).
 - **Stock max des ressources naturelles par palier** : 100/150/200 (proche/moyenne/éloignée) validé tel quel (section 2).
 - **Coût PA des 6 recettes avancées restantes** : chiffré par palier d'utilité (4 à 8 PA), voir section 8.
+- **Capacité de stockage** : poids d'objet 1/2/3, sac 12, banque 40/80/160 selon la place publique, voir section 5.
 
 ## 11. Hors scope V1 (reporté volontairement à la bêta)
 
 - **Table complète des rencontres en territoire externe** : dangerosité différenciée par zone, rencontres humaines/bandits, capture de bandit. Le stub zombie uniquement (10/20/35 % par palier, ×1,5 la nuit — section 5) suffit pour lancer le développement V1 ; l'extension complète est prévue pendant la phase de bêta, avec de vrais retours joueurs pour la calibrer.
 
 ## 12. Points ouverts restants
-
-- **Capacité de stockage (sac et banque de ville)** : principe retenu, trois classes de poids d'objet — **petit = 1, moyen = 2, lourd = 3** — qui comptent de la même façon dans le sac et dans la banque. Restent à trancher : la classe de chaque objet, la capacité du sac, et la capacité de la banque selon le palier de la place publique (les « 40 / 80 objets » de la section 7 sont à reconvertir en poids), y compris sans place publique (palier 0). **En attendant, le sac et la banque ne sont pas plafonnés.**
 
 - **Effet mécanique des objets de loot sans recette** (section 5) : Médicament basique, Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.

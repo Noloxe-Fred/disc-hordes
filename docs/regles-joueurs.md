@@ -101,13 +101,18 @@ Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consu
 
 ## 🔍 Fouiller
 Dans une zone, le bouton **Fouiller** de `/action` te fait chercher ce qui traîne, pour **2 PA** (3 la nuit), après confirmation.
-🎒 Tu trouves **2 à 5 objets** selon la zone (plus on s'éloigne, plus il y en a), mais certaines trouvailles ne valent rien. Tout va dans ton sac (`/inventaire`).
+🎒 Tu trouves **2 à 5 objets** selon la zone (plus on s'éloigne, plus il y en a), mais certaines trouvailles ne valent rien. Tout va dans ton sac (`/inventaire`), **tant qu'il y a de la place** : ce qui ne rentre pas reste sur place et est perdu. Sac plein, tu ne peux pas fouiller.
 🌲 Chaque type de zone a son butin : **bois**, baies et gibier en forêt, **eau** et plantes médicinales dans les marécages, **pierre** et ferraille en montagne, tissu, ferraille et pièces mécaniques dans la ville en ruines. Les objets rares se cachent loin de la ville.
 
 
 # 🎒 Ton sac
 
 `/inventaire` affiche ce que tu portes, en ville comme dehors.
+
+## ⚖️ Le poids
+Chaque objet pèse **1** (petit : tissu, baies, plantes, bandage, torche…), **2** (moyen : bois, ferraille, eau brute, gibier…) ou **3** (lourd : pierre, gros gibier, armes avancées…).
+Ton sac porte **12** au plus : la jauge de charge est en haut de son image. Trop lourd, tu ne peux rien y ajouter de plus : ni fouiller, ni recevoir, ni fabriquer un objet qui l'alourdit, ni retirer de la banque.
+⬇️ Le bouton **Déposer un objet** l'allège gratuitement. Attention : pour l'instant, un objet déposé est **perdu**.
 
 ## 🔨 Fabriquer
 Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour comme nuit) :
@@ -126,6 +131,7 @@ Tu ne peux donner qu'à un survivant **au même endroit** que toi : un citoyen d
 
 ## 🏦 La banque
 En ville, le bouton **Banque** montre la réserve commune de ta ville. **Déposer** y range des objets de ton sac, **Retirer** en reprend : c'est gratuit, et tous les citoyens vivants présents en ville y ont accès.
+⚖️ La banque porte **40** au plus, avec les mêmes poids que le sac.
 📜 Chaque dépôt et chaque retrait est inscrit au journal de la ville.
 
 
@@ -144,7 +150,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
-🎒 `/inventaire` : le contenu de ton sac, pour fabriquer ou donner des objets
+🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner ou déposer des objets
 ⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, ou quitter ta ville si tu es mort)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫

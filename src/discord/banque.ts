@@ -12,14 +12,15 @@ import {
   type ButtonInteraction,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { emojiObjet } from "../config/objets";
+import { emojiObjet, poidsObjet } from "../config/objets";
 import { prisma } from "../db";
+import { chargeBanque, chargeSac, deborde, libelleCharge } from "../services/charge";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
 import { rendreInventaire } from "./renduInventaire";
 
 // Banque de ville (conception.md §1, inventaire de ville) : les citoyens vivants presents en ville y deposent des
 // objets de leur sac ou en retirent, sans passer par le don. Gratuit en PA, inscrit au journal public de la ville.
-// Capacite non limitee pour l'instant : elle sera fixee avec le poids des objets (sac et banque, ticket T59).
+// Capacite en poids selon le palier de la place publique, et celle du sac au retrait (equilibrage.md §5).
 
 const COULEUR = 0x95a5a6;
 const FICHIER_BANQUE = "banque.png";
@@ -77,12 +78,12 @@ export async function ecranBanque(
     };
   }
   const ville = joueur.ville!;
-  const banque = await contenuBanque(ville.id);
-  const total = banque.reduce((somme, e) => somme + e.quantite, 0);
+  const [banque, charge, sac] = await Promise.all([contenuBanque(ville.id), chargeBanque(ville.id), chargeSac(joueurId)]);
 
-  const png = rendreInventaire(`Banque — ${ville.nom}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })));
+  const png = rendreInventaire(`Banque — ${ville.nom}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), charge);
   const conteneur = encadre(
-    (message ? `${message}\n\n` : "") + `## 🏦 Banque — ${ville.nom}\n${total} objet(s) en réserve, à la disposition de tous les citoyens.`,
+    (message ? `${message}\n\n` : "") +
+      `## 🏦 Banque — ${ville.nom}\nRéserve à la disposition de tous les citoyens : 🏦 ${libelleCharge(charge)} · 🎒 votre sac ${libelleCharge(sac)}.`,
   )
     .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${FICHIER_BANQUE}`)))
     .addTextDisplayComponents(
@@ -157,6 +158,16 @@ async function operer(joueurId: number, sens: SensBanque, objetId: number, quant
     return sens === "deposer"
       ? `Vous n'avez pas ${quantite} ${nom} sur vous.`
       : `La banque n'a plus ${quantite} ${nom} (il en reste ${source?.quantite ?? 0}).`;
+  }
+
+  // La destination doit avoir la place : la banque au depot, le sac au retrait
+  const poids = poidsObjet(objet.nom) * quantite;
+  const destination = sens === "deposer" ? await chargeBanque(villeId) : await chargeSac(joueurId);
+  if (deborde(destination, poids)) {
+    return (
+      (sens === "deposer" ? "La banque est trop pleine" : "Votre sac est trop lourd") +
+      ` pour ${quantite} ${nom} (poids ${poids}, charge ${libelleCharge(destination)}).`
+    );
   }
 
   const sac = { where: { joueurId_objetId: { joueurId, objetId } } };

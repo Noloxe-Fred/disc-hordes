@@ -15,7 +15,7 @@ import {
 import type { Command } from "../client";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
-import { emojiObjet } from "../config/objets";
+import { emojiObjet, poidsObjet } from "../config/objets";
 import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
@@ -26,6 +26,7 @@ import { coutDeplacement, coutFouille, coutObservation } from "../game/deplaceme
 import { tirerLoot } from "../game/loot";
 import { calculerPaMax } from "../game/pa";
 import { ajouterACarte } from "../services/carte";
+import { chargeSac, deborde, libelleCharge, MESSAGE_SAC_PLEIN, sacPlein } from "../services/charge";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { destinationsDepuis } from "../services/zones";
@@ -140,14 +141,21 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
           ),
         );
 
-  // Fouiller la zone courante : objets tires selon le type et le palier de la zone, ajoutes au sac
+  // Fouiller la zone courante : objets tires selon le type et le palier de la zone, ajoutes au sac tant qu'il y a
+  // de la place ; sac plein, la fouille est refusee sans couter de PA
   const coutFou = coutFouille(ville.phaseActuelle);
-  const ecranFouille =
-    coutFou > paActuel
+  const sac = await chargeSac(joueurId);
+  const ecranFouille = sacPlein(sac)
+    ? encadre(`${entete}\n\n${MESSAGE_SAC_PLEIN} (${libelleCharge(sac)}).`).addActionRowComponents(
+        new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()),
+      )
+    : coutFou > paActuel
       ? encadre(`${entete}\n\nIl vous faut **${coutFou} PA** pour fouiller la zone (vous en avez ${paActuel}).`).addActionRowComponents(
           new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()),
         )
-      : encadre(`${entete}\n**Fouiller** la zone pour **${coutFou} PA** ? Ce que vous trouvez va dans votre sac.`).addActionRowComponents(
+      : encadre(
+          `${entete}\n**Fouiller** la zone pour **${coutFou} PA** ? Ce que vous trouvez va dans votre sac (🎒 ${libelleCharge(sac)}) ; ce qui ne rentre pas reste sur place.`,
+        ).addActionRowComponents(
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId("confirmer-fouille").setLabel(`Fouiller (${coutFou} PA)`).setStyle(ButtonStyle.Primary),
             boutonRetour(),
@@ -325,7 +333,8 @@ async function confirmerObservation(joueurId: number, zoneDepartId: number | nul
   );
 }
 
-// Fouille confirmee : reverification, puis PA depenses et objets tires ajoutes a l'inventaire du joueur.
+// Fouille confirmee : reverification, puis PA depenses et objets tires ajoutes au sac dans l'ordre du tirage, tant
+// qu'ils rentrent (equilibrage.md §5, « Poids et capacite ») ; ceux qui ne rentrent pas sont perdus.
 // Renvoie le texte a afficher au joueur.
 async function confirmerFouille(joueurId: number, zoneDepartId: number | null): Promise<string> {
   const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
@@ -337,11 +346,23 @@ async function confirmerFouille(joueurId: number, zoneDepartId: number | null): 
   if (actuel.statut !== StatutJoueur.VIVANT && actuel.statut !== StatutJoueur.EXCLU) return "Vous ne pouvez plus fouiller.";
   if (!zone || actuel.zoneActuelleId !== zoneDepartId) return "Votre position a changé entre-temps : relancez `/action`.";
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour fouiller la zone.`;
+  const sac = await chargeSac(joueurId);
+  if (sacPlein(sac)) return `${MESSAGE_SAC_PLEIN} (${libelleCharge(sac)}).`;
   const type = typeDeZone(zone.nom);
   if (!type) throw new Error(`Type de zone inconnu : ${zone.nom}`);
 
-  const trouves = tirerLoot(LOOT_PAR_ZONE[type.cle][zone.palier]);
+  // Un objet trop lourd pour la place restante est laisse, mais un plus leger tire ensuite peut encore rentrer
+  const trouves = new Map<string, number>();
+  const laisses = new Map<string, number>();
+  for (const nom of tirerLoot(LOOT_PAR_ZONE[type.cle][zone.palier])) {
+    const poids = poidsObjet(nom);
+    const cible = deborde(sac, poids) ? laisses : trouves;
+    if (cible === trouves) sac.utilisee += poids;
+    cible.set(nom, (cible.get(nom) ?? 0) + 1);
+  }
   const objets = await prisma.objet.findMany({ where: { nom: { in: [...trouves.keys()] } } });
+  const liste = (quantites: Map<string, number>) => [...quantites].map(([nom, n]) => `${emojiObjet(nom)} **${nom}** × ${n}`).join("\n");
+  const texteLaisses = laisses.size > 0 ? `\n\nVotre sac est trop lourd pour le reste, laissé sur place :\n${liste(laisses)}` : "";
   await prisma.$transaction([
     prisma.joueur.update({ where: { id: joueurId }, data: { paActuel: { decrement: cout } } }),
     ...objets.map((objet) =>
@@ -355,17 +376,21 @@ async function confirmerFouille(joueurId: number, zoneDepartId: number | null): 
       data: {
         villeId: ville.id,
         joueurId,
-        message: `Fouille de ${zone.nom} : ${objets.length > 0 ? objets.map((o) => `${o.nom} ×${trouves.get(o.nom)}`).join(", ") : "rien"}`,
+        message:
+          `Fouille de ${zone.nom} : ${objets.length > 0 ? objets.map((o) => `${o.nom} ×${trouves.get(o.nom)}`).join(", ") : "rien"}` +
+          (laisses.size > 0 ? ` (laissé faute de place : ${[...laisses].map(([nom, n]) => `${nom} ×${n}`).join(", ")})` : ""),
         public: false, // rien de public en territoire externe (conception.md §7)
       },
     }),
   ]);
 
-  if (objets.length === 0) return `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`;
+  if (trouves.size === 0 && laisses.size === 0) {
+    return `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`;
+  }
+  if (trouves.size === 0) return `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants).${texteLaisses}`;
   return (
-    `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n` +
-    objets.map((o) => `${emojiObjet(o.nom)} **${o.nom}** × ${trouves.get(o.nom)}`).join("\n") +
-    "\n\n🎒 Tout est rangé dans votre sac (`/inventaire`)."
+    `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n${liste(trouves)}` +
+    `\n\n🎒 Rangé dans votre sac (${libelleCharge(sac)}, \`/inventaire\`).${texteLaisses}`
   );
 }
 

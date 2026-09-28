@@ -7,7 +7,8 @@ import { imageEmoji } from "./emojis";
 // Rendu PNG du sac d'un joueur (SVG rasterise par resvg), dans la charte MyHordes de la carte et des regles :
 // cadre brun a bordure beige, titre creme en Courier Prime. Les objets sont ranges par famille (ressources,
 // objets fabriques, objets rares), une case par objet avec son icone Twemoji et sa quantite ; la derniere
-// rangee de chaque famille est completee de cases vides, comme les emplacements du sac de MyHordes.
+// rangee de chaque famille est completee de cases vides, comme les emplacements du sac de MyHordes. Sous le titre,
+// une jauge montre la charge (poids des objets) sur la capacite ; rouge quand elle depasse.
 
 const POLICES = ["CourierPrime-Regular.ttf", "CourierPrime-Bold.ttf"].map((f) => join(__dirname, "../../assets/fonts", f));
 
@@ -19,6 +20,7 @@ const MARGE = 24;
 const BANDEAU = 58;
 const TITRE_FAMILLE = 34;
 const ICONE = 54;
+const JAUGE = 40; // bandeau de la jauge de charge, sous le titre
 const LARGEUR = 2 * MARGE + COLONNES * CASE + (COLONNES - 1) * ESPACE;
 const ECHELLE = 1.5; // image nette une fois reduite par Discord
 
@@ -35,6 +37,9 @@ const COULEUR = {
   badge: "#2e3a0c",
   bordBadge: "#b4da4c",
   quantite: "#d7ff5b",
+  fondJauge: "#3e2417",
+  jauge: "#b4da4c",
+  jaugePleine: "#e0703a",
 };
 
 const FAMILLES: { titre: string; types: TypeObjet[] }[] = [
@@ -88,9 +93,31 @@ function caseObjet(x: number, y: number, objet: ObjetSac | null): string {
   );
 }
 
-export function construireSvgInventaire(titre: string, objets: ObjetSac[]): string {
+export interface ChargeInventaire {
+  utilisee: number;
+  capacite: number;
+}
+
+function jaugeCharge(y: number, charge: ChargeInventaire): string {
+  const libelle = `CHARGE ${charge.utilisee} / ${charge.capacite}`;
+  const xBarre = MARGE + 190;
+  const largeurBarre = LARGEUR - MARGE - xBarre;
+  const remplie = Math.round(largeurBarre * Math.min(1, charge.utilisee / charge.capacite));
+  const couleur = charge.utilisee >= charge.capacite ? COULEUR.jaugePleine : COULEUR.jauge;
+  return (
+    `<text x="${MARGE}" y="${y + 21}" font-size="16" font-weight="bold" letter-spacing="1" fill="${COULEUR.famille}">${libelle}</text>` +
+    `<rect x="${xBarre}" y="${y + 6}" width="${largeurBarre}" height="20" rx="4" fill="${COULEUR.fondJauge}" stroke="${COULEUR.bordCase}" stroke-width="1.5"/>` +
+    (remplie > 0 ? `<rect x="${xBarre}" y="${y + 6}" width="${remplie}" height="20" rx="4" fill="${couleur}"/>` : "")
+  );
+}
+
+export function construireSvgInventaire(titre: string, objets: ObjetSac[], charge?: ChargeInventaire): string {
   const elements: string[] = [];
   let y = BANDEAU + 10;
+  if (charge) {
+    elements.push(jaugeCharge(y, charge));
+    y += JAUGE;
+  }
   const hauteurRangee = CASE + ETIQUETTE + ESPACE;
 
   const familles = FAMILLES.map((f) => ({
@@ -133,8 +160,8 @@ export function construireSvgInventaire(titre: string, objets: ObjetSac[]): stri
   );
 }
 
-export function rendreInventaire(titre: string, objets: ObjetSac[]): Buffer {
-  const resvg = new Resvg(construireSvgInventaire(titre, objets), {
+export function rendreInventaire(titre: string, objets: ObjetSac[], charge?: ChargeInventaire): Buffer {
+  const resvg = new Resvg(construireSvgInventaire(titre, objets, charge), {
     fitTo: { mode: "width", value: Math.round(LARGEUR * ECHELLE) },
     font: { fontFiles: POLICES, loadSystemFonts: false, defaultFontFamily: "Courier Prime" },
   });

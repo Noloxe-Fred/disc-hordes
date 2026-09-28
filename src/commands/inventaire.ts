@@ -15,19 +15,22 @@ import {
   TextDisplayBuilder,
   type ButtonInteraction,
   type Guild,
+  type ModalSubmitInteraction,
 } from "discord.js";
 import type { Command } from "../client";
-import { emojiObjet } from "../config/objets";
+import { CAPACITE_SAC, emojiObjet, poidsObjet } from "../config/objets";
 import { prisma } from "../db";
 import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { rendreInventaire } from "../discord/renduInventaire";
+import { chargeSac, deborde, libelleCharge, poidsTotal } from "../services/charge";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
-// « donner a » un autre survivant present au meme endroit, et, en ville, acces a la banque (discord/banque.ts).
+// « donner a » un autre survivant present au meme endroit, « deposer » un objet pour alleger le sac, et, en ville,
+// acces a la banque (discord/banque.ts). Le sac a une capacite en poids (equilibrage.md §5, services/charge.ts).
 // Le menu montre le sac en image (renduInventaire.ts) ; le menu et chaque ecran remplacent le meme message,
 // « Retour » ramene au menu.
 
@@ -118,8 +121,11 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
   // Menu du sac, recharge a chaque retour : un depot ou un retrait a la banque change son contenu
   let sac = await contenuSac(joueurId);
   const construireMenu = () => {
-    const png = rendreInventaire(`Sac — ${interaction.user.username}`, sac.map((e) => ({ ...e.objet, quantite: e.quantite })));
-    const menu = encadre(entete)
+    const charge = { utilisee: poidsTotal(sac), capacite: CAPACITE_SAC };
+    const png = rendreInventaire(`Sac — ${interaction.user.username}`, sac.map((e) => ({ ...e.objet, quantite: e.quantite })), charge);
+    const menu = encadre(
+      `${entete}\n🎒 Charge ${libelleCharge(charge)}` + (charge.utilisee > charge.capacite ? " — **trop lourd**, déposez des objets" : ""),
+    )
       .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${FICHIER_SAC}`)))
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
@@ -135,6 +141,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
           ...(empechementBanque(joueur) === null
             ? [new ButtonBuilder().setCustomId("banque").setLabel("Banque").setEmoji("🏦").setStyle(ButtonStyle.Secondary)]
             : []),
+          new ButtonBuilder().setCustomId("poser").setLabel("Déposer un objet").setEmoji("⬇️").setStyle(ButtonStyle.Secondary),
         ),
       );
     }
@@ -224,8 +231,70 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
         await resultat.soumission.update({ components: [encadre(resultat.texte)], attachments: [] });
       }
       return;
+    } else if (clic.isButton() && clic.customId === "poser") {
+      // Apres avoir depose, retour sur le menu du sac rafraichi, le resultat en tete
+      const resultat = await formulairePoser(clic, joueurId, sac);
+      if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
+      sac = await contenuSac(joueurId);
+      quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
+      const menu = construireMenu();
+      menu.components.unshift(encadre(resultat.texte));
+      if (!resultat.soumission) await clic.update({ ...menu, attachments: [] });
+      else if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ ...menu, attachments: [] });
     }
   }
+}
+
+// Formulaire « deposer un objet » (objet + quantite) : l'objet quitte le sac et disparait, faute d'objets au sol pour
+// l'instant. Gratuit en PA. Renvoie null si le formulaire n'est pas envoye ; texte seul (sans soumission) si le sac est
+// vide, le clic n'ayant alors pas ouvert de formulaire.
+async function formulairePoser(
+  clic: ButtonInteraction,
+  joueurId: number,
+  sac: Awaited<ReturnType<typeof contenuSac>>,
+): Promise<{ soumission: ModalSubmitInteraction | null; texte: string } | null> {
+  if (sac.length === 0) return { soumission: null, texte: "Votre sac est vide : rien à déposer." };
+  const champs = champsObjetsPossedes(sac);
+  const idFormulaire = `poser:${clic.id}`;
+  await clic.showModal(
+    new ModalBuilder()
+      .setCustomId(idFormulaire)
+      .setTitle("Déposer un objet (il sera perdu)")
+      .addLabelComponents(...champs, champQuantite()),
+  );
+  const soumission = await clic
+    .awaitModalSubmit({ time: DELAI_CHOIX_MS, filter: (i) => i.customId === idFormulaire })
+    .catch(() => null);
+  if (!soumission) return null;
+
+  const objetId = lireObjetPossede(soumission, champs.length);
+  const quantite = lireQuantite(soumission);
+  const texte =
+    objetId === null
+      ? "Choisissez un seul objet."
+      : quantite === null
+        ? "La quantité doit être un nombre entier positif."
+        : await poser(joueurId, objetId, quantite);
+  return { soumission, texte };
+}
+
+async function poser(joueurId: number, objetId: number, quantite: number): Promise<string> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
+  if (!peutAgir(joueur)) return "Vous ne pouvez plus déposer d'objet.";
+  const entree = await prisma.inventaireJoueur.findUnique({
+    where: { joueurId_objetId: { joueurId, objetId } },
+    include: { objet: true },
+  });
+  if (!entree || entree.quantite < quantite) return `Vous n'avez pas ${quantite} ${entree?.objet.nom ?? "de cet objet"} sur vous.`;
+
+  const objet = objetAvecEmoji(entree.objet.nom);
+  await prisma.$transaction([
+    prisma.inventaireJoueur.update({ where: { id: entree.id }, data: { quantite: { decrement: quantite } } }),
+    prisma.journalEntree.create({
+      data: { villeId: joueur.villeId!, joueurId, message: `Objet déposé : ${entree.objet.nom} ×${quantite}`, public: false },
+    }),
+  ]);
+  return `⬇️ Vous avez déposé **${objet} × ${quantite}**. Personne ne le retrouvera.`;
 }
 
 // Fabrication confirmee : reverification (PA et ingredients ont pu changer), puis ingredients consommes, PA
@@ -236,9 +305,16 @@ async function fabriquer(joueurId: number, recette: RecetteSimple): Promise<stri
   const cout = recette.coutPA ?? 0;
   const paRestants = (joueur.paActuel ?? 0) - cout;
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour fabriquer ${recette.objetResultat.nom}.`;
-  const sac = new Map((await contenuSac(joueurId)).map((e) => [e.objetId, e.quantite]));
+  const contenu = await contenuSac(joueurId);
+  const sac = new Map(contenu.map((e) => [e.objetId, e.quantite]));
   const manque = manquants(recette, sac);
   if (manque.length > 0) return `Il vous manque : ${manque.join(", ")}.`;
+  // Poids compte apres avoir retire les ingredients : une fabrication qui allege le sac reste toujours possible
+  const charge = { utilisee: poidsTotal(contenu), capacite: CAPACITE_SAC };
+  const ajout = poidsObjet(recette.objetResultat.nom) - poidsTotal(recette.ingredients);
+  if (deborde(charge, ajout)) {
+    return `Votre sac est trop lourd pour fabriquer ${objetAvecEmoji(recette.objetResultat.nom)} (charge ${libelleCharge(charge)}) : déposez d'abord des objets.`;
+  }
 
   await prisma.$transaction([
     prisma.joueur.update({ where: { id: joueurId }, data: { paActuel: { decrement: cout } } }),
@@ -337,6 +413,11 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
     include: { objet: true },
   });
   if (!entree || entree.quantite < quantite) return `Vous n'avez pas ${quantite} ${entree?.objet.nom ?? "de cet objet"} sur vous.`;
+  const chargeDestinataire = await chargeSac(destinataireId);
+  const poids = poidsObjet(entree.objet.nom) * quantite;
+  if (deborde(chargeDestinataire, poids)) {
+    return `Le sac de **${nomJoueur(destinataire)}** est trop lourd pour recevoir ${quantite} ${objetAvecEmoji(entree.objet.nom)} (poids ${poids}, charge ${libelleCharge(chargeDestinataire)}).`;
+  }
 
   const enVille = joueur.zoneActuelleId === null;
   const objet = objetAvecEmoji(entree.objet.nom);
@@ -382,7 +463,7 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
 }
 
 const command: Command = {
-  data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer ou donner des objets"),
+  data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner ou déposer des objets"),
 
   async execute(interaction) {
     const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
