@@ -28,6 +28,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 
 - Se déplacer entre zones = changement de rôle Discord (accès/retrait de salon)
 - Déplacement par **adjacence** : on traverse les zones intermédiaires plutôt que de sauter directement, pour permettre des événements en chemin et complexifier l'accès aux zones éloignées
+- **Graphe des zones** (identique pour tous les groupes) : la ville donne accès aux 4 zones proches ; chaque type de zone relie proche ↔ moyenne ↔ éloignée ; à chaque palier, les types voisins forment un anneau (ville en ruines – forêt – marécages – montagnes – ville en ruines). On ne rentre en ville que depuis une zone proche
 - Trajet joué zone par zone, une commande par étape (pas de trajet multi-zones simulé d'un coup)
 - Dans une nouvelle zone, le joueur voit les zones adjacentes accessibles depuis là → un éclaireur peut constituer une "carte"
 - Découverte de zones individuelle ; commande `/partager-carte` pour la transmettre aux autres en rentrant d'une zone ; commande `/carte` pour consulter sa propre carte découverte à tout moment

@@ -2,12 +2,14 @@ import { StatutVille } from "@prisma/client";
 import { PermissionFlagsBits, type Guild, type OverwriteResolvable, type Role } from "discord.js";
 import { PALIERS_ZONE, TYPES_ZONE, nomSalonZone } from "../config/zones";
 import { prisma } from "../db";
+import { ensureAdjacencesGroupe, nomZone } from "../services/zones";
 import { ensureCategory, ensureRole, ensureTextChannel, trouverRole, trouverSalonTexte } from "./reconcile";
 
 // Categorie "Territoires externes" d'un groupe (conception.md §1) : visible uniquement des villes
 // fondees du groupe (via leurs roles-ville). Les salons de zone sont masques a tous sauf au role
 // Position de la zone, donne au joueur present dans la zone lors de ses deplacements.
-// Idempotent : appele a chaque fondation, cree ce qui manque et ajoute la nouvelle ville a la visibilite.
+// Idempotent : appele a chaque fondation, cree ce qui manque (zones, salons, roles, liens d'adjacence) et ajoute
+// la nouvelle ville a la visibilite.
 export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): Promise<void> {
   const everyoneId = guild.roles.everyone.id;
 
@@ -31,7 +33,7 @@ export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): P
 
   for (const type of TYPES_ZONE) {
     for (const { palier, nom: nomPalier } of PALIERS_ZONE) {
-      const nom = `${type.nom} ${nomPalier}`;
+      const nom = nomZone(type.nom, nomPalier);
       const zone = await prisma.zone.upsert({
         where: { groupeId_nom: { groupeId, nom } },
         update: {},
@@ -58,4 +60,6 @@ export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): P
       ]);
     }
   }
+
+  await ensureAdjacencesGroupe(groupeId);
 }

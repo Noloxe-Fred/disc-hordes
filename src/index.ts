@@ -6,6 +6,7 @@ import { createClient, type Command } from "./client";
 import { prisma } from "./db";
 import { gererBouton } from "./discord/boutons";
 import { synchroniserNomade } from "./discord/joueurDiscord";
+import { ensureAdjacencesGroupe } from "./services/zones";
 import { demarrerHorlogeCycle } from "./scheduler/cycle";
 
 const client = createClient();
@@ -28,6 +29,11 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`${body.length} commande(s) déployée(s)${guildId ? ` sur la guilde ${guildId}` : " globalement"}.`);
   } catch (error) {
     console.error("Echec du deploiement des commandes", error);
+  }
+
+  // Liens d'adjacence des groupes crees avant leur mise en place (idempotent)
+  for (const { id } of await prisma.groupe.findMany({ select: { id: true } })) {
+    await ensureAdjacencesGroupe(id).catch((error) => console.error(`Adjacences du groupe ${id} impossibles`, error));
   }
 
   demarrerHorlogeCycle(client);
