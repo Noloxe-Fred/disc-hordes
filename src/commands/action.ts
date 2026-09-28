@@ -37,6 +37,7 @@ const DELAI_CHOIX_MS = 120_000;
 const COULEUR_VIVANT = 0x2ecc71;
 const COULEUR_MORT = 0xc0392b;
 const VALEUR_VILLE = "ville";
+const OBJET_TORCHE = "Torche";
 
 function encadre(texte: string, couleur = COULEUR_VIVANT): ContainerBuilder {
   return new ContainerBuilder().setAccentColor(couleur).addTextDisplayComponents(new TextDisplayBuilder().setContent(texte));
@@ -101,6 +102,10 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ...(accessibles.ville && !exclu ? [{ id: null, nom: `Rentrer en ville (${ville.nom})`, palier: null }] : []),
     ...accessibles.zones.map((z) => ({ id: z.id, nom: z.nom, palier: z.palier })),
   ].map((d) => ({ ...d, cout: coutDeplacement(d.palier, ville.phaseActuelle) }));
+  const torches =
+    ville.phaseActuelle === TypePhase.NUIT
+      ? ((await prisma.inventaireJoueur.findFirst({ where: { joueurId, objet: { nom: OBJET_TORCHE } } }))?.quantite ?? 0)
+      : 0;
   const valeur = (d: Destination) => (d.id === null ? VALEUR_VILLE : String(d.id));
 
   const ecranDeplacement = encadre(`${entete}\n**Se déplacer** : choisissez une destination.`).addActionRowComponents(
@@ -184,44 +189,67 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     } else if (clic.isStringSelectMenu() && clic.customId === "aller") {
       destination = destinations.find((d) => valeur(d) === clic.values[0]);
       if (!destination) return;
-      // Confirmation avant de depenser des PA (conception.md §4)
+      // Confirmation avant de depenser des PA (conception.md §4). La nuit, une torche du sac permet de payer
+      // le cout de jour (equilibrage.md §6).
+      const coutTorche = coutDeplacement(destination.palier, TypePhase.JOUR);
+      const torchePossible = torches > 0 && coutTorche < destination.cout && coutTorche <= paActuel;
+      const boutons = [
+        ...(destination.cout <= paActuel
+          ? [new ButtonBuilder().setCustomId("confirmer").setLabel(`Y aller (${destination.cout} PA)`).setStyle(ButtonStyle.Primary)]
+          : []),
+        ...(torchePossible
+          ? [
+              new ButtonBuilder()
+                .setCustomId("confirmer-torche")
+                .setLabel(`Avec une torche (${coutTorche} PA)`)
+                .setEmoji("🔥")
+                .setStyle(ButtonStyle.Primary),
+            ]
+          : []),
+      ];
       await clic.update({
         components: [
-          destination.cout > paActuel
+          boutons.length === 0
             ? encadre(
                 `${entete}\n\nIl vous faut **${destination.cout} PA** pour aller vers ${destination.nom} (vous en avez ${paActuel}).`,
               ).addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()))
-            : encadre(`${entete}\n\nAller vers **${destination.nom}** pour **${destination.cout} PA** ?`).addActionRowComponents(
-                new ActionRowBuilder<ButtonBuilder>().addComponents(
-                  new ButtonBuilder()
-                    .setCustomId("confirmer")
-                    .setLabel(`Y aller (${destination.cout} PA)`)
-                    .setStyle(ButtonStyle.Primary),
-                  boutonRetour(),
-                ),
-              ),
+            : encadre(
+                `${entete}\n\nAller vers **${destination.nom}** pour **${destination.cout} PA** ?` +
+                  (torchePossible ? `\n🔥 Avec une torche (vous en avez ${torches}), le trajet ne coûte que **${coutTorche} PA**.` : ""),
+              ).addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(...boutons, boutonRetour())),
         ],
       });
-    } else if (clic.customId === "confirmer" && destination) {
+    } else if ((clic.customId === "confirmer" || clic.customId === "confirmer-torche") && destination) {
+      const avecTorche = clic.customId === "confirmer-torche";
       await clic.deferUpdate();
-      await clic.editReply({ components: [encadre(await confirmerDeplacement(guild, joueurId, joueur.zoneActuelleId, groupeId, destination))] });
+      await clic.editReply({
+        components: [encadre(await confirmerDeplacement(guild, joueurId, joueur.zoneActuelleId, groupeId, destination, avecTorche))],
+      });
       return;
     }
   }
 }
 
 // Deplacement confirme : reverification (phase, PA ou position ont pu changer pendant la confirmation), puis
-// execution. Renvoie le texte a afficher au joueur.
+// execution. Avec une torche, la nuit, le trajet coute le prix de jour et la torche est consommee. Renvoie le
+// texte a afficher au joueur.
 async function confirmerDeplacement(
   guild: Guild,
   joueurId: number,
   zoneDepartId: number | null,
   groupeId: number,
   destination: Destination,
+  avecTorche: boolean,
 ): Promise<string> {
   const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   const ville = actuel.ville!;
-  const cout = coutDeplacement(destination.palier, ville.phaseActuelle);
+  const nuit = ville.phaseActuelle === TypePhase.NUIT;
+  const torche =
+    avecTorche && nuit
+      ? await prisma.inventaireJoueur.findFirst({ where: { joueurId, objet: { nom: OBJET_TORCHE }, quantite: { gt: 0 } } })
+      : null;
+  if (avecTorche && nuit && !torche) return "Vous n'avez plus de torche : relancez `/action`.";
+  const cout = coutDeplacement(destination.palier, torche ? TypePhase.JOUR : ville.phaseActuelle);
   const depuisActuel = await destinationsDepuis(groupeId, actuel.zoneActuelleId);
   const toujoursAccessible =
     destination.id === null ? depuisActuel.ville : depuisActuel.zones.some((z) => z.id === destination.id);
@@ -231,6 +259,7 @@ async function confirmerDeplacement(
   if (actuel.zoneActuelleId !== zoneDepartId || !toujoursAccessible) return "Votre position a changé entre-temps : relancez `/action`.";
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour ce déplacement.`;
 
+  if (torche) await prisma.inventaireJoueur.update({ where: { id: torche.id }, data: { quantite: { decrement: 1 } } });
   await deplacerJoueur(guild, actuel, destination.id, cout);
   await prisma.journalEntree.create({
     data: {
@@ -241,10 +270,11 @@ async function confirmerDeplacement(
     },
   });
 
-  if (destination.id === null) return `🏠 Vous êtes rentré à **${ville.nom}** (−${cout} PA, ${paRestants} restants).`;
+  const bilan = `−${cout} PA, ${paRestants} restants${torche ? ", une torche consumée 🔥" : ""}`;
+  if (destination.id === null) return `🏠 Vous êtes rentré à **${ville.nom}** (${bilan}).`;
   const salon = await trouverSalonTexte(guild, `salon:zone:${destination.id}`);
   return (
-    `🧭 Vous êtes arrivé : **${destination.nom}**${salon ? ` — ${salon}` : ""} (−${cout} PA, ${paRestants} restants).\n` +
+    `🧭 Vous êtes arrivé : **${destination.nom}**${salon ? ` — ${salon}` : ""} (${bilan}).\n` +
     "Tant que vous êtes dehors, vous ne pouvez plus écrire dans les salons de la ville."
   );
 }

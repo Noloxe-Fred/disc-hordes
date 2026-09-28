@@ -105,6 +105,26 @@ Dans une zone, le bouton **Fouiller** de `/action` te fait chercher ce qui traî
 🌲 Chaque type de zone a son butin : **bois**, baies et gibier en forêt, **eau** et plantes médicinales dans les marécages, **pierre** et ferraille en montagne, tissu, ferraille et pièces mécaniques dans la ville en ruines. Les objets rares se cachent loin de la ville.
 
 
+# 🎒 Ton sac
+
+`/inventaire` affiche ce que tu portes, en ville comme dehors.
+
+## 🔨 Fabriquer
+Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour comme nuit) :
+🩹 **Bandage** : 2 Tissu
+🍲 **Plat préparé** : 1 Baies + 1 Gibier
+🔥 **Feu** : 2 Bois
+🗡️ **Arme de fortune** : 1 Ferraille + 1 Bois
+💧 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
+🔦 **Torche** : 1 Bois + 1 Tissu
+🪤 **Piège simple** : 2 Bois + 1 Ferraille
+🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+
+## 🤝 Donner
+Le bouton **Donner** ouvre un formulaire : choisis **à qui**, **quel objet** et **combien**. C'est gratuit.
+Tu ne peux donner qu'à un survivant **au même endroit** que toi : un citoyen de ta ville si tu es en ville, n'importe quel survivant de ta zone si tu es dehors. Le don est annoncé dans le salon du lieu.
+
+
 # 💀 La mort et la chute
 
 ## ⚰️ Mourir
@@ -120,13 +140,13 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
-🎒 `/inventaire` : le contenu de ton sac
+🎒 `/inventaire` : le contenu de ton sac, pour fabriquer ou donner des objets
 ⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, ou quitter ta ville si tu es mort)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 En préparation
-⚔️ Combats · 🍲 Manger, boire et se soigner · 🔨 Chantiers et craft · 🗳️ Élections du maire
+⚔️ Combats · 🍲 Manger, boire et se soigner · 🔨 Chantiers et atelier · 🗳️ Élections du maire
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 
