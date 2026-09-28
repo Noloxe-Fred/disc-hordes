@@ -2,7 +2,7 @@ import { StatutVille, TypeRessourceDiscord } from "@prisma/client";
 import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { prisma } from "../db";
 import { trouverRole } from "./reconcile";
-import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE } from "./structure";
+import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, ROLE_RADIO } from "./structure";
 
 // Permissions retirees a un joueur mort sur les salons de sa ville : il les voit toujours
 // (conception.md §3, l'ame reste liee a sa partie) mais ne peut plus y interagir.
@@ -124,4 +124,25 @@ export async function changerPositionDiscord(
   if (!membre) return;
   if (ancienneZoneId !== null) await retirerRole(membre, `role:position:zone:${ancienneZoneId}`);
   if (nouvelleZoneId !== null) await ajouterRole(membre, `role:position:zone:${nouvelleZoneId}`);
+}
+
+// Ecriture retiree sur les salons de la ville quand le joueur part en territoire externe, rendue a son retour
+// (conception.md §1). Le role Radio permet de garder l'ecriture dehors. Seules ces permissions sont touchees :
+// une restriction de mort ou d'exclusion posee sur le meme membre reste en place.
+const PERMISSIONS_ECRITURE_VILLE = ["SendMessages", "SendMessagesInThreads", "CreatePublicThreads", "Connect", "Speak"] as const;
+
+export async function restreindreEcritureVille(
+  guild: Guild,
+  discordId: string,
+  villeId: number,
+  restreindre: boolean,
+): Promise<void> {
+  const membre = await guild.members.fetch(discordId).catch(() => null);
+  if (!membre) return;
+  const radio = await trouverRole(guild, ROLE_RADIO.cle);
+  const valeur = restreindre && !(radio && membre.roles.cache.has(radio.id)) ? false : null;
+  const permissions = Object.fromEntries(PERMISSIONS_ECRITURE_VILLE.map((p) => [p, valeur]));
+  for (const salon of await salonsDeVille(guild, villeId)) {
+    await salon.permissionOverwrites.edit(membre, permissions).catch(() => null);
+  }
 }

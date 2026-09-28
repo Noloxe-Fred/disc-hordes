@@ -87,6 +87,15 @@ Elle réduit peu à peu tes PA… et au bout de **96h** sans remède, tu deviens
 
 <!-- nouveau message -->
 
+# 🗺️ Les territoires externes
+
+Dans `/action`, le bouton **Se déplacer** te propose les destinations possibles et leur coût : le bot te demande de confirmer avant de dépenser tes PA.
+🧭 On avance **de proche en proche** : de la ville vers les 4 zones **proches**, puis vers les zones **moyennes** et **éloignées** du même type, ou vers les zones voisines de même distance.
+⚡ Coût : **2 PA** pour une zone proche (ou pour rentrer en ville), **3 PA** pour une moyenne, **4 PA** pour une éloignée. La nuit, c'est **50 % plus cher**.
+🔇 Dehors, tu ne peux plus écrire dans les salons de ta ville, et tu ne récupères pas tes PA au changement de phase. Tu retrouves le salon de chaque zone où tu te trouves.
+
+<!-- nouveau message -->
+
 # 💀 La mort et la chute
 
 ## ⚰️ Mourir
@@ -103,12 +112,12 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac
-⚡ `/action` : tes actions possibles (quitter ta ville si tu es mort)
+⚡ `/action` : tes actions possibles (te déplacer, ou quitter ta ville si tu es mort)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 En préparation
-🗺️ Exploration des territoires externes · 🔍 Fouille et loot · ⚔️ Combats · 🍲 Manger, boire et se soigner · 🔨 Chantiers et craft · 🗳️ Élections du maire
+🗺️ Carte des zones découvertes · 🔍 Fouille et loot · ⚔️ Combats · 🍲 Manger, boire et se soigner · 🔨 Chantiers et craft · 🗳️ Élections du maire
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

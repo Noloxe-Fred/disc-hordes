@@ -12,7 +12,8 @@ import {
 import { NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../../config/metiers";
 import { PV_MAX } from "../../config/sante";
 import { prisma } from "../../db";
-import { appliquerExclusionDiscord, changerPositionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
+import { deplacerJoueur } from "../deplacement";
+import { appliquerExclusionDiscord, restreindreEcritureVille, retablirJoueurDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
 import {
   DELAI_SELECTION_MS,
@@ -102,16 +103,7 @@ async function teleporter(interaction: ButtonInteraction, guild: Guild) {
 
   const zone = choix.values[0] === VALEUR_EN_VILLE ? null : (zones.find((z) => String(z.id) === choix.values[0]) ?? null);
   await choix.deferUpdate();
-  await prisma.joueur.update({ where: { id: joueur.id }, data: { zoneActuelleId: zone?.id ?? null } });
-  if (zone) {
-    // La zone rejoint la carte de decouverte du joueur
-    await prisma.carteDecouverte.upsert({
-      where: { joueurId_zoneId: { joueurId: joueur.id, zoneId: zone.id } },
-      update: {},
-      create: { joueurId: joueur.id, zoneId: zone.id },
-    });
-  }
-  await changerPositionDiscord(guild, joueur.utilisateur.discordId, joueur.zoneActuelleId, zone?.id ?? null);
+  await deplacerJoueur(guild, joueur, zone?.id ?? null, 0);
 
   const destination = zone ? zone.nom : "en ville";
   await journaliser(interaction.user, "Téléporter un joueur", `${detailJournal(joueur)} → ${destination}`);
@@ -199,6 +191,8 @@ async function reintegrer(interaction: ButtonInteraction, guild: Guild) {
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   await prisma.joueur.update({ where: { id: joueur.id }, data: { statut: StatutJoueur.VIVANT } });
   await retablirJoueurDiscord(guild, joueur.utilisateur.discordId, joueur.villeId!);
+  // Toujours en territoire externe : il retrouve la vue de sa ville, mais pas l'ecriture
+  if (joueur.zoneActuelleId !== null) await restreindreEcritureVille(guild, joueur.utilisateur.discordId, joueur.villeId!, true);
   await journaliser(interaction.user, "Réintégrer un joueur", detailJournal(joueur));
   await soumission.editReply({ content: `${mention(joueur)} est réintégré dans **${joueur.ville?.nom}**.`, allowedMentions: { parse: [] } });
 }

@@ -153,13 +153,14 @@ Pour chaque citoyen présent en ville (pas en territoire externe), jet indépend
 
 ## 4. Coûts des actions en PA
 
-Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mention contraire.
+Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mention contraire. Le coût d'un déplacement dépend du palier de la zone d'arrivée.
 
 | Action | Coût (jour) | Coût (nuit) |
 |---|---|---|
 | Déplacement — zone proche (palier 1) | 2 PA | 3 PA |
 | Déplacement — zone moyenne (palier 2) | 3 PA | 5 PA |
-| Déplacement — zone éloignée (palier 3) | 4–5 PA | 6–8 PA |
+| Déplacement — zone éloignée (palier 3) | 4 PA | 6 PA |
+| Retour en ville (depuis une zone proche) | 2 PA | 3 PA |
 | Observer | 1 PA | 2 PA |
 | Fouiller/looter la zone courante | 2 PA | 3 PA |
 | Combat — attaquer (par échange) | 2 PA | 3 PA |
