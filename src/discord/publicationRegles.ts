@@ -24,11 +24,6 @@ const SALONS_LIABLES = [
   SALON_COMMEMORATION,
 ];
 
-// Titre d'une section sans le "# " ni l'emoji de tete, ex. "Les territoires externes"
-function titreSection(section: string): string {
-  return section.split(/\r?\n/)[0].replace(/^#\s+/, "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
-}
-
 // Texte brut d'une section, pour la description (texte alternatif) de son image
 function texteBrut(section: string): string {
   return section
@@ -76,8 +71,8 @@ async function nettoyer(salon: TextChannel, botId: string): Promise<number> {
 }
 
 // Republie les regles joueurs (docs/regles-joueurs.md) dans #regles (bouton « Publier les règles » du panneau
-// /moderation) : un sommaire en embed, puis une image par section (titre "# "), avec sous l'image les liens vers
-// les salons cites et un fil verrouille contenant le texte de la section (recherche et copie).
+// /moderation) : un sommaire en embed, puis une image par section (titre "# ") avec sous l'image les liens vers
+// les salons cites ; un fil verrouille sous le sommaire contient le texte de toutes les sections (recherche et copie).
 // Renvoie le compte rendu a afficher.
 export async function publierRegles(guild: Guild): Promise<string> {
   const salonRegles = await trouverSalonTexte(guild, SALON_REGLES.cle);
@@ -109,11 +104,10 @@ export async function publierRegles(guild: Guild): Promise<string> {
       .setTitle("📖 Sommaire")
       .setColor(COULEUR_SOMMAIRE)
       .setDescription(construireSommaire(sections, liens))
-      .setFooter({ text: "Cliquez sur un titre pour aller à la section. Le texte de chaque section est dans le fil sous son image." });
+      .setFooter({ text: "Cliquez sur un titre pour aller à la section. Le texte complet des règles est dans le fil de ce message." });
   const sommaire = await salonRegles.send({ embeds: [embedSommaire(sections.map(() => null))] });
 
   const liens: string[] = [];
-  let filsNonVerrouilles = 0;
   for (const [index, section] of sections.entries()) {
     // Les salons cites ne sont pas cliquables dans l'image : liens rappeles sous celle-ci
     const cites = [...salons].filter(([nom]) => section.includes(`#${nom}`)).map(([, id]) => `<#${id}>`);
@@ -128,25 +122,26 @@ export async function publierRegles(guild: Guild): Promise<string> {
       allowedMentions: { parse: [] },
     });
     liens.push(publie.url);
-
-    const fil = await publie.startThread({
-      name: `📄 ${titreSection(section)} (texte)`.slice(0, 100),
-      autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
-    });
-    for (const morceau of decouper(lierSalons(section, salons))) {
-      await fil.send({ content: morceau, allowedMentions: { parse: [] } });
-    }
-    // Verrouille : seuls les MJ/Admin (gestion des fils) peuvent y ecrire
-    const verrouille = await fil.setLocked(true).then(() => true).catch(() => false);
-    if (!verrouille) filsNonVerrouilles++;
   }
   await sommaire.edit({ embeds: [embedSommaire(liens)] });
 
+  // Un seul fil, sous le sommaire, avec le texte de toutes les sections (recherche et copie) : chaque section
+  // commence un nouveau message
+  const fil = await sommaire.startThread({
+    name: "📄 Règles complètes (texte)",
+    autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+  });
+  for (const section of sections) {
+    for (const morceau of decouper(lierSalons(section, salons))) {
+      await fil.send({ content: morceau, allowedMentions: { parse: [] } });
+    }
+  }
+  // Verrouille : seuls les MJ/Admin (gestion des fils) peuvent y ecrire
+  const verrouille = await fil.setLocked(true).then(() => true).catch(() => false);
+
   return (
     `Règles mises à jour dans ${salonRegles} : ${supprimes} ancien(s) message(s) supprimé(s), ` +
-    `sommaire + ${sections.length} section(s) publiée(s) en image, chacune avec son fil de texte.` +
-    (filsNonVerrouilles > 0
-      ? `\n⚠️ ${filsNonVerrouilles} fil(s) non verrouillé(s) : le bot n'a pas la permission « Gérer les fils » dans ${salonRegles}.`
-      : "")
+    `sommaire + ${sections.length} section(s) publiée(s) en image, texte complet dans le fil du sommaire.` +
+    (verrouille ? "" : `\n⚠️ Fil non verrouillé : le bot n'a pas la permission « Gérer les fils » dans ${salonRegles}.`)
   );
 }

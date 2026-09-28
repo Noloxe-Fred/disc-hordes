@@ -1,7 +1,7 @@
 <!--
 Règles affichées aux joueurs dans le salon #règles, publiées par le bouton « Publier les règles » du panneau /moderation.
-- Chaque titre « # » ouvre une section, publiée en image (charte MyHordes) avec un fil contenant son texte brut ;
-  un sommaire en embed renvoie à chaque section.
+- Chaque titre « # » ouvre une section, publiée en image (charte MyHordes) ; un sommaire en embed renvoie à chaque
+  section, et un fil sous le sommaire contient le texte brut de toutes les règles.
 - Markdown compris par le rendu image : « ## » sous-titre, « > » encadré, **gras**, *italique*, `code`, emojis ;
   une ligne du fichier = une ligne affichée.
 - Les noms de salons (#général, #annonces, #règles, #fonder-une-colonie, #nouvel-arrivant, #commémoration)
