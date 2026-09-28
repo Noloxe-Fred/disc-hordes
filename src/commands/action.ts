@@ -20,8 +20,8 @@ import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
 import { deplacerJoueur } from "../discord/deplacement";
-import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
-import { retirerJoueurDeVilleDiscord } from "../discord/joueurDiscord";
+import { retirerJoueurDeVilleDiscord, synchroniserAccesJoueur } from "../discord/joueurDiscord";
+import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
 import { tirerLoot } from "../game/loot";
@@ -463,6 +463,10 @@ const command: Command = {
     const guild = interaction.guild;
     if (!guild) {
       await interaction.reply({ content: "Cette commande doit être utilisée sur un serveur.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+    if (await estMjActif(guild, interaction.user.id)) {
+      await interaction.reply({ content: MESSAGE_MJ_ACTIF_NE_JOUE_PAS, flags: MessageFlags.Ephemeral });
       return;
     }
 

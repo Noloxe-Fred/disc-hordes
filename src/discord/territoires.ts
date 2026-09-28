@@ -4,6 +4,7 @@ import { PALIERS_ZONE, TYPES_ZONE, nomSalonZone } from "../config/zones";
 import { prisma } from "../db";
 import { ensureAdjacencesGroupe, nomZone } from "../services/zones";
 import { ensureCategory, ensureRole, ensureTextChannel, trouverCategorie, trouverRole, trouverSalonTexte } from "./reconcile";
+import { ROLE_MJ } from "./structure";
 
 // Categorie "Territoires externes" d'un groupe (conception.md §1) : visible uniquement des villes
 // fondees du groupe (via leurs roles-ville). Les salons de zone sont masques a tous sauf au role
@@ -20,9 +21,13 @@ export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): P
     if (role) rolesVille.push(role);
   }
 
+  // Le MJ actif voit toutes les zones et les ondes radio (structure.ts)
+  const roleMj = await trouverRole(guild, ROLE_MJ.cle);
+  const accesMj: OverwriteResolvable[] = roleMj ? [{ id: roleMj.id, allow: [PermissionFlagsBits.ViewChannel] }] : [];
   const overwritesCategorie: OverwriteResolvable[] = [
     { id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] },
     ...rolesVille.map((role) => ({ id: role.id, allow: [PermissionFlagsBits.ViewChannel] })),
+    ...accesMj,
   ];
   const categorie = await ensureCategory(
     guild,
@@ -52,11 +57,13 @@ export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): P
         // Edition ciblee (sans remplacer les autres permissions du salon)
         await salonExistant.permissionOverwrites.edit(everyoneId, { ViewChannel: false });
         await salonExistant.permissionOverwrites.edit(rolePosition, accesPosition);
+        if (roleMj) await salonExistant.permissionOverwrites.edit(roleMj, { ViewChannel: true });
         continue;
       }
       await ensureTextChannel(guild, cle, nomSalonZone(type.nom, nomPalier), categorie.id, [
         { id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] },
         { id: rolePosition.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+        ...accesMj,
       ]);
     }
   }
@@ -71,12 +78,17 @@ export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): P
 export async function ensureSalonRadio(guild: Guild, groupeId: number): Promise<TextChannel | null> {
   const everyoneId = guild.roles.everyone.id;
   const cle = `salon:groupe:${groupeId}:radio`;
+  const roleMj = await trouverRole(guild, ROLE_MJ.cle);
   const existant = await trouverSalonTexte(guild, cle);
   if (existant) {
     await existant.permissionOverwrites.edit(everyoneId, { ViewChannel: false });
+    if (roleMj) await existant.permissionOverwrites.edit(roleMj, { ViewChannel: true });
     return existant;
   }
   const categorie = await trouverCategorie(guild, `categorie:groupe:${groupeId}:territoires`);
   if (!categorie) return null;
-  return ensureTextChannel(guild, cle, "ondes-radio", categorie.id, [{ id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] }]);
+  return ensureTextChannel(guild, cle, "ondes-radio", categorie.id, [
+    { id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] },
+    ...(roleMj ? [{ id: roleMj.id, allow: [PermissionFlagsBits.ViewChannel] }] : []),
+  ]);
 }

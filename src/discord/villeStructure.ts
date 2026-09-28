@@ -1,5 +1,6 @@
 import { PermissionFlagsBits, type Guild, type Role, type TextChannel } from "discord.js";
 import { ensureCategory, ensureRole, ensureTextChannel, ensureVoiceChannel, trouverRole, trouverSalonTexte } from "./reconcile";
+import { ROLE_MJ } from "./structure";
 
 // Structure de la categorie "Ville" a la fondation (conception.md §1) : mairie, place
 // publique, chantiers, atelier, puits, un salon "maisons privees" (un seul salon partage,
@@ -15,9 +16,12 @@ export interface StructureVille {
 export async function creerStructureVille(guild: Guild, villeId: number, nomVille: string): Promise<StructureVille> {
   const roleVille = await ensureRole(guild, `role:ville:${villeId}`, `Ville:${nomVille}`);
 
+  // Le MJ actif voit toutes les villes (structure.ts) ; les salons heritent des permissions de la categorie
+  const roleMj = await trouverRole(guild, ROLE_MJ.cle);
   const overwritesVille = [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: roleVille.id, allow: [PermissionFlagsBits.ViewChannel] },
+    ...(roleMj ? [{ id: roleMj.id, allow: [PermissionFlagsBits.ViewChannel] }] : []),
   ];
 
   const categorie = await ensureCategory(guild, `categorie:ville:${villeId}`, nomVille, overwritesVille);

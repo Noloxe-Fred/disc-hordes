@@ -23,6 +23,7 @@ import { prisma } from "../db";
 import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
 import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
+import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { rendreInventaire } from "../discord/renduInventaire";
 import { chargeSac, deborde, libelleCharge, poidsTotal } from "../services/charge";
@@ -479,6 +480,10 @@ const command: Command = {
   data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner ou déposer des objets"),
 
   async execute(interaction) {
+    if (interaction.guild && (await estMjActif(interaction.guild, interaction.user.id))) {
+      await interaction.reply({ content: MESSAGE_MJ_ACTIF_NE_JOUE_PAS, flags: MessageFlags.Ephemeral });
+      return;
+    }
     const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
     const joueur = await trouverJoueurActif(utilisateur.id);
 

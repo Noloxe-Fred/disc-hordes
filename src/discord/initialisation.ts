@@ -1,4 +1,6 @@
+import { TypeRessourceDiscord } from "@prisma/client";
 import { PermissionFlagsBits, type Guild, type OverwriteResolvable, type Role } from "discord.js";
+import { prisma } from "../db";
 import { synchroniserNomade } from "./joueurDiscord";
 import { ensureCategory, ensureRole, ensureTextChannel, renommerCle, supprimerRole } from "./reconcile";
 import {
@@ -7,6 +9,7 @@ import {
   CLES_RENOMMEES,
   ROLE_ADMIN,
   ROLE_MJ,
+  ROLE_MJ_INACTIF,
   ROLES_DESIRES,
   ROLES_OBSOLETES,
   SALON_ANNONCES,
@@ -40,6 +43,28 @@ async function placerStaffEnHaut(guild: Guild, roleAdmin: Role, roleMj: Role): P
   }
 }
 
+// Salons de jeu deja crees (villes, territoires, ondes radio) : vue donnee au MJ actif, pour les villes fondees avant
+// l'ajout de cette regle (les nouvelles l'ont des leur creation). Renvoie le nombre de categories et salons touches.
+const PREFIXES_SALONS_DE_JEU = ["categorie:ville:", "salon:ville:", "categorie:groupe:", "salon:zone:", "salon:groupe:"];
+
+async function ouvrirJeuAuMjActif(guild: Guild, roleMj: Role): Promise<number> {
+  const ressources = await prisma.ressourceDiscord.findMany({
+    where: {
+      guildId: guild.id,
+      type: { in: [TypeRessourceDiscord.SALON, TypeRessourceDiscord.CATEGORIE] },
+      OR: PREFIXES_SALONS_DE_JEU.map((prefixe) => ({ cle: { startsWith: prefixe } })),
+    },
+  });
+  let touches = 0;
+  for (const { discordId } of ressources) {
+    const salon = await guild.channels.fetch(discordId).catch(() => null);
+    if (!salon || !("permissionOverwrites" in salon)) continue;
+    await salon.permissionOverwrites.edit(roleMj, { ViewChannel: true }).catch(() => null);
+    touches++;
+  }
+  return touches;
+}
+
 // Renvoie le compte rendu a afficher a l'Admin
 export async function initialiserServeur(guild: Guild): Promise<string> {
   for (const [ancienneCle, nouvelleCle] of CLES_RENOMMEES) {
@@ -57,24 +82,27 @@ export async function initialiserServeur(guild: Guild): Promise<string> {
 
   const everyoneId = guild.roles.everyone.id;
   const mjId = roles[ROLE_MJ.cle].id;
+  const mjInactifId = roles[ROLE_MJ_INACTIF.cle].id;
   const adminId = roles[ROLE_ADMIN.cle].id;
 
-  // Salons MJ : accessibles aux MJ et aux Admins
+  // Salons MJ : accessibles aux MJ actifs et aux Admins
   const overwritesMJ: OverwriteResolvable[] = [
     { id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] },
     { id: mjId, allow: [PermissionFlagsBits.ViewChannel] },
     { id: adminId, allow: [PermissionFlagsBits.ViewChannel] },
   ];
+  // Categorie Admin-MJ et discussion-mj : aussi aux MJ inactifs, pour garder le contact avec l'equipe
+  const overwritesEquipeMJ: OverwriteResolvable[] = [...overwritesMJ, { id: mjInactifId, allow: [PermissionFlagsBits.ViewChannel] }];
   // Salons Admin : accessibles aux Admins uniquement
   const overwritesAdmin: OverwriteResolvable[] = [
     { id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] },
     { id: adminId, allow: [PermissionFlagsBits.ViewChannel] },
   ];
 
-  const categorieAdminMJ = await ensureCategory(guild, CATEGORIE_ADMIN_MJ.cle, CATEGORIE_ADMIN_MJ.nom, overwritesMJ);
+  const categorieAdminMJ = await ensureCategory(guild, CATEGORIE_ADMIN_MJ.cle, CATEGORIE_ADMIN_MJ.nom, overwritesEquipeMJ);
 
   await ensureTextChannel(guild, SALON_SIGNALEMENTS.cle, SALON_SIGNALEMENTS.nom, categorieAdminMJ.id, overwritesMJ);
-  await ensureTextChannel(guild, SALON_DISCUSSION_MJ.cle, SALON_DISCUSSION_MJ.nom, categorieAdminMJ.id, overwritesMJ);
+  await ensureTextChannel(guild, SALON_DISCUSSION_MJ.cle, SALON_DISCUSSION_MJ.nom, categorieAdminMJ.id, overwritesEquipeMJ);
   await ensureTextChannel(guild, SALON_GESTION.cle, SALON_GESTION.nom, categorieAdminMJ.id, overwritesAdmin);
 
   const categorieDiscHordes = await ensureCategory(guild, CATEGORIE_DISCHORDES.cle, CATEGORIE_DISCHORDES.nom);
@@ -105,6 +133,8 @@ export async function initialiserServeur(guild: Guild): Promise<string> {
     }
   }
 
+  const salonsDeJeu = await ouvrirJeuAuMjActif(guild, roles[ROLE_MJ.cle]);
+
   // Role Nomade sur les membres deja presents : donne a ceux sans ville en jeu, retire aux autres
   const membres = await guild.members.fetch();
   for (const membre of membres.values()) {
@@ -114,7 +144,8 @@ export async function initialiserServeur(guild: Guild): Promise<string> {
   return (
     "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (signalements + discussion-mj + gestion) " +
     "et catégorie Disc'Hordes (général + annonces + règles + fonder-une-colonie + nouvel-arrivant + commémoration). " +
-    `Rôle Nomade synchronisé sur ${membres.filter((m) => !m.user.bot).size} membre(s).` +
+    `Rôle Nomade synchronisé sur ${membres.filter((m) => !m.user.bot).size} membre(s). ` +
+    `MJ actif : vue ouverte sur ${salonsDeJeu} catégorie(s) et salon(s) de jeu.` +
     (staffPlace
       ? ""
       : "\n⚠️ Rôles Admin et MJ non placés en haut : glissez le rôle du bot tout en haut de la liste des rôles " +

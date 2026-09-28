@@ -5,7 +5,10 @@
 export const ROLE_CITOYEN = { cle: "role:citoyen", nom: "Citoyen", couleur: 0x2ecc71 } as const; // vert : vivant
 export const ROLE_MORT = { cle: "role:mort", nom: "Mort", couleur: 0xc0392b } as const; // rouge
 // Staff : affiche a part en haut de la liste des membres, Admin au-dessus de MJ (voir initialisation.ts)
-export const ROLE_MJ = { cle: "role:mj", nom: "MJ", couleur: 0xf1c40f, separe: true } as const; // or : staff jeu
+// MJ actif : voit tous les salons de jeu et a /moderation, mais ne joue pas. MJ inactif : voit le serveur comme un
+// joueur, plus le salon discussion-mj ; bascule entre les deux par le panneau /moderation.
+export const ROLE_MJ = { cle: "role:mj", nom: "MJ actif", couleur: 0xf1c40f, separe: true } as const; // or : staff jeu
+export const ROLE_MJ_INACTIF = { cle: "role:mj-inactif", nom: "MJ inactif", couleur: 0x9a7d0a, separe: false } as const; // or terne
 export const ROLE_ADMIN = { cle: "role:admin", nom: "Admin", couleur: 0xe67e22, separe: true } as const; // orange : staff serveur
 export const ROLE_RADIO = { cle: "role:radio", nom: "Radio", couleur: 0x3498db } as const; // bleu : ondes
 
@@ -16,6 +19,7 @@ export const ROLES_DESIRES: readonly { cle: string; nom: string; couleur: number
   ROLE_CITOYEN,
   ROLE_MORT,
   ROLE_MJ,
+  ROLE_MJ_INACTIF,
   ROLE_ADMIN,
   ROLE_RADIO,
   ROLE_NOMADE,

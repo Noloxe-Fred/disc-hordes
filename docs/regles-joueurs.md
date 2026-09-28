@@ -21,7 +21,7 @@ Ton seul espoir : **rejoindre une ville**, la faire tenir, et survivre le plus l
 🔘 **Nomade** : tu n'as pas encore de ville. Tu es notifié à chaque nouvelle ville qui recrute.
 🟢 **Citoyen** : tu habites une ville fondée.
 🔴 **Mort** : tu es tombé… mais ton âme observe encore ta ville.
-🟠 **Admin** / 🟡 **MJ** : l'équipe qui fait tourner le serveur et le jeu.
+🟠 **Admin** / 🟡 **MJ actif** : l'équipe qui fait tourner le serveur et le jeu. Un MJ actif voit toute la partie et ne joue pas ; un **MJ inactif** joue comme toi, sans rien voir de plus.
 
 ## 🗺️ Les salons
 

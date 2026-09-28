@@ -3,7 +3,7 @@ import { ChannelType, PermissionFlagsBits, type Guild, type GuildMember, type Te
 import { OBJET_RADIO } from "../config/objets";
 import { prisma } from "../db";
 import { trouverRole, trouverSalonTexte } from "./reconcile";
-import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, ROLE_RADIO } from "./structure";
+import { ROLE_CITOYEN, ROLE_MJ, ROLE_MORT, ROLE_NOMADE, ROLE_RADIO } from "./structure";
 import { ensureSalonRadio } from "./territoires";
 
 // Acces Discord d'un joueur a sa ville et aux ondes radio de son groupe (conception.md §1 et §3), recalcule en entier
@@ -14,6 +14,7 @@ import { ensureSalonRadio } from "./territoires";
 //   Tour Radio (a venir) rendra la ville accessible depuis dehors aux seuls porteurs de radio.
 // - Mort ou zombifie : voit toujours sa ville (l'ame reste liee a sa partie) mais ne peut plus y interagir.
 // - Exclu : plus aucun salon de la ville.
+// - MJ actif : aucune restriction propre, son role lui ouvre tout le jeu (il ne peut pas jouer tant qu'il est actif).
 // Salon « ondes-radio » du groupe : ouvert aux porteurs de radio (vivants ou exclus), en ville comme dehors : un porteur
 // en ville relaie les nouvelles des ondes a ses concitoyens.
 
@@ -96,11 +97,14 @@ export async function synchroniserAccesJoueur(guild: Guild, joueurId: number): P
 
   if (radio) await ajouterRole(membre, ROLE_RADIO.cle);
   else await retirerRole(membre, ROLE_RADIO.cle);
+  const roleMj = await trouverRole(guild, ROLE_MJ.cle);
+  const mjActif = roleMj !== null && membre.roles.cache.has(roleMj.id);
 
   for (const { cle, salon } of await salonsDeVille(guild, joueur.villeId)) {
     const mairie = cle === `salon:ville:${joueur.villeId}:mairie`;
-    const acces =
-      joueur.statut === StatutJoueur.EXCLU
+    const acces = mjActif
+      ? LIBRE
+      : joueur.statut === StatutJoueur.EXCLU
         ? MASQUE
         : !enJeu
           ? LECTURE_SEULE
