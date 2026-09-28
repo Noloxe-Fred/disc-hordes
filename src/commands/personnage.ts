@@ -1,13 +1,13 @@
 import { StatutJoueur, StatutVille, TypePhase } from "@prisma/client";
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../client";
-import { DUREE_PHASE_HEURES } from "../config/cycle";
 import { NOM_METIER } from "../config/metiers";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { PV_MAX } from "../config/sante";
 import { prisma } from "../db";
 import { calculerEtatInfection } from "../game/infection";
 import { paMaxEffectif } from "../game/sante";
+import { prochaineBascule } from "../scheduler/cycle";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
@@ -74,16 +74,15 @@ const command: Command = {
       });
     }
 
-    if (ville.statut === StatutVille.ACTIVE && ville.phaseDepuis) {
-      const heuresEcoulees = (Date.now() - ville.phaseDepuis.getTime()) / 3_600_000;
-      const heuresRestantes = DUREE_PHASE_HEURES - heuresEcoulees;
+    if (ville.statut === StatutVille.ACTIVE) {
+      // Horloge commune : la phase change au prochain minuit, quelle que soit la date de fondation
+      const bascule = Math.floor(prochaineBascule().getTime() / 1000);
       const prochainePhase = ville.phaseActuelle === TypePhase.JOUR ? "nuit" : "jour";
       embed.addFields({
         name: `Cycle ${ville.cycleActuel} — ${ville.phaseActuelle === TypePhase.JOUR ? "Jour" : "Nuit"}`,
         value:
-          heuresRestantes > 0
-            ? `Passage à la ${prochainePhase} dans environ ${formatDureeHeures(heuresRestantes)}.`
-            : "Le changement de phase est en retard (avancement automatique du cycle pas encore implémenté).",
+          `Passage à la ${prochainePhase} <t:${bascule}:R> (à minuit)` +
+          (ville.phaseActuelle === TypePhase.NUIT ? ", avec l'attaque des zombies." : "."),
       });
     }
 
