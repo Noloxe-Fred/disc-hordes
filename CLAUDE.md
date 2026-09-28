@@ -1,7 +1,7 @@
 # Disc'Hordes — Contexte projet pour Claude Code
 
 Bot Discord de survie zombie (inspiré Hordes/MyHordes), module de "Horror Botum Est".
-Stack : Node.js/TypeScript, hébergé sur TeoHeberg (panel Pterodactyl), MySQL.
+Stack : Node.js/TypeScript, hébergement prévu sur NorthHost (panel Pterodactyl, serveur pas encore acheté), MySQL.
 
 ## Documents de référence (à lire avant toute implémentation)
 
@@ -11,8 +11,8 @@ Stack : Node.js/TypeScript, hébergé sur TeoHeberg (panel Pterodactyl), MySQL.
 ## État du projet
 
 - Conception V1/bêta figée sur les deux documents ci-dessus (sections "points tranchés").
-- Déploiement : dépôt Git avec autoupdate Pterodactyl (git pull automatique au redémarrage du serveur TeoHeberg), redémarrage fait manuellement par l'utilisateur — pas d'automatisation du déclenchement.
-- Base de données : MySQL fournie par TeoHeberg (endpoint `database.teoheberg.fr:3306`). Prévoir un système de migrations versionnées (Prisma ou Knex) committé dans le repo plutôt que des modifications de schéma à la main.
+- Déploiement : aucun pour l'instant (serveur NorthHost pas encore acheté ; développement et tests en local). À terme : dépôt Git avec autoupdate Pterodactyl (git pull automatique au redémarrage du serveur), redémarrage fait manuellement par l'utilisateur — pas d'automatisation du déclenchement.
+- Base de données : MariaDB locale pour le développement ; MySQL fournie par l'hébergeur à terme. Prévoir un système de migrations versionnées (Prisma ou Knex) committé dans le repo plutôt que des modifications de schéma à la main.
 
 ## Notes pour Claude Code
 

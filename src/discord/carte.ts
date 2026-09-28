@@ -22,7 +22,7 @@ import { rendreCarte } from "./renduCarte";
 // - Partage : en ville, vers un ou plusieurs citoyens vivants de sa ville (ou tous), gratuit en PA. Les
 //   destinataires recoivent les zones qu'ils ne connaissaient pas ; le partage est annonce sur la place publique.
 
-const COULEUR = 0xc8a165;
+const COULEUR = 0xddab76; // bordure beige de la charte MyHordes, comme le cadre de l'image
 const FICHIER_CARTE = "carte.png";
 
 function encadre(texte: string): ContainerBuilder {
@@ -56,8 +56,8 @@ export async function ecranCarte(
     `## 🗺️ Carte — ${ville.nom}\n` +
     `${connues} / ${cases.length} zones découvertes\n` +
     (dehors.length > 0
-      ? `🔵 **Citoyens dehors** : ${dehors.map((c) => `${nomJoueur(c)} (${c.zoneActuelle!.nom})`).join(", ")}`
-      : "🔵 Aucun autre citoyen hors de la ville.");
+      ? `🟡 **Citoyens dehors** : ${dehors.map((c) => `${nomJoueur(c)} (${c.zoneActuelle!.nom})`).join(", ")}`
+      : "🟡 Aucun autre citoyen hors de la ville.");
 
   const conteneur = encadre(texte)
     .addMediaGalleryComponents(
@@ -65,7 +65,7 @@ export async function ecranCarte(
     )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        "-# Cercle doré : vous · zones pointillées : inconnues · points bleus : vos concitoyens. " +
+        "-# Contour lumineux : vous · cases noires : zones inconnues · points jaunes : vos concitoyens. " +
           "Les liens suivent les anneaux (zones de même distance) et les rayons (même type de zone).",
       ),
     )
