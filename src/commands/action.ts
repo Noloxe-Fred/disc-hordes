@@ -15,6 +15,7 @@ import {
 import type { Command } from "../client";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
+import { emojiObjet } from "../config/objets";
 import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
@@ -363,7 +364,7 @@ async function confirmerFouille(joueurId: number, zoneDepartId: number | null): 
   if (objets.length === 0) return `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`;
   return (
     `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n` +
-    objets.map((o) => `• ${o.nom} × ${trouves.get(o.nom)}`).join("\n") +
+    objets.map((o) => `${emojiObjet(o.nom)} **${o.nom}** × ${trouves.get(o.nom)}`).join("\n") +
     "\n\n🎒 Tout est rangé dans votre sac (`/inventaire`)."
   );
 }

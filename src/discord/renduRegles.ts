@@ -1,7 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
+import { imageEmoji } from "./emojis";
 
 // Rendu PNG d'une section des regles joueurs (docs/regles-joueurs.md), publiee en image dans #regles.
 // satori met en page (retour a la ligne, gras, emojis) et produit un SVG, rasterise ensuite par resvg.
@@ -12,7 +13,6 @@ import satori from "satori";
 // une ligne = une ligne affichee, ligne vide = espacement ; en ligne : **gras**, *italique*, `code`, #salon.
 
 const DOSSIER_POLICES = join(__dirname, "..", "..", "assets", "fonts");
-const DOSSIER_EMOJIS = join(__dirname, "..", "..", "node_modules", "@twemoji", "svg");
 
 const LARGEUR = 800;
 const ECHELLE = 1.5; // image finale de 1200 px de large, nette une fois reduite par Discord
@@ -57,21 +57,6 @@ function chargerPolices() {
   return polices;
 }
 
-const IMAGE_VIDE = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>').toString("base64")}`;
-const cacheEmojis = new Map<string, string>();
-
-// Nom de fichier Twemoji : points de code en hexadecimal joints par "-", sans le selecteur de variante FE0F
-// (sauf dans les sequences ZWJ, ou certains fichiers le conservent)
-function imageEmoji(emoji: string): string {
-  const enCache = cacheEmojis.get(emoji);
-  if (enCache) return enCache;
-  const codes = [...emoji].map((c) => c.codePointAt(0)!.toString(16));
-  const candidats = [codes.filter((c) => c !== "fe0f").join("-"), codes.join("-")];
-  const fichier = candidats.map((nom) => join(DOSSIER_EMOJIS, `${nom}.svg`)).find((chemin) => existsSync(chemin));
-  const image = fichier ? `data:image/svg+xml;base64,${readFileSync(fichier).toString("base64")}` : IMAGE_VIDE;
-  cacheEmojis.set(emoji, image);
-  return image;
-}
 
 // --- Markdown -> elements satori ---
 

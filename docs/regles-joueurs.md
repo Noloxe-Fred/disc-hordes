@@ -115,7 +115,7 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 🍲 **Plat préparé** : 1 Baies + 1 Gibier
 🔥 **Feu** : 2 Bois
 🗡️ **Arme de fortune** : 1 Ferraille + 1 Bois
-💧 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
+🍶 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
 🔦 **Torche** : 1 Bois + 1 Tissu
 🪤 **Piège simple** : 2 Bois + 1 Ferraille
 🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.

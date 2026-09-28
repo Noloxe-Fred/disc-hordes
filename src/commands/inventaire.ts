@@ -1,10 +1,13 @@
 import { StatutJoueur, StatutVille, TypeObjet } from "@prisma/client";
 import {
   ActionRowBuilder,
+  AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
   LabelBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   MessageFlags,
   ModalBuilder,
   SlashCommandBuilder,
@@ -16,18 +19,21 @@ import {
   type Guild,
 } from "discord.js";
 import type { Command } from "../client";
+import { emojiObjet } from "../config/objets";
 import { prisma } from "../db";
 import { trouverSalonTexte } from "../discord/reconcile";
+import { rendreInventaire } from "../discord/renduInventaire";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
-// « donner a » un autre survivant present au meme endroit. Le menu et chaque ecran remplacent le meme message ;
-// « Retour » ramene au menu.
+// « donner a » un autre survivant present au meme endroit. Le menu montre le sac en image (renduInventaire.ts) ;
+// le menu et chaque ecran remplacent le meme message, « Retour » ramene au menu.
 
 const DELAI_CHOIX_MS = 120_000;
 const COULEUR = 0x95a5a6;
 const OPTIONS_MAX = 25;
+const FICHIER_SAC = "sac.png";
 
 function encadre(texte: string): ContainerBuilder {
   return new ContainerBuilder().setAccentColor(COULEUR).addTextDisplayComponents(new TextDisplayBuilder().setContent(texte));
@@ -86,14 +92,19 @@ async function destinatairesPossibles(joueur: { id: number; villeId: number | nu
   });
 }
 
+// « 🪵 Bois » : nom d'objet precede de son emoji, pour les textes
+function objetAvecEmoji(nom: string): string {
+  return `${emojiObjet(nom)} ${nom}`;
+}
+
 function libelleIngredients(recette: RecetteSimple): string {
-  return recette.ingredients.map((i) => `${i.quantite} ${i.objet.nom}`).join(" + ");
+  return recette.ingredients.map((i) => `${i.quantite} ${objetAvecEmoji(i.objet.nom)}`).join(" + ");
 }
 
 function manquants(recette: RecetteSimple, sac: Map<number, number>): string[] {
   return recette.ingredients
     .filter((i) => (sac.get(i.objetId) ?? 0) < i.quantite)
-    .map((i) => `${i.quantite - (sac.get(i.objetId) ?? 0)} ${i.objet.nom}`);
+    .map((i) => `${i.quantite - (sac.get(i.objetId) ?? 0)} ${objetAvecEmoji(i.objet.nom)}`);
 }
 
 async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueurId: number) {
@@ -102,11 +113,16 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
   const paActuel = joueur.paActuel ?? 0;
 
   const sac = await contenuSac(joueurId);
-  const entete =
-    `## 🎒 Inventaire — ${interaction.user.username}\n` +
-    (sac.length > 0 ? sac.map((e) => `• ${e.objet.nom} × ${e.quantite}`).join("\n") : "*Votre sac est vide.*") +
-    (actif ? `\n\n⚡ ${paActuel} PA` : "");
-  const menu = encadre(entete);
+  const entete = `## 🎒 Inventaire — ${interaction.user.username}` + (actif ? `\n⚡ ${paActuel} PA` : "");
+  const png = rendreInventaire(`Sac — ${interaction.user.username}`, sac.map((e) => ({ ...e.objet, quantite: e.quantite })));
+  const image = () => [new AttachmentBuilder(png, { name: FICHIER_SAC })];
+  const menu = encadre(entete)
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${FICHIER_SAC}`)))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        sac.length > 0 ? `-# ${sac.map((e) => `${objetAvecEmoji(e.objet.nom)} ×${e.quantite}`).join(" · ")}` : "-# Votre sac est vide.",
+      ),
+    );
   if (actif) {
     menu.addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -116,7 +132,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
     );
   }
 
-  const reponse = await interaction.reply({ components: [menu], flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+  const reponse = await interaction.reply({ components: [menu], files: image(), flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
   if (!actif) return;
 
   const recettes = await recettesSimples();
@@ -128,7 +144,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
     if (!clic) return;
 
     if (clic.customId === "retour") {
-      await clic.update({ components: [menu] });
+      await clic.update({ components: [menu], files: image() });
     } else if (clic.customId === "fabriquer") {
       await clic.update({
         components: [
@@ -142,6 +158,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
                     recettes.map((r) => ({
                       label: r.objetResultat.nom,
                       value: String(r.id),
+                      emoji: emojiObjet(r.objetResultat.nom),
                       description: `${libelleIngredients(r)} · ${r.coutPA ?? 0} PA${manquants(r, quantites).length > 0 ? " — il manque des ingrédients" : ""}`.slice(0, 100),
                     })),
                   ),
@@ -149,6 +166,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
             )
             .addActionRowComponents(ligneRetour()),
         ],
+        attachments: [],
       });
     } else if (clic.isStringSelectMenu() && clic.customId === "recette") {
       recette = recettes.find((r) => String(r.id) === clic.values[0]);
@@ -159,11 +177,11 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
         components: [
           manque.length > 0 || cout > paActuel
             ? encadre(
-                `${entete}\n\n**${recette.objetResultat.nom}** demande ${libelleIngredients(recette)} et **${cout} PA**.\n` +
+                `${entete}\n\n**${objetAvecEmoji(recette.objetResultat.nom)}** demande ${libelleIngredients(recette)} et **${cout} PA**.\n` +
                   (manque.length > 0 ? `Il vous manque : ${manque.join(", ")}.` : `Vous n'avez que ${paActuel} PA.`),
               ).addActionRowComponents(ligneRetour())
             : encadre(
-                `${entete}\n\nFabriquer **${recette.objetResultat.nom}** avec ${libelleIngredients(recette)} pour **${cout} PA** ?`,
+                `${entete}\n\nFabriquer **${objetAvecEmoji(recette.objetResultat.nom)}** avec ${libelleIngredients(recette)} pour **${cout} PA** ?`,
               ).addActionRowComponents(
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                   new ButtonBuilder().setCustomId("confirmer-fabrication").setLabel(`Fabriquer (${cout} PA)`).setStyle(ButtonStyle.Primary),
@@ -171,16 +189,17 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
                 ),
               ),
         ],
+        attachments: [],
       });
     } else if (clic.customId === "confirmer-fabrication" && recette) {
       await clic.deferUpdate();
-      await clic.editReply({ components: [encadre(await fabriquer(joueurId, recette))] });
+      await clic.editReply({ components: [encadre(await fabriquer(joueurId, recette))], attachments: [] });
       return;
     } else if (clic.isButton() && clic.customId === "donner") {
       const resultat = await formulaireDon(clic, joueurId, sac);
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (resultat.soumission.isFromMessage()) {
-        await resultat.soumission.update({ components: [encadre(resultat.texte)] });
+        await resultat.soumission.update({ components: [encadre(resultat.texte)], attachments: [] });
       }
       return;
     }
@@ -221,7 +240,7 @@ async function fabriquer(joueurId: number, recette: RecetteSimple): Promise<stri
       },
     }),
   ]);
-  return `🔨 Vous avez fabriqué **${recette.objetResultat.nom}** (−${cout} PA, ${paRestants} restants). Il est dans votre sac.`;
+  return `🔨 Vous avez fabriqué **${objetAvecEmoji(recette.objetResultat.nom)}** (−${cout} PA, ${paRestants} restants). Il est dans votre sac.`;
 }
 
 // Formulaire unique du don : destinataire, objet et quantite. Renvoie null si le formulaire n'est pas envoye.
@@ -243,6 +262,7 @@ async function formulaireDon(
               : "Aucun autre survivant n'est dans cette zone pour recevoir un objet.",
         ).addActionRowComponents(ligneRetour()),
       ],
+      attachments: [],
     });
     return null;
   }
@@ -268,7 +288,7 @@ async function formulaireDon(
               .setCustomId("objet")
               .setRequired(true)
               .addOptions(
-                sac.slice(0, OPTIONS_MAX).map((e) => ({ label: `${e.objet.nom} (× ${e.quantite})`.slice(0, 100), value: String(e.objetId) })),
+                sac.slice(0, OPTIONS_MAX).map((e) => ({ label: `${e.objet.nom} (× ${e.quantite})`.slice(0, 100), value: String(e.objetId), emoji: emojiObjet(e.objet.nom) })),
               ),
           ),
         new LabelBuilder()
@@ -308,7 +328,7 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
   if (!entree || entree.quantite < quantite) return `Vous n'avez pas ${quantite} ${entree?.objet.nom ?? "de cet objet"} sur vous.`;
 
   const enVille = joueur.zoneActuelleId === null;
-  const objet = entree.objet.nom;
+  const objet = objetAvecEmoji(entree.objet.nom);
   await prisma.$transaction([
     prisma.inventaireJoueur.update({
       where: { joueurId_objetId: { joueurId, objetId } },
