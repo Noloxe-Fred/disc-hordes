@@ -1,5 +1,6 @@
 import type { Guild } from "discord.js";
 import { prisma } from "../db";
+import { ajouterACarte } from "../services/carte";
 import { changerPositionDiscord, restreindreEcritureVille } from "./joueurDiscord";
 
 // Deplacement d'un joueur vers une zone de son groupe, ou en ville (null) : PA depenses, zone ajoutee a sa
@@ -15,13 +16,7 @@ export async function deplacerJoueur(
     where: { id: joueur.id },
     data: { zoneActuelleId: zoneId, ...(coutPa > 0 ? { paActuel: { decrement: coutPa } } : {}) },
   });
-  if (zoneId !== null) {
-    await prisma.carteDecouverte.upsert({
-      where: { joueurId_zoneId: { joueurId: joueur.id, zoneId } },
-      update: {},
-      create: { joueurId: joueur.id, zoneId },
-    });
-  }
+  if (zoneId !== null) await ajouterACarte(joueur.id, [zoneId]);
 
   const discordId = joueur.utilisateur.discordId;
   await changerPositionDiscord(guild, discordId, joueur.zoneActuelleId, zoneId);

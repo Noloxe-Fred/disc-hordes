@@ -18,15 +18,16 @@ import { prisma } from "../db";
 import { deplacerJoueur } from "../discord/deplacement";
 import { retirerJoueurDeVilleDiscord } from "../discord/joueurDiscord";
 import { trouverSalonTexte } from "../discord/reconcile";
-import { coutDeplacement } from "../game/deplacement";
+import { coutDeplacement, coutObservation } from "../game/deplacement";
 import { calculerPaMax } from "../game/pa";
+import { ajouterACarte } from "../services/carte";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
-// ouvrant son ecran (pour l'instant « Se deplacer », avec confirmation avant de depenser des PA) ; fouille,
-// observation et combat s'y ajouteront. Mort : quitter sa ville pour en rejoindre une autre.
+// ouvrant son ecran (« Se deplacer », « Observer »), avec confirmation avant de depenser des PA ; fouille
+// et combat s'y ajouteront. Mort : quitter sa ville pour en rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
 const COULEUR_VIVANT = 0x2ecc71;
@@ -78,6 +79,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   const menu = encadre(`${entete}\nQue voulez-vous faire ?`).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("deplacer").setLabel("Se déplacer").setEmoji("🧭").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId("observer").setLabel("Observer").setEmoji("👁️").setStyle(ButtonStyle.Secondary),
     ),
   );
 
@@ -103,6 +105,22 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ),
   ).addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()));
 
+  // Observer : voir les zones adjacentes sans s'y rendre, et les ajouter a sa carte
+  const coutObs = coutObservation(ville.phaseActuelle, joueur.metier);
+  const ecranObservation =
+    coutObs > paActuel
+      ? encadre(`${entete}\n\nIl vous faut **${coutObs} PA** pour observer les environs (vous en avez ${paActuel}).`).addActionRowComponents(
+          new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()),
+        )
+      : encadre(
+          `${entete}\n**Observer** les zones voisines sans vous y rendre, pour **${coutObs} PA** ? Elles seront ajoutées à votre carte.`,
+        ).addActionRowComponents(
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId("confirmer-observation").setLabel(`Observer (${coutObs} PA)`).setStyle(ButtonStyle.Primary),
+            boutonRetour(),
+          ),
+        );
+
   const reponse = await interaction.reply({ components: [menu], flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
 
   let destination: Destination | undefined;
@@ -114,6 +132,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       await clic.update({ components: [menu] });
     } else if (clic.customId === "deplacer") {
       await clic.update({ components: [ecranDeplacement] });
+    } else if (clic.customId === "observer") {
+      await clic.update({ components: [ecranObservation] });
+    } else if (clic.customId === "confirmer-observation") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await confirmerObservation(joueurId, joueur.zoneActuelleId, groupeId))] });
+      return;
     } else if (clic.isStringSelectMenu() && clic.customId === "aller") {
       destination = destinations.find((d) => valeur(d) === clic.values[0]);
       if (!destination) return;
@@ -179,6 +203,51 @@ async function confirmerDeplacement(
   return (
     `🧭 Vous êtes arrivé : **${destination.nom}**${salon ? ` — ${salon}` : ""} (−${cout} PA, ${paRestants} restants).\n` +
     "Tant que vous êtes dehors, vous ne pouvez plus écrire dans les salons de la ville."
+  );
+}
+
+// Observation confirmee : reverification, puis PA depenses, zones adjacentes ajoutees a la carte et survivants
+// presents dans chacune affiches. Renvoie le texte a afficher au joueur.
+async function confirmerObservation(joueurId: number, zoneDepartId: number | null, groupeId: number): Promise<string> {
+  const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
+  const ville = actuel.ville!;
+  const cout = coutObservation(ville.phaseActuelle, actuel.metier);
+  const paRestants = (actuel.paActuel ?? 0) - cout;
+
+  if (actuel.statut !== StatutJoueur.VIVANT && actuel.statut !== StatutJoueur.EXCLU) return "Vous ne pouvez plus observer les environs.";
+  if (actuel.zoneActuelleId !== zoneDepartId) return "Votre position a changé entre-temps : relancez `/action`.";
+  if (paRestants < 0) return `Il vous faut **${cout} PA** pour observer les environs.`;
+
+  const { zones } = await destinationsDepuis(groupeId, actuel.zoneActuelleId);
+  await prisma.joueur.update({ where: { id: joueurId }, data: { paActuel: { decrement: cout } } });
+  const connuesAvant = new Set(
+    (await prisma.carteDecouverte.findMany({ where: { joueurId, zoneId: { in: zones.map((z) => z.id) } } })).map((c) => c.zoneId),
+  );
+  const nouvelles = await ajouterACarte(joueurId, zones.map((z) => z.id));
+  const presents = await prisma.joueur.groupBy({
+    by: ["zoneActuelleId"],
+    where: {
+      zoneActuelleId: { in: zones.map((z) => z.id) },
+      statut: { in: [StatutJoueur.VIVANT, StatutJoueur.EXCLU] },
+      dateSortie: null,
+      id: { not: joueurId },
+    },
+    _count: { _all: true },
+  });
+  const nbPresents = (zoneId: number) => presents.find((p) => p.zoneActuelleId === zoneId)?._count._all ?? 0;
+
+  const depuis = actuel.zoneActuelle ? actuel.zoneActuelle.nom : ville.nom;
+  await prisma.journalEntree.create({
+    data: { villeId: ville.id, joueurId, message: `Observation des environs depuis ${depuis}`, public: false },
+  });
+
+  const lignes = zones.map((z) => {
+    const n = nbPresents(z.id);
+    return `• **${z.nom}** — ${n === 0 ? "personne en vue" : `👥 ${n} survivant${n > 1 ? "s" : ""}`}${connuesAvant.has(z.id) ? "" : " 🆕"}`;
+  });
+  return (
+    `👁️ Depuis **${depuis}**, vous observez les environs (−${cout} PA, ${paRestants} restants) :\n${lignes.join("\n")}\n\n` +
+    (nouvelles > 0 ? `🗺️ ${nouvelles} nouvelle(s) zone(s) ajoutée(s) à votre carte (\`/carte\`).` : "🗺️ Vous connaissiez déjà toutes ces zones.")
   );
 }
 

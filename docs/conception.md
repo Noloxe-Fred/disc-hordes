@@ -32,6 +32,8 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - Trajet joué zone par zone, une commande par étape (pas de trajet multi-zones simulé d'un coup)
 - Dans une nouvelle zone, le joueur voit les zones adjacentes accessibles depuis là → un éclaireur peut constituer une "carte"
 - Découverte de zones individuelle ; commande `/partager-carte` pour la transmettre aux autres en rentrant d'une zone ; commande `/carte` pour consulter sa propre carte découverte à tout moment
+- Une zone rejoint la carte quand le joueur y entre, quand il l'**observe** depuis une zone adjacente (ou depuis la ville pour les zones proches) via le bouton « Observer » de `/action` — qui indique aussi le nombre de survivants présents dans chaque zone voisine, et coûte moins cher à l'éclaireur (voir document d'équilibrage §4) — ou quand un autre citoyen la lui partage
+- `/partager-carte` : réservé aux citoyens vivants présents en ville ; destinataires choisis parmi les citoyens vivants de la ville (un menu à choix multiples, ou « toute la ville »), où qu'ils soient ; chacun reçoit les zones qu'il ne connaissait pas ; le partage est annoncé sur la place publique et inscrit au journal des destinataires
 - **Inventaire de ville** : dépôt d'objets sans passer par le troc direct (fait aussi office de banque)
 - **Capacité de zone** : pas de limite artificielle de joueurs simultanés dans un même salon de territoire externe en V1
 
