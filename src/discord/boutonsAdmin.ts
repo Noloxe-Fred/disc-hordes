@@ -1,160 +1,108 @@
-import { StatutVille } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ComponentType,
   ContainerBuilder,
   MessageFlags,
+  SeparatorBuilder,
   TextDisplayBuilder,
   type ButtonInteraction,
-  type Guild,
 } from "discord.js";
-import { prisma } from "../db";
-import { initialiserServeur } from "./initialisation";
-import { synchroniserNomade } from "./joueurDiscord";
-import { supprimerMessagesRecrutement } from "./messageVille";
+import { FAMILLE_JOUEUR } from "./admin/joueur";
+import { FAMILLE_MODERATION } from "./admin/moderation";
+import type { FamilleAdmin } from "./admin/outils";
+import { FAMILLE_POLITIQUE } from "./admin/politique";
+import { FAMILLE_RESSOURCES } from "./admin/ressources";
+import { FAMILLE_SERVEUR } from "./admin/serveur";
+import { FAMILLE_TEMPS } from "./admin/temps";
+import { FAMILLE_VILLE } from "./admin/ville";
 import { estAdmin } from "./permissions";
-import { supprimerRessources, trouverRole } from "./reconcile";
-import { ROLE_CITOYEN, ROLE_MORT } from "./structure";
 
-// Panneau /admin (Components V2) et ses boutons : customId "admin:<action>", routes par boutons.ts.
+// Panneau /admin (Components V2) : l'accueil propose une famille d'actions par bouton, chaque famille
+// ouvre son sous-panneau (conception.md §4). customId : "admin:menu:<famille|accueil>" pour la navigation,
+// "admin:<famille>:<action>" pour une action (actions decrites dans discord/admin/). Routes par boutons.ts.
 // Les droits sont reverifies a chaque clic, le panneau pouvant rester affiche longtemps.
 
 const COULEUR_ADMIN = 0xe67e22; // orange du role Admin
-const DELAI_CONFIRMATION_MS = 30_000;
+const BOUTONS_PAR_LIGNE = 5;
+
+const FAMILLES: readonly FamilleAdmin[] = [
+  FAMILLE_SERVEUR,
+  FAMILLE_VILLE,
+  FAMILLE_JOUEUR,
+  FAMILLE_RESSOURCES,
+  FAMILLE_TEMPS,
+  FAMILLE_POLITIQUE,
+  FAMILLE_MODERATION,
+];
+
+function lignesDeBoutons(boutons: ButtonBuilder[]): ActionRowBuilder<ButtonBuilder>[] {
+  const lignes: ActionRowBuilder<ButtonBuilder>[] = [];
+  for (let i = 0; i < boutons.length; i += BOUTONS_PAR_LIGNE) {
+    lignes.push(new ActionRowBuilder<ButtonBuilder>().addComponents(boutons.slice(i, i + BOUTONS_PAR_LIGNE)));
+  }
+  return lignes;
+}
 
 export function construirePanneauAdmin(): ContainerBuilder {
   return new ContainerBuilder()
     .setAccentColor(COULEUR_ADMIN)
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        "## 🛠️ Administration\n" +
-          "**Initialiser le serveur** : crée ou met à jour les rôles et salons fixes de Disc'Hordes, " +
-          "et synchronise le rôle Nomade.\n" +
-          "**Réinitialiser la base** : efface toutes les parties (villes, joueurs, demandes, groupes, territoires) " +
-          "ainsi que leurs salons et rôles Discord ; les comptes joueurs peuvent aussi être effacés.",
+        "## 🛠️ Administration\nChoisissez une famille d'actions :\n" +
+          FAMILLES.map((f) => `${f.emoji} **${f.titre}** : ${f.resume}`).join("\n"),
       ),
     )
     .addActionRowComponents(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId("admin:init").setLabel("Initialiser le serveur").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId("admin:reset-base").setLabel("Réinitialiser la base").setStyle(ButtonStyle.Danger),
+      lignesDeBoutons(
+        FAMILLES.map((f) =>
+          new ButtonBuilder().setCustomId(`admin:menu:${f.cle}`).setLabel(f.titre).setEmoji(f.emoji).setStyle(ButtonStyle.Secondary),
+        ),
       ),
     );
 }
 
-// --- Initialiser le serveur (discord/initialisation.ts) ---
+function construireSousPanneau(famille: FamilleAdmin): ContainerBuilder {
+  const descriptions = famille.actions.map(
+    (a) => `**${a.libelle}**${a.executer ? "" : " *(à venir)*"} : ${a.description}`,
+  );
+  const boutons = famille.actions.map((a) =>
+    new ButtonBuilder()
+      .setCustomId(`admin:${famille.cle}:${a.cle}`)
+      .setLabel(a.libelle)
+      .setStyle(a.style ?? ButtonStyle.Secondary)
+      .setDisabled(!a.executer),
+  );
 
-async function initialiser(interaction: ButtonInteraction, guild: Guild) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  await interaction.editReply(await initialiserServeur(guild));
-}
-
-// --- Reinitialiser la base : conserve le catalogue (objets, recettes, succes) et la structure fixe du serveur ---
-
-// Ressources Discord creees en cours de partie (fondation, territoires)
-const PREFIXES_RESSOURCES_PARTIE = [
-  "role:ville:",
-  "categorie:ville:",
-  "salon:ville:",
-  "categorie:groupe:",
-  "salon:zone:",
-  "role:position:zone:",
-];
-
-async function reinitialiserBase(interaction: ButtonInteraction, guild: Guild) {
-  // Collecte sur le message de reponse lui-meme : sur une reponse a un bouton, discord.js collecterait
-  // sinon les clics du panneau
-  const reponse = await interaction.reply({
-    content:
-      "⚠️ **Réinitialisation de la base** : toutes les villes (en création, en jeu, tombées), joueurs, demandes, " +
-      "groupes et territoires seront effacés, ainsi que leurs salons et rôles Discord.\n" +
-      "« Effacer aussi les comptes » supprime en plus les comptes joueurs et leurs succès obtenus. Action irréversible.",
-    components: [
+  return new ContainerBuilder()
+    .setAccentColor(COULEUR_ADMIN)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`## ${famille.emoji} Administration — ${famille.titre}\n${descriptions.join("\n")}`),
+    )
+    .addActionRowComponents(lignesDeBoutons(boutons))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId("parties").setLabel("Effacer les parties").setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId("comptes").setLabel("Effacer aussi les comptes").setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId("annuler").setLabel("Annuler").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId("admin:menu:accueil").setLabel("Retour").setEmoji("↩️").setStyle(ButtonStyle.Secondary),
       ),
-    ],
-    flags: MessageFlags.Ephemeral,
-    withResponse: true,
-  });
-
-  const choix =
-    (await reponse.resource?.message
-      ?.awaitMessageComponent({ componentType: ComponentType.Button, time: DELAI_CONFIRMATION_MS })
-      .catch(() => null)) ?? null;
-  if (choix?.customId !== "parties" && choix?.customId !== "comptes") {
-    const abandon = { content: "Réinitialisation abandonnée.", components: [] };
-    if (choix) await choix.update(abandon);
-    else await interaction.editReply(abandon).catch(() => null);
-    return;
-  }
-  const avecComptes = choix.customId === "comptes";
-
-  // Suppression des salons/roles et des donnees : bien plus long que les 3 s accordees par Discord
-  await choix.deferUpdate();
-  await choix.editReply({ content: "Réinitialisation en cours...", components: [] });
-
-  // Messages de recrutement des villes en creation (ceux des villes fondees ont deja ete supprimes)
-  const villesEnCreation = await prisma.ville.findMany({ where: { statut: StatutVille.EN_CREATION }, select: { id: true } });
-  for (const { id } of villesEnCreation) {
-    await supprimerMessagesRecrutement(guild, id);
-  }
-
-  await supprimerRessources(guild, [], PREFIXES_RESSOURCES_PARTIE);
-
-  // Ordre impose par les cles etrangeres sans cascade (Joueur <-> Ville via le maire, Zone -> Groupe...)
-  await prisma.$transaction([
-    prisma.vote.deleteMany(),
-    prisma.candidature.deleteMany(),
-    prisma.election.deleteMany(),
-    prisma.gardeVolontaire.deleteMany(),
-    prisma.cycleAttaque.deleteMany(),
-    prisma.signalement.deleteMany(),
-    prisma.journalEntree.deleteMany(),
-    prisma.contributionBatiment.deleteMany(),
-    prisma.batimentVille.deleteMany(),
-    prisma.inventaireVille.deleteMany(),
-    prisma.demandeInscription.deleteMany(),
-    prisma.ville.updateMany({ data: { maireId: null } }),
-    prisma.joueur.deleteMany(), // inventaires et cartes supprimes en cascade
-    prisma.ville.deleteMany(),
-    prisma.zone.deleteMany(), // adjacences et stocks supprimes en cascade
-    prisma.groupe.deleteMany(),
-    ...(avecComptes ? [prisma.utilisateur.deleteMany()] : []), // succes obtenus supprimes en cascade
-  ]);
-
-  // Plus personne n'a de ville : roles de partie retires, role Nomade pour tous
-  const roleCitoyen = await trouverRole(guild, ROLE_CITOYEN.cle);
-  const roleMort = await trouverRole(guild, ROLE_MORT.cle);
-  const membres = await guild.members.fetch();
-  for (const membre of membres.values()) {
-    if (membre.user.bot) continue;
-    if (roleCitoyen && membre.roles.cache.has(roleCitoyen.id)) await membre.roles.remove(roleCitoyen).catch(() => null);
-    if (roleMort && membre.roles.cache.has(roleMort.id)) await membre.roles.remove(roleMort).catch(() => null);
-    await synchroniserNomade(membre);
-  }
-
-  await choix.editReply({
-    content:
-      "Base réinitialisée : villes, joueurs, demandes, groupes et territoires effacés, salons et rôles de partie supprimés, " +
-      "rôle Nomade rendu à tous." +
-      (avecComptes ? " Comptes joueurs et succès effacés." : ""),
-    components: [],
-  });
+    );
 }
 
-const ACTIONS = { init: initialiser, "reset-base": reinitialiserBase } as const;
-
-export async function gererBoutonAdmin(interaction: ButtonInteraction, action: string) {
+export async function gererBoutonAdmin(interaction: ButtonInteraction, cleFamille: string, cleAction: string | undefined) {
   const guild = interaction.guild;
-  if (!guild || !(action in ACTIONS)) return;
+  if (!guild || !cleAction) return;
   if (!(await estAdmin(guild, interaction.user.id))) {
     await interaction.reply({ content: "Action réservée aux Admins.", flags: MessageFlags.Ephemeral });
     return;
   }
-  await ACTIONS[action as keyof typeof ACTIONS](interaction, guild);
+
+  // Navigation : le panneau est remplace sur place par l'accueil ou le sous-panneau d'une famille
+  if (cleFamille === "menu") {
+    const famille = FAMILLES.find((f) => f.cle === cleAction);
+    await interaction.update({ components: [famille ? construireSousPanneau(famille) : construirePanneauAdmin()] });
+    return;
+  }
+
+  const action = FAMILLES.find((f) => f.cle === cleFamille)?.actions.find((a) => a.cle === cleAction);
+  await action?.executer?.(interaction, guild);
 }

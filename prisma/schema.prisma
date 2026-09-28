@@ -549,3 +549,15 @@ model RessourceDiscord {
 
   @@unique([guildId, cle])
 }
+
+// Journal des actions du panneau /admin (conception.md §9 : separe des logs techniques),
+// consultable depuis la famille Moderation du panneau.
+model JournalAdmin {
+  id             Int      @id @default(autoincrement())
+  adminDiscordId String
+  action         String
+  details        String   @db.Text
+  date           DateTime @default(now())
+
+  @@index([date])
+}

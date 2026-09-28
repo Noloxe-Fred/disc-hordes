@@ -14,12 +14,11 @@ import { prisma } from "../db";
 import { INCLUDE_MESSAGE_VILLE, construireMessageVille } from "../discord/messageVille";
 import { trouverRole, trouverSalonTexte } from "../discord/reconcile";
 import { ROLE_NOMADE, SALON_FONDER_COLONIE } from "../discord/structure";
-import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteLibre";
+import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_NOM_VILLE, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteLibre";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 const VALEUR_SANS_METIER = "AUCUN";
-const LONGUEUR_MAX_NOM = 50;
 
 // Formulaire unique de creation : nom, metier du createur et projet de ville (facultatif)
 function construireFormulaire(idFormulaire: string): ModalBuilder {
@@ -34,7 +33,7 @@ function construireFormulaire(idFormulaire: string): ModalBuilder {
             .setCustomId("nom")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setMaxLength(LONGUEUR_MAX_NOM),
+            .setMaxLength(LONGUEUR_MAX_NOM_VILLE),
         ),
       new LabelBuilder()
         .setLabel("Votre métier")

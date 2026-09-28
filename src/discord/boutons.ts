@@ -85,9 +85,9 @@ export async function gererBouton(interaction: ButtonInteraction) {
   const [prefixe, action, id] = interaction.customId.split(":");
   if (!action) return;
 
-  // Panneaux /admin et /moderation : pas d'identifiant
+  // Panneau /admin : "admin:<famille>:<action>" ; panneau /moderation : pas d'identifiant
   if (prefixe === "admin") {
-    await gererBoutonAdmin(interaction, action);
+    await gererBoutonAdmin(interaction, action, id);
     return;
   }
   if (prefixe === "moderation") {

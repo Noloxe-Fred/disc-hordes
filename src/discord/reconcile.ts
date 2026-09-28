@@ -176,3 +176,14 @@ export async function ensureVoiceChannel(
   await saveRessource(guild.id, cle, TypeRessourceDiscord.SALON, salon.id);
   return salon;
 }
+
+// Renomme sur Discord la ressource (role, categorie ou salon) enregistree sous cette cle, si elle existe encore
+export async function renommerRessource(guild: Guild, cle: string, nom: string): Promise<void> {
+  const ressource = await prisma.ressourceDiscord.findUnique({ where: { guildId_cle: { guildId: guild.id, cle } } });
+  if (!ressource) return;
+  const cible =
+    ressource.type === TypeRessourceDiscord.ROLE
+      ? await guild.roles.fetch(ressource.discordId).catch(() => null)
+      : await guild.channels.fetch(ressource.discordId).catch(() => null);
+  if (cible && cible.name !== nom) await cible.setName(nom).catch((error) => console.error(`Renommage de ${cle} impossible`, error));
+}

@@ -310,13 +310,25 @@ async function fonder(interaction: ButtonInteraction, guild: Guild, villeId: num
     return;
   }
 
-  const createurJoueur = ville.habitants.find((h) => h.utilisateurId === ville.createurUtilisateurId);
-  if (!createurJoueur) {
-    await repondre(interaction, "Erreur interne : le créateur n'est pas listé comme habitant de sa propre ville.");
-    return;
-  }
-
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const { paMax } = await fonderVille(guild, ville.id);
+  await interaction.editReply(
+    `**${ville.nom}** est fondée avec ${nombreHabitants} habitant(s) (PA max individuel : ${paMax}). Vous êtes le premier maire.`,
+  );
+}
+
+// Lancement de la partie d'une ville en creation, sans controle du minimum d'habitants : appele par le
+// bouton « Fonder la ville » (apres ses controles) et par « Forcer la fondation » du panneau /admin.
+// Le createur devient le premier maire.
+export async function fonderVille(guild: Guild, villeId: number): Promise<{ nombreHabitants: number; paMax: number }> {
+  const ville = await prisma.ville.findUniqueOrThrow({
+    where: { id: villeId },
+    include: { createur: true, habitants: { include: { utilisateur: true } } },
+  });
+  const nombreHabitants = ville.habitants.length;
+
+  const createurJoueur = ville.habitants.find((h) => h.utilisateurId === ville.createurUtilisateurId);
+  if (!createurJoueur) throw new Error(`Le créateur de la ville ${villeId} n'est pas listé parmi ses habitants`);
 
   const paMax = Math.min(PA_MAX_PLAFOND, Math.floor(PA_CIBLE_VILLE / nombreHabitants));
 
@@ -366,14 +378,13 @@ async function fonder(interaction: ButtonInteraction, guild: Guild, villeId: num
 
   await salonMairie.send(
     `**${ville.nom}** est fondée ! ${nombreHabitants} habitant(s), PA max individuel : **${paMax}**.\n` +
-      `${interaction.user} devient le premier maire (mandat de ${CYCLES_PAR_MANDAT_MAIRE} cycles).\n` +
+      `<@${ville.createur.discordId}> devient le premier maire (mandat de ${CYCLES_PAR_MANDAT_MAIRE} cycles).\n` +
       "Faim et soif démarrent à 100/100. Les commandes `/action` et `/aide` arrivent bientôt.",
   );
 
-  await interaction.editReply(
-    `**${ville.nom}** est fondée avec ${nombreHabitants} habitant(s) (PA max individuel : ${paMax}). Vous êtes le premier maire.`,
-  );
+  return { nombreHabitants, paMax };
 }
+
 
 const ACTIONS = { rejoindre, quitter, annuler, fonder } as const;
 

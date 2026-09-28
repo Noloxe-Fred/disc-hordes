@@ -1,31 +1,26 @@
 import { CauseMort, MeteoType, StatutJoueur, StatutVille, TypeBatiment, TypePhase, type Ville } from "@prisma/client";
-import { ChannelType, type Guild } from "discord.js";
+import type { Guild } from "discord.js";
 import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
 import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif } from "../game/faimSoif";
 import { infligerDegats, tenterInfection } from "../game/sante";
+import { posterDansMairie } from "../discord/villeStructure";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
 // plutot que 24h/48h apres leur propre fondation (conception.md §2). Le bot ne gerant qu'un
 // seul serveur Discord en V1, on prend la premiere (et seule) guilde connue du client.
 
-function msJusquauProchainMinuit(): number {
-  const maintenant = new Date();
+// Prochaine bascule jour/nuit, commune a toutes les villes (y compris apres une phase forcee par un admin)
+export function prochaineBascule(maintenant: Date = new Date()): Date {
   const prochainMinuit = new Date(maintenant);
   prochainMinuit.setHours(24, 0, 0, 0);
-  return prochainMinuit.getTime() - maintenant.getTime();
+  return prochainMinuit;
 }
 
-async function posterDansMairie(guild: Guild, villeId: number, message: string) {
-  const ressource = await prisma.ressourceDiscord.findUnique({
-    where: { guildId_cle: { guildId: guild.id, cle: `salon:ville:${villeId}:mairie` } },
-  });
-  if (!ressource) return;
-
-  const salon = await guild.channels.fetch(ressource.discordId).catch(() => null);
-  if (salon?.type === ChannelType.GuildText) await salon.send(message).catch(() => null);
+function msJusquauProchainMinuit(): number {
+  return prochaineBascule().getTime() - Date.now();
 }
 
 function habitantsVivants(villeId: number) {
@@ -95,10 +90,14 @@ async function resoudreBlessuresNuit(
   return { lignes, villeTombee: false };
 }
 
-// L'attaque de zombies se resout a l'aube, en cloture de la nuit qui s'acheve (pas a la
-// tombee de la nuit) : le minuit qui cloture une journee n'a donc jamais d'attaque, a chaque
-// cycle et pour toutes les villes (conception.md §2).
-async function basculerVersJour(guild: Guild, ville: Ville) {
+// Resout une attaque de zombies sur la ville a la force de son cycle courant : jets de blessures et compte
+// rendu public. "enregistrer" conserve l'attaque dans l'historique de la ville (attaque de l'aube) ; il est
+// fait avant les blessures, pour que le recapitulatif d'une chute eventuelle en tienne compte.
+export async function resoudreAttaque(
+  guild: Guild,
+  ville: Ville,
+  enregistrer: boolean,
+): Promise<{ compteRendu: string; villeTombee: boolean }> {
   const palissade = await prisma.batimentVille.findUnique({
     where: { villeId_type: { villeId: ville.id, type: TypeBatiment.PALISSADE } },
   });
@@ -108,24 +107,33 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   // Aucun systeme de garde volontaire pour l'instant : bonus de garde toujours nul.
   const defenseTotale = calculerDefenseTotale(palissade?.palierActuel ?? 0, 0);
 
-  await prisma.cycleAttaque.create({
-    data: {
-      villeId: ville.id,
-      cycleNumero: ville.cycleActuel,
-      forceAttaque,
-      defenseTotale,
-      meteoMauvais: meteoMauvaise,
-    },
-  });
+  if (enregistrer) {
+    // Upsert : un admin a pu reculer le cycle sur un numero deja joue
+    const donnees = { forceAttaque, defenseTotale, meteoMauvais: meteoMauvaise, dateResolution: new Date() };
+    await prisma.cycleAttaque.upsert({
+      where: { villeId_cycleNumero: { villeId: ville.id, cycleNumero: ville.cycleActuel } },
+      update: donnees,
+      create: { villeId: ville.id, cycleNumero: ville.cycleActuel, ...donnees },
+    });
+  }
 
   const { lignes, villeTombee } = await resoudreBlessuresNuit(guild, ville, forceAttaque, defenseTotale);
 
   const deficit = Math.max(0, forceAttaque - defenseTotale);
   const compteRendu =
-    `🧟 Attaque de la nuit sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
+    `🧟 Attaque de zombies sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
     (deficit > 0
       ? ` — déficit de ${deficit.toFixed(1)}.` + (lignes.length > 0 ? `\n${lignes.join("\n")}` : "\nPersonne n'a été touché.")
       : " — repoussée sans difficulté.");
+
+  return { compteRendu, villeTombee };
+}
+
+// L'attaque de zombies se resout a l'aube, en cloture de la nuit qui s'acheve (pas a la
+// tombee de la nuit) : le minuit qui cloture une journee n'a donc jamais d'attaque, a chaque
+// cycle et pour toutes les villes (conception.md §2).
+async function basculerVersJour(guild: Guild, ville: Ville) {
+  const { compteRendu, villeTombee } = await resoudreAttaque(guild, ville, true);
 
   if (villeTombee) {
     await posterDansMairie(guild, ville.id, `${compteRendu}\n\n**${ville.nom}** est tombée.`);
@@ -142,16 +150,18 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   await appliquerFaimSoif(guild, ville.id);
 }
 
+// Changement de phase d'une ville : a minuit (horloge commune) ou force depuis le panneau /admin
+export async function basculerPhase(guild: Guild, ville: Ville): Promise<void> {
+  if (ville.phaseActuelle === TypePhase.JOUR) await basculerVersNuit(guild, ville);
+  else await basculerVersJour(guild, ville);
+}
+
 async function executerTick(guild: Guild) {
   const villes = await prisma.ville.findMany({ where: { statut: StatutVille.ACTIVE } });
 
   for (const ville of villes) {
     try {
-      if (ville.phaseActuelle === TypePhase.JOUR) {
-        await basculerVersNuit(guild, ville);
-      } else {
-        await basculerVersJour(guild, ville);
-      }
+      await basculerPhase(guild, ville);
     } catch (error) {
       console.error(`Erreur lors du changement de phase de la ville ${ville.id}`, error);
     }

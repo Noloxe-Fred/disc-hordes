@@ -1,5 +1,5 @@
 import { PermissionFlagsBits, type Guild, type Role, type TextChannel } from "discord.js";
-import { ensureCategory, ensureRole, ensureTextChannel, ensureVoiceChannel } from "./reconcile";
+import { ensureCategory, ensureRole, ensureTextChannel, ensureVoiceChannel, trouverSalonTexte } from "./reconcile";
 
 // Structure de la categorie "Ville" a la fondation (conception.md §1) : mairie, place
 // publique, chantiers, atelier, puits, un salon "maisons privees" (un seul salon partage,
@@ -31,4 +31,10 @@ export async function creerStructureVille(guild: Guild, villeId: number, nomVill
   await ensureVoiceChannel(guild, `salon:ville:${villeId}:vocal`, `Ville ${nomVille}`, categorie.id);
 
   return { roleVille, salonMairie };
+}
+
+// Annonce publique dans la mairie d'une ville fondee (cycle jour/nuit, decisions du panneau /admin)
+export async function posterDansMairie(guild: Guild, villeId: number, message: string): Promise<void> {
+  const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:mairie`);
+  await salon?.send(message).catch(() => null);
 }

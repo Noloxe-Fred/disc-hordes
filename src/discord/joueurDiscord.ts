@@ -90,3 +90,38 @@ export async function retirerJoueurDeVilleDiscord(guild: Guild, discordId: strin
     await salon.permissionOverwrites.delete(membre).catch(() => null);
   }
 }
+
+// Exclusion d'un joueur (conception.md §5) : il perd l'acces aux salons de sa ville (permission propre au
+// membre) mais garde son role-ville, qui lui laisse la vue des territoires externes ou il continue d'exister.
+export async function appliquerExclusionDiscord(guild: Guild, discordId: string, villeId: number): Promise<void> {
+  const membre = await guild.members.fetch(discordId).catch(() => null);
+  if (!membre) return;
+  for (const salon of await salonsDeVille(guild, villeId)) {
+    await salon.permissionOverwrites.edit(membre, { ViewChannel: false }).catch(() => null);
+  }
+}
+
+// Retour a la vie normale en ville (resurrection, reintegration, reset de la ville) : role Citoyen a la place
+// de Mort et suppression des permissions propres posees a la mort ou a l'exclusion.
+export async function retablirJoueurDiscord(guild: Guild, discordId: string, villeId: number): Promise<void> {
+  const membre = await guild.members.fetch(discordId).catch(() => null);
+  if (!membre) return;
+  await ajouterRole(membre, ROLE_CITOYEN.cle);
+  await retirerRole(membre, ROLE_MORT.cle);
+  for (const salon of await salonsDeVille(guild, villeId)) {
+    await salon.permissionOverwrites.delete(membre).catch(() => null);
+  }
+}
+
+// Deplacement entre zones (null = en ville) : echange des roles Position, seul acces aux salons de zone
+export async function changerPositionDiscord(
+  guild: Guild,
+  discordId: string,
+  ancienneZoneId: number | null,
+  nouvelleZoneId: number | null,
+): Promise<void> {
+  const membre = await guild.members.fetch(discordId).catch(() => null);
+  if (!membre) return;
+  if (ancienneZoneId !== null) await retirerRole(membre, `role:position:zone:${ancienneZoneId}`);
+  if (nouvelleZoneId !== null) await ajouterRole(membre, `role:position:zone:${nouvelleZoneId}`);
+}
