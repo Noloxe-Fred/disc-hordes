@@ -1,7 +1,9 @@
 import { StatutJoueur, StatutVille } from "@prisma/client";
 import { ButtonStyle, type ButtonInteraction } from "discord.js";
+import { OBJET_RADIO } from "../../config/objets";
 import { prisma } from "../../db";
 import { calculerPaMax } from "../../game/pa";
+import { synchroniserAccesJoueur } from "../joueurDiscord";
 import {
   champMembre,
   champTexte,
@@ -55,6 +57,7 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
     const objet = await prisma.objet.findUniqueOrThrow({ where: { id: objetId } });
 
     let proprietaire: string;
+    let joueurRadio: number | null = null; // radio ajoutee ou retiree du sac : acces a recalculer
     let avant: number;
     let apres: number;
     if (cible === "joueur") {
@@ -72,6 +75,7 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
         create: { joueurId: joueur.id, objetId, quantite: apres },
       });
       proprietaire = `<@${joueur.utilisateur.discordId}>`;
+      if (objet.nom === OBJET_RADIO) joueurRadio = joueur.id;
     } else {
       const ville = await prisma.ville.findUnique({ where: { id: Number(lireChoix(soumission, "ville")) } });
       if (ville?.statut !== StatutVille.ACTIVE) {
@@ -92,6 +96,7 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
     const libelle = sens > 0 ? "Ajouter un objet" : "Retirer un objet";
     await journaliser(interaction.user, libelle, `${objet.nom} : ${avant} → ${apres} (${proprietaire})`);
     await repondre(soumission, `${objet.nom} dans ${proprietaire} : ${avant} → **${apres}**.`);
+    if (joueurRadio !== null) await synchroniserAccesJoueur(interaction.guild!, joueurRadio);
   };
 }
 

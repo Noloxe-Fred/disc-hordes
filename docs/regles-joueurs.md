@@ -92,7 +92,8 @@ Elle réduit peu à peu tes PA… et au bout de **96h** sans remède, tu deviens
 Dans `/action`, le bouton **Se déplacer** te propose les destinations possibles et leur coût : le bot te demande de confirmer avant de dépenser tes PA.
 🧭 On avance **de proche en proche** : de la ville vers les 4 zones **proches**, puis vers les zones **moyennes** et **éloignées** du même type, ou vers les zones voisines de même distance.
 ⚡ Coût : **2 PA** pour une zone proche (ou pour rentrer en ville), **3 PA** pour une moyenne, **4 PA** pour une éloignée. La nuit, c'est **50 % plus cher**.
-🔇 Dehors, tu ne peux plus écrire dans les salons de ta ville, et tu ne récupères pas tes PA au changement de phase. Tu retrouves le salon de chaque zone où tu te trouves.
+🔇 Dehors, tu ne vois plus ce qui se passe en ville : seule la **mairie** reste lisible, sans pouvoir y écrire, pour suivre les annonces. Tu ne récupères pas non plus tes PA au changement de phase. Tu ne vois que le salon de la zone où tu te trouves : personne ne voit ce qui se passe dans une zone sans y être.
+📻 Avec une **radio**, tu rejoins le salon **ondes-radio**, où les porteurs de radio se parlent d'une zone à l'autre. Elle ne te montre pas ta ville quand tu es dehors, mais en ville, un porteur de radio écoute les ondes et peut relayer les nouvelles à ses concitoyens. La radio se trouve dans les marécages, loin de la ville ; elle ne pèse rien et s'affiche à côté de tes PA et de ta charge.
 
 ## 🗺️ Ta carte
 Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consulter avec le bouton **Carte** de `/action`. Elle montre aussi, en jaune, les citoyens de ta ville partis dehors.

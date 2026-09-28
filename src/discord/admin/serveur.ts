@@ -35,6 +35,7 @@ const PREFIXES_RESSOURCES_PARTIE = [
   "salon:ville:",
   "categorie:groupe:",
   "salon:zone:",
+  "salon:groupe:",
   "role:position:zone:",
 ];
 

@@ -18,10 +18,11 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 import type { Command } from "../client";
-import { CAPACITE_SAC, emojiObjet, poidsObjet } from "../config/objets";
+import { CAPACITE_SAC, emojiObjet, estEquipement, OBJET_RADIO, poidsObjet } from "../config/objets";
 import { prisma } from "../db";
 import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
+import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { rendreInventaire } from "../discord/renduInventaire";
 import { chargeSac, deborde, libelleCharge, poidsTotal } from "../services/charge";
@@ -122,7 +123,13 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
   let sac = await contenuSac(joueurId);
   const construireMenu = () => {
     const charge = { utilisee: poidsTotal(sac), capacite: CAPACITE_SAC };
-    const png = rendreInventaire(`Sac — ${interaction.user.username}`, sac.map((e) => ({ ...e.objet, quantite: e.quantite })), charge);
+    // Les equipements (radio) sont montres a part, a cote des PA et de la charge, pas dans la grille du sac
+    const objets = sac.map((e) => ({ ...e.objet, quantite: e.quantite }));
+    const png = rendreInventaire(`Sac — ${interaction.user.username}`, objets.filter((o) => !estEquipement(o.nom)), {
+      pa: actif ? paActuel : undefined,
+      charge,
+      equipements: objets.filter((o) => estEquipement(o.nom)),
+    });
     const menu = encadre(
       `${entete}\n🎒 Charge ${libelleCharge(charge)}` + (charge.utilisee > charge.capacite ? " — **trop lourd**, déposez des objets" : ""),
     )
@@ -274,11 +281,11 @@ async function formulairePoser(
       ? "Choisissez un seul objet."
       : quantite === null
         ? "La quantité doit être un nombre entier positif."
-        : await poser(joueurId, objetId, quantite);
+        : await poser(clic.guild!, joueurId, objetId, quantite);
   return { soumission, texte };
 }
 
-async function poser(joueurId: number, objetId: number, quantite: number): Promise<string> {
+async function poser(guild: Guild, joueurId: number, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   if (!peutAgir(joueur)) return "Vous ne pouvez plus déposer d'objet.";
   const entree = await prisma.inventaireJoueur.findUnique({
@@ -294,6 +301,7 @@ async function poser(joueurId: number, objetId: number, quantite: number): Promi
       data: { villeId: joueur.villeId!, joueurId, message: `Objet déposé : ${entree.objet.nom} ×${quantite}`, public: false },
     }),
   ]);
+  if (entree.objet.nom === OBJET_RADIO) await synchroniserAccesJoueur(guild, joueurId);
   return `⬇️ Vous avez déposé **${objet} × ${quantite}**. Personne ne le retrouvera.`;
 }
 
@@ -447,6 +455,11 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
         ]
       : []),
   ]);
+
+  if (entree.objet.nom === OBJET_RADIO) {
+    await synchroniserAccesJoueur(guild, joueurId);
+    await synchroniserAccesJoueur(guild, destinataireId);
+  }
 
   const salon = await trouverSalonTexte(
     guild,

@@ -133,6 +133,7 @@ export async function nettoyerGroupeSiTombe(guild: Guild, groupeId: number): Pro
     guild,
     [
       `categorie:groupe:${groupeId}:territoires`,
+      `salon:groupe:${groupeId}:radio`,
       ...villes.flatMap(({ id }) => [`role:ville:${id}`, `categorie:ville:${id}`]),
       ...zones.flatMap(({ id }) => [`salon:zone:${id}`, `role:position:zone:${id}`]),
     ],

@@ -71,7 +71,7 @@ const POIDS_OBJET: Record<string, number> = {
   "Ingrédient de remède": PETIT,
   Munitions: PETIT,
   // Loot rare
-  Radio: PETIT,
+  Radio: 0, // equipement : ne prend pas de place
   "Médicament basique": PETIT,
   "Arme simple": MOYEN,
   "Arme avancée": LOURD,
@@ -109,3 +109,14 @@ export function poidsObjet(nom: string): number {
 export const CAPACITE_SAC = 12;
 // Capacite de la banque de ville selon le palier de la place publique (0 = pas encore construite)
 export const CAPACITE_BANQUE_PAR_PALIER = [40, 80, 160];
+
+// Porter une radio donne le role Radio et l'acces au salon « ondes-radio » du groupe, en ville comme dehors
+// (discord/joueurDiscord.ts)
+export const OBJET_RADIO = "Radio";
+
+// Equipements : objets portes sans prendre de place, montres a part dans l'image du sac (a cote des PA et de la charge)
+const EQUIPEMENTS: readonly string[] = [OBJET_RADIO];
+
+export function estEquipement(nom: string): boolean {
+  return EQUIPEMENTS.includes(nom);
+}

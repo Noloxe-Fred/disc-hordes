@@ -22,7 +22,7 @@ export async function enregistrerMort(guild: Guild, joueurId: number, cause: Cau
   });
   if (joueur.villeId === null) return false;
 
-  await appliquerMortDiscord(guild, joueur.utilisateur.discordId, joueur.villeId, avant.zoneActuelleId);
+  await appliquerMortDiscord(guild, joueur.id, avant.zoneActuelleId);
 
   const survivants = await prisma.joueur.count({
     where: { villeId: joueur.villeId, statut: StatutJoueur.VIVANT, dateSortie: null },

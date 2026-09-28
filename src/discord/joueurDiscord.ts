@@ -1,30 +1,57 @@
-import { StatutVille, TypeRessourceDiscord } from "@prisma/client";
-import { ChannelType, type Guild, type GuildMember } from "discord.js";
+import { StatutJoueur, StatutVille, TypeRessourceDiscord } from "@prisma/client";
+import { ChannelType, PermissionFlagsBits, type Guild, type GuildMember, type TextChannel, type VoiceChannel } from "discord.js";
+import { OBJET_RADIO } from "../config/objets";
 import { prisma } from "../db";
-import { trouverRole } from "./reconcile";
+import { trouverRole, trouverSalonTexte } from "./reconcile";
 import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, ROLE_RADIO } from "./structure";
+import { ensureSalonRadio } from "./territoires";
 
-// Permissions retirees a un joueur mort sur les salons de sa ville : il les voit toujours
-// (conception.md §3, l'ame reste liee a sa partie) mais ne peut plus y interagir.
-const PERMISSIONS_RETIREES_MORT = {
-  SendMessages: false,
-  SendMessagesInThreads: false,
-  CreatePublicThreads: false,
-  AddReactions: false,
-  Connect: false,
-  Speak: false,
-} as const;
+// Acces Discord d'un joueur a sa ville et aux ondes radio de son groupe (conception.md §1 et §3), recalcule en entier
+// par synchroniserAccesJoueur a chaque changement de situation (deplacement, mort, exclusion, retour a la vie,
+// radio gagnee ou perdue) : une permission propre au membre sur chaque salon de la ville, prioritaire sur les roles.
+// - Vivant en ville : aucune restriction.
+// - Vivant dehors, radio ou non : salons de la ville masques, sauf la mairie, lisible sans y ecrire (annonces). La
+//   Tour Radio (a venir) rendra la ville accessible depuis dehors aux seuls porteurs de radio.
+// - Mort ou zombifie : voit toujours sa ville (l'ame reste liee a sa partie) mais ne peut plus y interagir.
+// - Exclu : plus aucun salon de la ville.
+// Salon « ondes-radio » du groupe : ouvert aux porteurs de radio (vivants ou exclus), en ville comme dehors : un porteur
+// en ville relaie les nouvelles des ondes a ses concitoyens.
+
+const ECRITURE = ["SendMessages", "SendMessagesInThreads", "CreatePublicThreads", "AddReactions", "Connect", "Speak"] as const;
+type Permission = "ViewChannel" | (typeof ECRITURE)[number];
+type Acces = Partial<Record<Permission, boolean>>;
+
+const LECTURE_SEULE: Acces = Object.fromEntries(ECRITURE.map((p) => [p, false]));
+const MASQUE: Acces = { ViewChannel: false };
+const LIBRE: Acces = {};
 
 async function salonsDeVille(guild: Guild, villeId: number) {
   const ressources = await prisma.ressourceDiscord.findMany({
     where: { guildId: guild.id, type: TypeRessourceDiscord.SALON, cle: { startsWith: `salon:ville:${villeId}:` } },
   });
-  const salons = [];
-  for (const { discordId } of ressources) {
+  const salons: { cle: string; salon: TextChannel | VoiceChannel }[] = [];
+  for (const { cle, discordId } of ressources) {
     const salon = await guild.channels.fetch(discordId).catch(() => null);
-    if (salon && (salon.type === ChannelType.GuildText || salon.type === ChannelType.GuildVoice)) salons.push(salon);
+    if (salon && (salon.type === ChannelType.GuildText || salon.type === ChannelType.GuildVoice)) salons.push({ cle, salon });
   }
   return salons;
+}
+
+// Pose la permission propre du membre sur le salon, en remplacant l'ancienne ; rien a faire si elle est deja en place
+async function appliquerAcces(salon: TextChannel | VoiceChannel, membre: GuildMember, acces: Acces): Promise<void> {
+  let allow = 0n;
+  let deny = 0n;
+  for (const [permission, valeur] of Object.entries(acces) as [Permission, boolean][]) {
+    if (valeur) allow |= PermissionFlagsBits[permission];
+    else deny |= PermissionFlagsBits[permission];
+  }
+  const actuel = salon.permissionOverwrites.cache.get(membre.id);
+  if (allow === 0n && deny === 0n) {
+    if (actuel) await salon.permissionOverwrites.delete(membre).catch(() => null);
+    return;
+  }
+  if (actuel && actuel.allow.bitfield === allow && actuel.deny.bitfield === deny) return;
+  await salon.permissionOverwrites.create(membre, acces).catch(() => null);
 }
 
 async function retirerRole(membre: GuildMember, cle: string) {
@@ -53,30 +80,60 @@ export async function synchroniserNomade(membre: GuildMember): Promise<void> {
   else await ajouterRole(membre, ROLE_NOMADE.cle);
 }
 
-// Mort d'un joueur : role Mort a la place de Citoyen, plus de position en territoire externe, et
-// ecriture bloquee sur les salons de sa ville (permission propre au membre, prioritaire sur les roles).
-export async function appliquerMortDiscord(
-  guild: Guild,
-  discordId: string,
-  villeId: number,
-  zoneActuelleId: number | null,
-): Promise<void> {
-  const membre = await guild.members.fetch(discordId).catch(() => null);
+// Recalcule le role Radio et les acces du joueur aux salons de sa ville et au salon radio de son groupe.
+// A appeler apres tout changement de position, de statut, ou quand une radio entre dans son sac ou en sort.
+export async function synchroniserAccesJoueur(guild: Guild, joueurId: number): Promise<void> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true, ville: true } });
+  if (joueur.villeId === null || joueur.dateSortie !== null) return;
+  const membre = await guild.members.fetch(joueur.utilisateur.discordId).catch(() => null);
   if (!membre) return;
 
-  const roleMort = await trouverRole(guild, ROLE_MORT.cle);
-  if (roleMort) await membre.roles.add(roleMort).catch(() => null);
-  await retirerRole(membre, ROLE_CITOYEN.cle);
-  if (zoneActuelleId !== null) await retirerRole(membre, `role:position:zone:${zoneActuelleId}`);
+  const enJeu = joueur.statut === StatutJoueur.VIVANT || joueur.statut === StatutJoueur.EXCLU;
+  const dehors = joueur.zoneActuelleId !== null;
+  const radio =
+    enJeu &&
+    (await prisma.inventaireJoueur.count({ where: { joueurId, quantite: { gt: 0 }, objet: { nom: OBJET_RADIO } } })) > 0;
 
-  for (const salon of await salonsDeVille(guild, villeId)) {
-    await salon.permissionOverwrites.edit(membre, PERMISSIONS_RETIREES_MORT).catch(() => null);
+  if (radio) await ajouterRole(membre, ROLE_RADIO.cle);
+  else await retirerRole(membre, ROLE_RADIO.cle);
+
+  for (const { cle, salon } of await salonsDeVille(guild, joueur.villeId)) {
+    const mairie = cle === `salon:ville:${joueur.villeId}:mairie`;
+    const acces =
+      joueur.statut === StatutJoueur.EXCLU
+        ? MASQUE
+        : !enJeu
+          ? LECTURE_SEULE
+          : dehors
+            ? mairie
+              ? LECTURE_SEULE
+              : MASQUE
+            : LIBRE;
+    await appliquerAcces(salon, membre, acces);
   }
+
+  const groupeId = joueur.ville?.groupeId;
+  if (groupeId == null) return;
+  const salonRadio = radio ? await ensureSalonRadio(guild, groupeId) : await trouverSalonTexte(guild, `salon:groupe:${groupeId}:radio`);
+  if (salonRadio) await appliquerAcces(salonRadio, membre, radio ? { ViewChannel: true, SendMessages: true } : LIBRE);
+}
+
+// Mort d'un joueur : role Mort a la place de Citoyen, plus de position en territoire externe, et
+// ville en lecture seule (synchroniserAccesJoueur).
+export async function appliquerMortDiscord(guild: Guild, joueurId: number, zoneAvantId: number | null): Promise<void> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
+  const membre = await guild.members.fetch(joueur.utilisateur.discordId).catch(() => null);
+  if (!membre) return;
+
+  await ajouterRole(membre, ROLE_MORT.cle);
+  await retirerRole(membre, ROLE_CITOYEN.cle);
+  if (zoneAvantId !== null) await retirerRole(membre, `role:position:zone:${zoneAvantId}`);
+  await synchroniserAccesJoueur(guild, joueurId);
 }
 
 // Depart de la ville (joueur mort qui la quitte, ou chute de la ville) : retrait des roles lies a la ville
-// et des permissions propres posees a sa mort, retour du role Nomade. Le role-ville retire lui enleve
-// aussi la vue des salons.
+// et des permissions propres posees sur ses salons et sur le salon radio, retour du role Nomade. Le role-ville
+// retire lui enleve aussi la vue des salons.
 export async function retirerJoueurDeVilleDiscord(guild: Guild, discordId: string, villeId: number): Promise<void> {
   const membre = await guild.members.fetch(discordId).catch(() => null);
   if (!membre) return;
@@ -84,33 +141,30 @@ export async function retirerJoueurDeVilleDiscord(guild: Guild, discordId: strin
   await retirerRole(membre, `role:ville:${villeId}`);
   await retirerRole(membre, ROLE_CITOYEN.cle);
   await retirerRole(membre, ROLE_MORT.cle);
+  await retirerRole(membre, ROLE_RADIO.cle);
   await ajouterRole(membre, ROLE_NOMADE.cle);
 
-  for (const salon of await salonsDeVille(guild, villeId)) {
-    await salon.permissionOverwrites.delete(membre).catch(() => null);
-  }
+  for (const { salon } of await salonsDeVille(guild, villeId)) await appliquerAcces(salon, membre, LIBRE);
+  const ville = await prisma.ville.findUnique({ where: { id: villeId }, select: { groupeId: true } });
+  const salonRadio = ville?.groupeId != null ? await trouverSalonTexte(guild, `salon:groupe:${ville.groupeId}:radio`) : null;
+  if (salonRadio) await appliquerAcces(salonRadio, membre, LIBRE);
 }
 
-// Exclusion d'un joueur (conception.md §5) : il perd l'acces aux salons de sa ville (permission propre au
-// membre) mais garde son role-ville, qui lui laisse la vue des territoires externes ou il continue d'exister.
-export async function appliquerExclusionDiscord(guild: Guild, discordId: string, villeId: number): Promise<void> {
-  const membre = await guild.members.fetch(discordId).catch(() => null);
-  if (!membre) return;
-  for (const salon of await salonsDeVille(guild, villeId)) {
-    await salon.permissionOverwrites.edit(membre, { ViewChannel: false }).catch(() => null);
-  }
+// Exclusion d'un joueur (conception.md §5) : il perd l'acces aux salons de sa ville mais garde son role-ville,
+// qui lui laisse la vue des territoires externes ou il continue d'exister.
+export async function appliquerExclusionDiscord(guild: Guild, joueurId: number): Promise<void> {
+  await synchroniserAccesJoueur(guild, joueurId);
 }
 
-// Retour a la vie normale en ville (resurrection, reintegration, reset de la ville) : role Citoyen a la place
-// de Mort et suppression des permissions propres posees a la mort ou a l'exclusion.
-export async function retablirJoueurDiscord(guild: Guild, discordId: string, villeId: number): Promise<void> {
-  const membre = await guild.members.fetch(discordId).catch(() => null);
+// Retour a la vie normale (resurrection, reintegration, reset de la ville) : role Citoyen a la place de Mort,
+// puis acces recalcules selon sa position.
+export async function retablirJoueurDiscord(guild: Guild, joueurId: number): Promise<void> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
+  const membre = await guild.members.fetch(joueur.utilisateur.discordId).catch(() => null);
   if (!membre) return;
   await ajouterRole(membre, ROLE_CITOYEN.cle);
   await retirerRole(membre, ROLE_MORT.cle);
-  for (const salon of await salonsDeVille(guild, villeId)) {
-    await salon.permissionOverwrites.delete(membre).catch(() => null);
-  }
+  await synchroniserAccesJoueur(guild, joueurId);
 }
 
 // Deplacement entre zones (null = en ville) : echange des roles Position, seul acces aux salons de zone
@@ -124,25 +178,4 @@ export async function changerPositionDiscord(
   if (!membre) return;
   if (ancienneZoneId !== null) await retirerRole(membre, `role:position:zone:${ancienneZoneId}`);
   if (nouvelleZoneId !== null) await ajouterRole(membre, `role:position:zone:${nouvelleZoneId}`);
-}
-
-// Ecriture retiree sur les salons de la ville quand le joueur part en territoire externe, rendue a son retour
-// (conception.md §1). Le role Radio permet de garder l'ecriture dehors. Seules ces permissions sont touchees :
-// une restriction de mort ou d'exclusion posee sur le meme membre reste en place.
-const PERMISSIONS_ECRITURE_VILLE = ["SendMessages", "SendMessagesInThreads", "CreatePublicThreads", "Connect", "Speak"] as const;
-
-export async function restreindreEcritureVille(
-  guild: Guild,
-  discordId: string,
-  villeId: number,
-  restreindre: boolean,
-): Promise<void> {
-  const membre = await guild.members.fetch(discordId).catch(() => null);
-  if (!membre) return;
-  const radio = await trouverRole(guild, ROLE_RADIO.cle);
-  const valeur = restreindre && !(radio && membre.roles.cache.has(radio.id)) ? false : null;
-  const permissions = Object.fromEntries(PERMISSIONS_ECRITURE_VILLE.map((p) => [p, valeur]));
-  for (const salon of await salonsDeVille(guild, villeId)) {
-    await salon.permissionOverwrites.edit(membre, permissions).catch(() => null);
-  }
 }

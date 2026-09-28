@@ -1,9 +1,9 @@
 import { StatutVille } from "@prisma/client";
-import { PermissionFlagsBits, type Guild, type OverwriteResolvable, type Role } from "discord.js";
+import { PermissionFlagsBits, type Guild, type OverwriteResolvable, type Role, type TextChannel } from "discord.js";
 import { PALIERS_ZONE, TYPES_ZONE, nomSalonZone } from "../config/zones";
 import { prisma } from "../db";
 import { ensureAdjacencesGroupe, nomZone } from "../services/zones";
-import { ensureCategory, ensureRole, ensureTextChannel, trouverRole, trouverSalonTexte } from "./reconcile";
+import { ensureCategory, ensureRole, ensureTextChannel, trouverCategorie, trouverRole, trouverSalonTexte } from "./reconcile";
 
 // Categorie "Territoires externes" d'un groupe (conception.md §1) : visible uniquement des villes
 // fondees du groupe (via leurs roles-ville). Les salons de zone sont masques a tous sauf au role
@@ -61,5 +61,22 @@ export async function ensureTerritoiresGroupe(guild: Guild, groupeId: number): P
     }
   }
 
+  await ensureSalonRadio(guild, groupeId);
   await ensureAdjacencesGroupe(groupeId);
+}
+
+// Salon « ondes-radio » du groupe (conception.md §1) : masque a tous, ouvert membre par membre aux porteurs de radio
+// (joueurDiscord.ts). Cree aussi a la demande pour un groupe fonde avant son ajout. Un salon
+// existant garde ses permissions de membres : seule celle de @everyone est reposee.
+export async function ensureSalonRadio(guild: Guild, groupeId: number): Promise<TextChannel | null> {
+  const everyoneId = guild.roles.everyone.id;
+  const cle = `salon:groupe:${groupeId}:radio`;
+  const existant = await trouverSalonTexte(guild, cle);
+  if (existant) {
+    await existant.permissionOverwrites.edit(everyoneId, { ViewChannel: false });
+    return existant;
+  }
+  const categorie = await trouverCategorie(guild, `categorie:groupe:${groupeId}:territoires`);
+  if (!categorie) return null;
+  return ensureTextChannel(guild, cle, "ondes-radio", categorie.id, [{ id: everyoneId, deny: [PermissionFlagsBits.ViewChannel] }]);
 }

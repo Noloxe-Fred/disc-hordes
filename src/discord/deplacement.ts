@@ -1,10 +1,11 @@
 import type { Guild } from "discord.js";
 import { prisma } from "../db";
 import { ajouterACarte } from "../services/carte";
-import { changerPositionDiscord, restreindreEcritureVille } from "./joueurDiscord";
+import { changerPositionDiscord, synchroniserAccesJoueur } from "./joueurDiscord";
 
 // Deplacement d'un joueur vers une zone de son groupe, ou en ville (null) : PA depenses, zone ajoutee a sa
-// carte de decouverte, roles Position echanges, ecriture en ville retiree dehors et rendue au retour.
+// carte de decouverte, roles Position echanges, acces a la ville et aux ondes radio recalcules en sortant ou en
+// rentrant (joueurDiscord.ts).
 // Utilise par le bouton « aller » de /action et par « Teleporter » du panneau /admin (sans cout).
 export async function deplacerJoueur(
   guild: Guild,
@@ -18,11 +19,8 @@ export async function deplacerJoueur(
   });
   if (zoneId !== null) await ajouterACarte(joueur.id, [zoneId]);
 
-  const discordId = joueur.utilisateur.discordId;
-  await changerPositionDiscord(guild, discordId, joueur.zoneActuelleId, zoneId);
+  await changerPositionDiscord(guild, joueur.utilisateur.discordId, joueur.zoneActuelleId, zoneId);
   const sortDeLaVille = joueur.zoneActuelleId === null && zoneId !== null;
   const rentreEnVille = joueur.zoneActuelleId !== null && zoneId === null;
-  if (joueur.villeId !== null && (sortDeLaVille || rentreEnVille)) {
-    await restreindreEcritureVille(guild, discordId, joueur.villeId, sortDeLaVille);
-  }
+  if (sortDeLaVille || rentreEnVille) await synchroniserAccesJoueur(guild, joueur.id);
 }

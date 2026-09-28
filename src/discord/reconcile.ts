@@ -1,4 +1,4 @@
-import { ChannelType, type Guild, type OverwriteResolvable, type Role, type TextChannel, type VoiceChannel } from "discord.js";
+import { ChannelType, type CategoryChannel, type Guild, type OverwriteResolvable, type Role, type TextChannel, type VoiceChannel } from "discord.js";
 import { TypeRessourceDiscord } from "@prisma/client";
 import { prisma } from "../db";
 
@@ -141,6 +141,13 @@ export async function trouverRole(guild: Guild, cle: string): Promise<Role | nul
   const discordId = await getDiscordId(guild.id, cle);
   if (!discordId) return null;
   return guild.roles.fetch(discordId).catch(() => null);
+}
+
+export async function trouverCategorie(guild: Guild, cle: string): Promise<CategoryChannel | null> {
+  const discordId = await getDiscordId(guild.id, cle);
+  if (!discordId) return null;
+  const categorie = await guild.channels.fetch(discordId).catch(() => null);
+  return categorie && categorie.type === ChannelType.GuildCategory ? categorie : null;
 }
 
 export async function trouverSalonTexte(guild: Guild, cle: string): Promise<TextChannel | null> {

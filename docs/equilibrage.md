@@ -218,10 +218,11 @@ Chaque objet a une classe de poids, qui compte de la même façon dans le sac et
 
 | Classe | Poids | Objets |
 |---|---|---|
-| **Petit** | 1 | Tissu, Baies, Plante médicinale, Ingrédient de remède, Munitions, Pièces mécaniques, Pièces mécaniques rouillées, Minerai rare, Radio, Médicament basique, Bandage, Torche, Ration d'eau purifiée, Remède contre l'infection, Infusion médicinale, Conserve longue durée |
+| **Petit** | 1 | Tissu, Baies, Plante médicinale, Ingrédient de remède, Munitions, Pièces mécaniques, Pièces mécaniques rouillées, Minerai rare, Médicament basique, Bandage, Torche, Ration d'eau purifiée, Remède contre l'infection, Infusion médicinale, Conserve longue durée |
 | **Moyen** | 2 | Bois, Ferraille, Eau brute, Gibier, Petit gibier, Bois rare, Objet rare, Arme simple, Arme de fortune, Plat préparé, Ragoût fortifiant, Piège simple, Feu |
 | **Lourd** | 3 | Pierre, Gros gibier, Gibier rare, Arme avancée, Pièces pour voiture, Pièges avancés, Structures de défense avancées, Armes/outils avancés, Réparation voiture |
 
+- **Équipement (poids 0)** : la **Radio** se porte sans prendre de place. Elle n'apparaît pas dans la grille du sac mais à part, à côté des PA et de la charge.
 - **Sac : capacité 12.** Une fouille rapporte en moyenne 3–4 objets de poids 2 (≈ 7) : une à deux fouilles avant de devoir rentrer, avec de la place pour une ration et une torche. Bonus de capacité (métier, sac à dos) : piste pour plus tard.
 - **Banque de ville : 40 sans place publique, 80 au palier 1, 160 au palier 2** (reconversion des 40 / 80 objets de la section 7 avec un poids moyen de 2). Les ressources déposées pour un chantier ne passent pas par la banque et n'en consomment pas la capacité.
 - **Fouille** : refusée sans coût en PA si le sac est plein (plus de place même pour un objet de poids 1). Sinon, les objets entrent dans l'ordre du tirage tant qu'ils rentrent ; ceux qui ne rentrent pas restent sur place et sont perdus (pas encore d'objets au sol dans les zones). Un objet plus léger tiré après un objet trop lourd peut encore entrer.
@@ -332,5 +333,7 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 - **Table complète des rencontres en territoire externe** : dangerosité différenciée par zone, rencontres humaines/bandits, capture de bandit. Le stub zombie uniquement (10/20/35 % par palier, ×1,5 la nuit — section 5) suffit pour lancer le développement V1 ; l'extension complète est prévue pendant la phase de bêta, avec de vrais retours joueurs pour la calibrer.
 
 ## 12. Points ouverts restants
+
+- **Tour Radio (nouveau bâtiment)** : une fois terminée, elle donne à tous les habitants de la ville l'accès au salon `ondes-radio` du groupe (aujourd'hui réservé aux porteurs de radio, en ville comme dehors), et rend les salons de la ville visibles depuis le territoire externe **aux seuls porteurs de radio** (aujourd'hui masqués dehors, sauf la mairie, radio ou non). Restent à chiffrer : coût en ressources, installation, paliers éventuels (section 7).
 
 - **Effet mécanique des objets de loot sans recette** (section 5) : Médicament basique, Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.

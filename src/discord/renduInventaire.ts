@@ -8,7 +8,8 @@ import { imageEmoji } from "./emojis";
 // cadre brun a bordure beige, titre creme en Courier Prime. Les objets sont ranges par famille (ressources,
 // objets fabriques, objets rares), une case par objet avec son icone Twemoji et sa quantite ; la derniere
 // rangee de chaque famille est completee de cases vides, comme les emplacements du sac de MyHordes. Sous le titre,
-// une jauge montre la charge (poids des objets) sur la capacite ; rouge quand elle depasse.
+// un bandeau reunit les PA, la jauge de charge (poids des objets sur la capacite, orange quand elle est atteinte) et
+// les equipements portes hors du sac, comme la radio.
 
 const POLICES = ["CourierPrime-Regular.ttf", "CourierPrime-Bold.ttf"].map((f) => join(__dirname, "../../assets/fonts", f));
 
@@ -20,7 +21,9 @@ const MARGE = 24;
 const BANDEAU = 58;
 const TITRE_FAMILLE = 34;
 const ICONE = 54;
-const JAUGE = 40; // bandeau de la jauge de charge, sous le titre
+const ENTETE = 56; // bandeau PA, charge et equipements, sous le titre
+const CASE_EQUIPEMENT = 44;
+const ICONE_EQUIPEMENT = 30;
 const LARGEUR = 2 * MARGE + COLONNES * CASE + (COLONNES - 1) * ESPACE;
 const ECHELLE = 1.5; // image nette une fois reduite par Discord
 
@@ -98,25 +101,60 @@ export interface ChargeInventaire {
   capacite: number;
 }
 
-function jaugeCharge(y: number, charge: ChargeInventaire): string {
-  const libelle = `CHARGE ${charge.utilisee} / ${charge.capacite}`;
-  const xBarre = MARGE + 190;
-  const largeurBarre = LARGEUR - MARGE - xBarre;
-  const remplie = Math.round(largeurBarre * Math.min(1, charge.utilisee / charge.capacite));
-  const couleur = charge.utilisee >= charge.capacite ? COULEUR.jaugePleine : COULEUR.jauge;
+export interface EnteteInventaire {
+  pa?: number;
+  charge?: ChargeInventaire;
+  equipements?: ObjetSac[]; // portes hors du sac, sans poids
+}
+
+function caseEquipement(x: number, y: number, objet: ObjetSac): string {
+  const decalage = (CASE_EQUIPEMENT - ICONE_EQUIPEMENT) / 2;
   return (
-    `<text x="${MARGE}" y="${y + 21}" font-size="16" font-weight="bold" letter-spacing="1" fill="${COULEUR.famille}">${libelle}</text>` +
-    `<rect x="${xBarre}" y="${y + 6}" width="${largeurBarre}" height="20" rx="4" fill="${COULEUR.fondJauge}" stroke="${COULEUR.bordCase}" stroke-width="1.5"/>` +
-    (remplie > 0 ? `<rect x="${xBarre}" y="${y + 6}" width="${remplie}" height="20" rx="4" fill="${couleur}"/>` : "")
+    `<rect x="${x}" y="${y}" width="${CASE_EQUIPEMENT}" height="${CASE_EQUIPEMENT}" rx="6" fill="${COULEUR.case}" stroke="${COULEUR.bordBadge}" stroke-width="2"/>` +
+    `<image x="${x + decalage}" y="${y + decalage}" width="${ICONE_EQUIPEMENT}" height="${ICONE_EQUIPEMENT}" href="${imageEmoji(emojiObjet(objet.nom))}"/>` +
+    (objet.quantite > 1
+      ? `<text x="${x + CASE_EQUIPEMENT - 4}" y="${y + CASE_EQUIPEMENT - 4}" text-anchor="end" font-size="13" font-weight="bold" fill="${COULEUR.quantite}">×${objet.quantite}</text>`
+      : "")
   );
 }
 
-export function construireSvgInventaire(titre: string, objets: ObjetSac[], charge?: ChargeInventaire): string {
+// PA a gauche, equipements a droite, jauge de charge entre les deux
+function bandeauEntete(y: number, entete: EnteteInventaire): string {
+  const elements: string[] = [];
+  const milieu = y + CASE_EQUIPEMENT / 2;
+  let x = MARGE;
+  let fin = LARGEUR - MARGE;
+
+  if (entete.pa !== undefined) {
+    elements.push(`<text x="${x}" y="${milieu + 6}" font-size="18" font-weight="bold" letter-spacing="1" fill="${COULEUR.titre}">PA ${entete.pa}</text>`);
+    x += 110;
+  }
+  for (const objet of [...(entete.equipements ?? [])].reverse()) {
+    fin -= CASE_EQUIPEMENT;
+    elements.push(caseEquipement(fin, y, objet));
+    fin -= 10;
+  }
+  if (entete.charge) {
+    const { utilisee, capacite } = entete.charge;
+    const xBarre = x + 190;
+    const largeurBarre = Math.max(0, fin - xBarre);
+    const remplie = Math.round(largeurBarre * Math.min(1, utilisee / capacite));
+    const couleur = utilisee >= capacite ? COULEUR.jaugePleine : COULEUR.jauge;
+    elements.push(
+      `<text x="${x}" y="${milieu + 6}" font-size="16" font-weight="bold" letter-spacing="1" fill="${COULEUR.famille}">CHARGE ${utilisee} / ${capacite}</text>`,
+      `<rect x="${xBarre}" y="${milieu - 10}" width="${largeurBarre}" height="20" rx="4" fill="${COULEUR.fondJauge}" stroke="${COULEUR.bordCase}" stroke-width="1.5"/>`,
+      remplie > 0 ? `<rect x="${xBarre}" y="${milieu - 10}" width="${remplie}" height="20" rx="4" fill="${couleur}"/>` : "",
+    );
+  }
+  return elements.join("");
+}
+
+export function construireSvgInventaire(titre: string, objets: ObjetSac[], entete: EnteteInventaire = {}): string {
   const elements: string[] = [];
   let y = BANDEAU + 10;
-  if (charge) {
-    elements.push(jaugeCharge(y, charge));
-    y += JAUGE;
+  if (entete.pa !== undefined || entete.charge || entete.equipements?.length) {
+    elements.push(bandeauEntete(y, entete));
+    y += ENTETE;
   }
   const hauteurRangee = CASE + ETIQUETTE + ESPACE;
 
@@ -160,8 +198,8 @@ export function construireSvgInventaire(titre: string, objets: ObjetSac[], charg
   );
 }
 
-export function rendreInventaire(titre: string, objets: ObjetSac[], charge?: ChargeInventaire): Buffer {
-  const resvg = new Resvg(construireSvgInventaire(titre, objets, charge), {
+export function rendreInventaire(titre: string, objets: ObjetSac[], entete: EnteteInventaire = {}): Buffer {
+  const resvg = new Resvg(construireSvgInventaire(titre, objets, entete), {
     fitTo: { mode: "width", value: Math.round(LARGEUR * ECHELLE) },
     font: { fontFiles: POLICES, loadSystemFonts: false, defaultFontFamily: "Courier Prime" },
   });

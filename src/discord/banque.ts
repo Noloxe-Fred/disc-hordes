@@ -10,12 +10,14 @@ import {
   ModalBuilder,
   TextDisplayBuilder,
   type ButtonInteraction,
+  type Guild,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { emojiObjet, poidsObjet } from "../config/objets";
+import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
 import { prisma } from "../db";
 import { chargeBanque, chargeSac, deborde, libelleCharge } from "../services/charge";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
+import { synchroniserAccesJoueur } from "./joueurDiscord";
 import { rendreInventaire } from "./renduInventaire";
 
 // Banque de ville (conception.md §1, inventaire de ville) : les citoyens vivants presents en ville y deposent des
@@ -80,7 +82,7 @@ export async function ecranBanque(
   const ville = joueur.ville!;
   const [banque, charge, sac] = await Promise.all([contenuBanque(ville.id), chargeBanque(ville.id), chargeSac(joueurId)]);
 
-  const png = rendreInventaire(`Banque — ${ville.nom}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), charge);
+  const png = rendreInventaire(`Banque — ${ville.nom}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), { charge });
   const conteneur = encadre(
     (message ? `${message}\n\n` : "") +
       `## 🏦 Banque — ${ville.nom}\nRéserve à la disposition de tous les citoyens : 🏦 ${libelleCharge(charge)} · 🎒 votre sac ${libelleCharge(sac)}.`,
@@ -136,13 +138,13 @@ export async function formulaireBanque(
       ? "Choisissez un seul objet."
       : quantite === null
         ? "La quantité doit être un nombre entier positif."
-        : await operer(joueurId, sens, objetId, quantite);
+        : await operer(clic.guild!, joueurId, sens, objetId, quantite);
   return { soumission, texte };
 }
 
 // Depot ou retrait : reverification (le joueur doit etre toujours en ville, l'objet toujours disponible), puis
 // transfert entre le sac et la banque, et entree au journal public de la ville.
-async function operer(joueurId: number, sens: SensBanque, objetId: number, quantite: number): Promise<string> {
+async function operer(guild: Guild, joueurId: number, sens: SensBanque, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   const raison = empechementBanque(joueur);
   if (raison) return raison;
@@ -187,6 +189,7 @@ async function operer(joueurId: number, sens: SensBanque, objetId: number, quant
       },
     }),
   ]);
+  if (objet.nom === OBJET_RADIO) await synchroniserAccesJoueur(guild, joueurId);
 
   return sens === "deposer"
     ? `📥 Vous avez déposé **${nom} × ${quantite}** à la banque de la ville.`

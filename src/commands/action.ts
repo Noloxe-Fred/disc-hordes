@@ -15,11 +15,12 @@ import {
 import type { Command } from "../client";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
-import { emojiObjet, poidsObjet } from "../config/objets";
+import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
 import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
 import { deplacerJoueur } from "../discord/deplacement";
+import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { retirerJoueurDeVilleDiscord } from "../discord/joueurDiscord";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
@@ -193,7 +194,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       await clic.update({ components: [ecranFouille] });
     } else if (clic.customId === "confirmer-fouille") {
       await clic.deferUpdate();
-      await clic.editReply({ components: [encadre(await confirmerFouille(joueurId, joueur.zoneActuelleId))] });
+      await clic.editReply({ components: [encadre(await confirmerFouille(guild, joueurId, joueur.zoneActuelleId))] });
       return;
     } else if (clic.isStringSelectMenu() && clic.customId === "aller") {
       destination = destinations.find((d) => valeur(d) === clic.values[0]);
@@ -336,7 +337,7 @@ async function confirmerObservation(joueurId: number, zoneDepartId: number | nul
 // Fouille confirmee : reverification, puis PA depenses et objets tires ajoutes au sac dans l'ordre du tirage, tant
 // qu'ils rentrent (equilibrage.md §5, « Poids et capacite ») ; ceux qui ne rentrent pas sont perdus.
 // Renvoie le texte a afficher au joueur.
-async function confirmerFouille(joueurId: number, zoneDepartId: number | null): Promise<string> {
+async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: number | null): Promise<string> {
   const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
   const ville = actuel.ville!;
   const zone = actuel.zoneActuelle;
@@ -383,6 +384,7 @@ async function confirmerFouille(joueurId: number, zoneDepartId: number | null): 
       },
     }),
   ]);
+  if (trouves.has(OBJET_RADIO)) await synchroniserAccesJoueur(guild, joueurId);
 
   if (trouves.size === 0 && laisses.size === 0) {
     return `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`;

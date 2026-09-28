@@ -192,11 +192,6 @@ async function forcerChute(interaction: ButtonInteraction, guild: Guild) {
 async function resetVille(guild: Guild, villeId: number): Promise<void> {
   const habitants = await prisma.joueur.findMany({ where: { villeId, dateSortie: null }, include: { utilisateur: true } });
 
-  for (const habitant of habitants) {
-    await changerPositionDiscord(guild, habitant.utilisateur.discordId, habitant.zoneActuelleId, null);
-    await retablirJoueurDiscord(guild, habitant.utilisateur.discordId, villeId);
-  }
-
   const joueurIds = habitants.map((h) => h.id);
   const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
   await prisma.$transaction([
@@ -240,6 +235,12 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
       },
     }),
   ]);
+
+  // Apres la remise a zero : les acces se recalculent sur la position (en ville) et l'inventaire (vide) remis a jour
+  for (const habitant of habitants) {
+    await changerPositionDiscord(guild, habitant.utilisateur.discordId, habitant.zoneActuelleId, null);
+    await retablirJoueurDiscord(guild, habitant.id);
+  }
 }
 
 async function reset(interaction: ButtonInteraction, guild: Guild) {

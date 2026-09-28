@@ -13,7 +13,7 @@ import { NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../../config/
 import { PV_MAX } from "../../config/sante";
 import { prisma } from "../../db";
 import { deplacerJoueur } from "../deplacement";
-import { appliquerExclusionDiscord, restreindreEcritureVille, retablirJoueurDiscord } from "../joueurDiscord";
+import { appliquerExclusionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
 import {
   DELAI_SELECTION_MS,
@@ -122,7 +122,7 @@ async function ressusciter(interaction: ButtonInteraction, guild: Guild) {
     where: { id: joueur.id },
     data: { statut: StatutJoueur.VIVANT, pv: PV_MAX, infecteDepuis: null, dateMort: null, causeMort: null },
   });
-  await retablirJoueurDiscord(guild, joueur.utilisateur.discordId, joueur.villeId!);
+  await retablirJoueurDiscord(guild, joueur.id);
   await journaliser(interaction.user, "Ressusciter un joueur", detailJournal(joueur));
   await soumission.editReply({ content: `${mention(joueur)} est revenu à la vie (${PV_MAX} PV, en ville).`, allowedMentions: { parse: [] } });
 }
@@ -173,7 +173,7 @@ async function exclure(interaction: ButtonInteraction, guild: Guild) {
       ? [prisma.ville.update({ where: { id: joueur.villeId! }, data: { maireId: null, mandatFinCycle: null } })]
       : []),
   ]);
-  await appliquerExclusionDiscord(guild, joueur.utilisateur.discordId, joueur.villeId!);
+  await appliquerExclusionDiscord(guild, joueur.id);
   await journaliser(interaction.user, "Exclure un joueur", detailJournal(joueur));
   await soumission.editReply({
     content:
@@ -190,9 +190,7 @@ async function reintegrer(interaction: ButtonInteraction, guild: Guild) {
 
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   await prisma.joueur.update({ where: { id: joueur.id }, data: { statut: StatutJoueur.VIVANT } });
-  await retablirJoueurDiscord(guild, joueur.utilisateur.discordId, joueur.villeId!);
-  // Toujours en territoire externe : il retrouve la vue de sa ville, mais pas l'ecriture
-  if (joueur.zoneActuelleId !== null) await restreindreEcritureVille(guild, joueur.utilisateur.discordId, joueur.villeId!, true);
+  await retablirJoueurDiscord(guild, joueur.id);
   await journaliser(interaction.user, "Réintégrer un joueur", detailJournal(joueur));
   await soumission.editReply({ content: `${mention(joueur)} est réintégré dans **${joueur.ville?.nom}**.`, allowedMentions: { parse: [] } });
 }
