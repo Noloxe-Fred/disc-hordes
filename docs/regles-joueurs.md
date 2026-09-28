@@ -1,8 +1,11 @@
 <!--
 Règles affichées aux joueurs dans le salon #règles, publiées par le bouton « Publier les règles » du panneau /moderation.
-- Chaque bloc séparé par la ligne de commentaire « nouveau message » devient un message Discord (2000 caractères max).
+- Chaque titre « # » ouvre une section, publiée en image (charte MyHordes) avec un fil contenant son texte brut ;
+  un sommaire en embed renvoie à chaque section.
+- Markdown compris par le rendu image : « ## » sous-titre, « > » encadré, **gras**, *italique*, `code`, emojis ;
+  une ligne du fichier = une ligne affichée.
 - Les noms de salons (#général, #annonces, #règles, #fonder-une-colonie, #nouvel-arrivant, #commémoration)
-  deviennent des liens cliquables à la publication.
+  sont rappelés en liens cliquables sous l'image et dans le fil.
 - À tenir à jour à chaque nouvelle mécanique : ce texte ne doit décrire que ce qui fonctionne en jeu.
 -->
 
@@ -29,7 +32,6 @@ Ton seul espoir : **rejoindre une ville**, la faire tenir, et survivre le plus l
 🚪 #nouvel-arrivant : les demandes pour rejoindre une ville
 🕯️ #commémoration : l'hommage aux villes tombées
 
-<!-- nouveau message -->
 
 # 🏗️ Fonder ou rejoindre une ville
 
@@ -54,7 +56,6 @@ Le **créateur devient le premier maire** pour 4 cycles.
 Tous les habitants deviennent **Citoyens**. Plus personne ne peut rejoindre la ville ensuite.
 Les **Territoires externes** de la région (forêt, marécages, montagnes, ville en ruines) sont créés avec elle.
 
-<!-- nouveau message -->
 
 # 🌗 Le cycle jour / nuit
 
@@ -85,7 +86,6 @@ Tu arrives **sans maison**. Une maison améliorée réduit tes chances d'être b
 Chaque blessure peut t'**infecter** (10 % de chance). L'infection est **secrète** : toi seul le sais, grâce à `/personnage`.
 Elle réduit peu à peu tes PA… et au bout de **96h** sans remède, tu deviens **zombie**. 🧟
 
-<!-- nouveau message -->
 
 # 🗺️ Les territoires externes
 
@@ -99,7 +99,6 @@ Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consu
 👁️ Le bouton **Observer** de `/action` te montre les zones voisines sans t'y rendre : tu vois combien de survivants s'y trouvent, et elles rejoignent ta carte. Coût : **1 PA** (2 la nuit) ; pour un **Éclaireur**, c'est gratuit le jour et **1 PA** la nuit.
 🤝 De retour en ville, le bouton **Partager la carte** de `/action` transmet gratuitement ta carte à un ou plusieurs citoyens, ou à toute la ville. Le partage est annoncé sur la place publique.
 
-<!-- nouveau message -->
 
 # 💀 La mort et la chute
 

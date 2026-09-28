@@ -1,6 +1,7 @@
-import { EmbedBuilder, type Guild } from "discord.js";
+import { AttachmentBuilder, EmbedBuilder, ThreadAutoArchiveDuration, type Guild, type TextChannel } from "discord.js";
 import { trouverSalonTexte } from "./reconcile";
-import { construireSommaire, lierSalons, lireMessagesRegles } from "./reglesJoueurs";
+import { construireSommaire, lierSalons, lireSectionsRegles } from "./reglesJoueurs";
+import { rendreSection } from "./renduRegles";
 import {
   SALON_ANNONCES,
   SALON_COMMEMORATION,
@@ -10,7 +11,9 @@ import {
   SALON_REGLES,
 } from "./structure";
 
-const COULEUR_SOMMAIRE = 0x2ecc71;
+const COULEUR_SOMMAIRE = 0xddab76; // bordure beige de la charte MyHordes, comme les images
+const LONGUEUR_MAX_MESSAGE = 2000;
+const LONGUEUR_MAX_DESCRIPTION_IMAGE = 1024;
 
 const SALONS_LIABLES = [
   SALON_GENERAL,
@@ -21,26 +24,78 @@ const SALONS_LIABLES = [
   SALON_COMMEMORATION,
 ];
 
+// Titre d'une section sans le "# " ni l'emoji de tete, ex. "Les territoires externes"
+function titreSection(section: string): string {
+  return section.split(/\r?\n/)[0].replace(/^#\s+/, "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
+}
+
+// Texte brut d'une section, pour la description (texte alternatif) de son image
+function texteBrut(section: string): string {
+  return section
+    .replace(/^#+\s+/gm, "")
+    .replace(/^>\s+/gm, "")
+    .replace(/[*`]/g, "")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
+// Decoupe un texte en messages de 2000 caracteres max, aux fins de ligne
+function decouper(texte: string): string[] {
+  const morceaux: string[] = [];
+  let courant = "";
+  for (const ligne of texte.split("\n")) {
+    const candidat = courant ? `${courant}\n${ligne}` : ligne;
+    if (candidat.length > LONGUEUR_MAX_MESSAGE && courant) {
+      morceaux.push(courant);
+      courant = ligne.slice(0, LONGUEUR_MAX_MESSAGE);
+    } else {
+      courant = candidat.slice(0, LONGUEUR_MAX_MESSAGE);
+    }
+  }
+  if (courant.trim()) morceaux.push(courant);
+  return morceaux;
+}
+
+// Supprime les messages et les fils publies par le bot : un message ecrit a la main par un MJ/Admin est conserve.
+// Supprimer le message de depart d'un fil ne supprime pas le fil, d'ou le nettoyage des fils a part.
+async function nettoyer(salon: TextChannel, botId: string): Promise<number> {
+  const [actifs, archives] = await Promise.all([
+    salon.threads.fetchActive().catch(() => null),
+    salon.threads.fetchArchived({ type: "public" }).catch(() => null),
+  ]);
+  for (const fil of [...(actifs?.threads.values() ?? []), ...(archives?.threads.values() ?? [])]) {
+    if (fil.ownerId === botId && fil.parentId === salon.id) await fil.delete().catch(() => null);
+  }
+
+  const anciens = await salon.messages.fetch({ limit: 100 });
+  const aSupprimer = anciens.filter((m) => m.author.id === botId);
+  for (const message of aSupprimer.values()) {
+    await message.delete().catch(() => null);
+  }
+  return aSupprimer.size;
+}
+
 // Republie les regles joueurs (docs/regles-joueurs.md) dans #regles (bouton « Publier les règles » du panneau
-// /moderation) : supprime les anciens messages du bot dans ce salon puis poste le contenu a jour.
+// /moderation) : un sommaire en embed, puis une image par section (titre "# "), avec sous l'image les liens vers
+// les salons cites et un fil verrouille contenant le texte de la section (recherche et copie).
 // Renvoie le compte rendu a afficher.
 export async function publierRegles(guild: Guild): Promise<string> {
   const salonRegles = await trouverSalonTexte(guild, SALON_REGLES.cle);
   if (!salonRegles) return "Salon règles introuvable : un Admin doit d'abord initialiser le serveur (panneau `/admin`).";
 
-  let messages: string[];
+  const sections = lireSectionsRegles();
+  if (sections.length === 0) return "Règles non publiées : aucune section (titre « # ») dans docs/regles-joueurs.md.";
+
+  // Images rendues avant de toucher au salon : en cas d'erreur, les anciennes regles restent en place
+  let images: Buffer[];
   try {
-    messages = lireMessagesRegles();
+    images = await Promise.all(sections.map((section) => rendreSection(section)));
   } catch (error) {
-    return `Règles non publiées : ${(error as Error).message}`;
+    return `Règles non publiées : rendu des images impossible (${(error as Error).message}).`;
   }
 
-  // Anciens messages du bot uniquement : un message ecrit a la main par un MJ/Admin est conserve
-  const anciens = await salonRegles.messages.fetch({ limit: 100 });
-  const aSupprimer = anciens.filter((m) => m.author.id === guild.client.user.id);
-  for (const message of aSupprimer.values()) {
-    await message.delete().catch(() => null);
-  }
+  const botId = guild.client.user.id;
+  const supprimes = await nettoyer(salonRegles, botId);
 
   const salons = new Map<string, string>();
   for (const { cle, nom } of SALONS_LIABLES) {
@@ -48,23 +103,50 @@ export async function publierRegles(guild: Guild): Promise<string> {
     if (salon) salons.set(nom, salon.id);
   }
 
-  // Sommaire poste en premier (sans liens), puis complete une fois les messages publies et leurs liens connus
+  // Sommaire poste en premier (sans liens), puis complete une fois les sections publiees et leurs liens connus
   const embedSommaire = (liens: (string | null)[]) =>
     new EmbedBuilder()
       .setTitle("📖 Sommaire")
       .setColor(COULEUR_SOMMAIRE)
-      .setDescription(construireSommaire(messages, liens))
-      .setFooter({ text: "Cliquez sur un titre pour aller à la section." });
-  const sommaire = await salonRegles.send({ embeds: [embedSommaire(messages.map(() => null))] });
+      .setDescription(construireSommaire(sections, liens))
+      .setFooter({ text: "Cliquez sur un titre pour aller à la section. Le texte de chaque section est dans le fil sous son image." });
+  const sommaire = await salonRegles.send({ embeds: [embedSommaire(sections.map(() => null))] });
+
   const liens: string[] = [];
-  for (const message of messages) {
-    const publie = await salonRegles.send({ content: lierSalons(message, salons), allowedMentions: { parse: [] } });
+  let filsNonVerrouilles = 0;
+  for (const [index, section] of sections.entries()) {
+    // Les salons cites ne sont pas cliquables dans l'image : liens rappeles sous celle-ci
+    const cites = [...salons].filter(([nom]) => section.includes(`#${nom}`)).map(([, id]) => `<#${id}>`);
+    const publie = await salonRegles.send({
+      content: cites.length > 0 ? `🔗 ${cites.join(" · ")}` : undefined,
+      files: [
+        new AttachmentBuilder(images[index], {
+          name: `regles-${index + 1}.png`,
+          description: texteBrut(section).slice(0, LONGUEUR_MAX_DESCRIPTION_IMAGE),
+        }),
+      ],
+      allowedMentions: { parse: [] },
+    });
     liens.push(publie.url);
+
+    const fil = await publie.startThread({
+      name: `📄 ${titreSection(section)} (texte)`.slice(0, 100),
+      autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+    });
+    for (const morceau of decouper(lierSalons(section, salons))) {
+      await fil.send({ content: morceau, allowedMentions: { parse: [] } });
+    }
+    // Verrouille : seuls les MJ/Admin (gestion des fils) peuvent y ecrire
+    const verrouille = await fil.setLocked(true).then(() => true).catch(() => false);
+    if (!verrouille) filsNonVerrouilles++;
   }
   await sommaire.edit({ embeds: [embedSommaire(liens)] });
 
   return (
-    `Règles mises à jour dans ${salonRegles} : ${aSupprimer.size} ancien(s) message(s) supprimé(s), ` +
-    `sommaire + ${messages.length} message(s) publié(s).`
+    `Règles mises à jour dans ${salonRegles} : ${supprimes} ancien(s) message(s) supprimé(s), ` +
+    `sommaire + ${sections.length} section(s) publiée(s) en image, chacune avec son fil de texte.` +
+    (filsNonVerrouilles > 0
+      ? `\n⚠️ ${filsNonVerrouilles} fil(s) non verrouillé(s) : le bot n'a pas la permission « Gérer les fils » dans ${salonRegles}.`
+      : "")
   );
 }

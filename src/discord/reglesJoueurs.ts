@@ -1,47 +1,25 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Texte des regles joueurs (docs/regles-joueurs.md), decoupe en messages Discord pour publicationRegles.ts.
+// Texte des regles joueurs (docs/regles-joueurs.md), decoupe en sections pour publicationRegles.ts.
 // Chemin valable depuis src/discord (dev) comme depuis dist/discord (build).
 const CHEMIN_REGLES = join(__dirname, "..", "..", "docs", "regles-joueurs.md");
-const SEPARATEUR = /^<!--\s*nouveau message\s*-->\s*$/m;
-const LONGUEUR_MAX_MESSAGE = 2000;
-const TRAIT_SEPARATION = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
-export function lireMessagesRegles(): string[] {
+function lireContenuRegles(): string {
   const brut = readFileSync(CHEMIN_REGLES, "utf8");
   const sansBom = brut.charCodeAt(0) === 0xfeff ? brut.slice(1) : brut; // BOM UTF-8 eventuel (editeurs Windows)
-  const contenu = sansBom.replace(/^\s*<!--[\s\S]*?-->/, ""); // commentaire d'en-tete, destine aux editeurs du fichier
-
-  const messages = contenu
-    .split(SEPARATEUR)
-    .map((bloc) => bloc.trim())
-    .filter((bloc) => bloc.length > 0);
-
-  // Trait de separation avant chaque categorie de regles (titre "# "), sauf la toute premiere :
-  // Discord n'affiche pas les regles horizontales Markdown ("---").
-  let premiereCategorie = true;
-  const avecSeparateurs = messages.map((message) =>
-    message.replace(/^# /gm, (titre) => {
-      if (premiereCategorie) {
-        premiereCategorie = false;
-        return titre;
-      }
-      return `${TRAIT_SEPARATION}\n${titre}`;
-    }),
-  );
-
-  const tropLong = avecSeparateurs.findIndex((m) => m.length > LONGUEUR_MAX_MESSAGE);
-  if (tropLong !== -1) {
-    throw new Error(
-      `Le message ${tropLong + 1} des règles fait ${avecSeparateurs[tropLong].length} caractères (max ${LONGUEUR_MAX_MESSAGE}) : ` +
-        "découpez-le avec un séparateur « nouveau message » dans docs/regles-joueurs.md.",
-    );
-  }
-  return avecSeparateurs;
+  return sansBom.replace(/<!--[\s\S]*?-->/g, ""); // commentaires destines aux editeurs du fichier
 }
 
-// Titres "# " et "## " d'un message, dans l'ordre (niveau 1 = titre principal, 2 = sous-titre)
+// Sections des regles : chaque titre "# " ouvre une section (publiee en image, voir renduRegles.ts)
+export function lireSectionsRegles(): string[] {
+  return lireContenuRegles()
+    .split(/^(?=# )/m)
+    .map((section) => section.trim())
+    .filter((section) => section.startsWith("# "));
+}
+
+// Titres "# " et "## " d'une section, dans l'ordre (niveau 1 = titre principal, 2 = sous-titre)
 export function extraireTitres(message: string): { niveau: 1 | 2; texte: string }[] {
   return message
     .split(/\r?\n/)
