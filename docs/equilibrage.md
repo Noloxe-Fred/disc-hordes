@@ -208,6 +208,8 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Règles transverses** : Ingrédient de remède ≤ 10 % en zone éloignée, **5 % en zone moyenne** (nouveau), 0 % en zone proche. Radio ≤ 10 % en zone éloignée (marécages uniquement), **5 % en zone moyenne** (marécages, nouveau), 0 % ailleurs et en zone proche. Rencontres tirées séparément du loot.
 
+**Tirage d'une fouille** : le nombre d'objets est tiré uniformément dans la fourchette de la case (ex. 2–3), puis chaque objet est tiré indépendamment avec les probabilités de la case telles quelles. Le complément à 100 % (ex. 10 % pour 50 + 30 + 10 %) est une trouvaille sans valeur : cet objet-là ne rapporte rien. Une fouille peut donc rapporter moins d'objets que la fourchette, voire aucun.
+
 **Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Médicament basique, Arme simple, Arme avancée, Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
 
 ### Rencontres en territoire externe (stub v0.1 — confirmé suffisant pour le lancement V1)

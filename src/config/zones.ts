@@ -9,6 +9,13 @@ export const TYPES_ZONE = [
   { cle: "montagnes", nom: "Montagnes" },
 ] as const;
 
+export type CleTypeZone = (typeof TYPES_ZONE)[number]["cle"];
+
+// Type d'une zone d'apres son nom ("Forêt proche" -> foret), les zones etant nommees "<type> <palier>"
+export function typeDeZone(nomZone: string): (typeof TYPES_ZONE)[number] | undefined {
+  return TYPES_ZONE.find((type) => nomZone.startsWith(`${type.nom} `));
+}
+
 export const PALIERS_ZONE = [
   { palier: PalierZone.PROCHE, nom: "proche" },
   { palier: PalierZone.MOYENNE, nom: "moyenne" },

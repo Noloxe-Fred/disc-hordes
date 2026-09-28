@@ -19,3 +19,6 @@ export const COUT_OBSERVATION_ECLAIREUR: Record<TypePhase, number> = {
 
 // Cout de nuit = cout de jour x 1,5, arrondi au PA superieur (equilibrage.md §4)
 export const MAJORATION_NUIT = 1.5;
+
+// Fouiller la zone courante (equilibrage.md §4)
+export const COUT_FOUILLE_JOUR = 2;

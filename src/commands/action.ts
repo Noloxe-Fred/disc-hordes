@@ -13,13 +13,16 @@ import {
   type Guild,
 } from "discord.js";
 import type { Command } from "../client";
+import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
+import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
 import { deplacerJoueur } from "../discord/deplacement";
 import { retirerJoueurDeVilleDiscord } from "../discord/joueurDiscord";
 import { trouverSalonTexte } from "../discord/reconcile";
-import { coutDeplacement, coutObservation } from "../game/deplacement";
+import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
+import { tirerLoot } from "../game/loot";
 import { calculerPaMax } from "../game/pa";
 import { ajouterACarte } from "../services/carte";
 import { trouverJoueurActif } from "../services/joueur";
@@ -27,9 +30,8 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
-// ouvrant son ecran (« Se deplacer », « Observer » avec confirmation avant de depenser des PA ; « Carte »,
-// « Partager la carte ») ; fouille
-// et combat s'y ajouteront. Mort : quitter sa ville pour en rejoindre une autre.
+// ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
+// « Carte », « Partager la carte ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
 const COULEUR_VIVANT = 0x2ecc71;
@@ -82,6 +84,10 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("deplacer").setLabel("Se déplacer").setEmoji("🧭").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId("observer").setLabel("Observer").setEmoji("👁️").setStyle(ButtonStyle.Secondary),
+      // Fouille reservee au territoire externe
+      ...(joueur.zoneActuelle
+        ? [new ButtonBuilder().setCustomId("fouiller").setLabel("Fouiller").setEmoji("🔍").setStyle(ButtonStyle.Secondary)]
+        : []),
       new ButtonBuilder().setCustomId("carte").setLabel("Carte").setEmoji("🗺️").setStyle(ButtonStyle.Secondary),
       // Partage reserve aux citoyens vivants en ville
       ...(empechementPartage(joueur) === null
@@ -128,6 +134,20 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
           ),
         );
 
+  // Fouiller la zone courante : objets tires selon le type et le palier de la zone, ajoutes au sac
+  const coutFou = coutFouille(ville.phaseActuelle);
+  const ecranFouille =
+    coutFou > paActuel
+      ? encadre(`${entete}\n\nIl vous faut **${coutFou} PA** pour fouiller la zone (vous en avez ${paActuel}).`).addActionRowComponents(
+          new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()),
+        )
+      : encadre(`${entete}\n**Fouiller** la zone pour **${coutFou} PA** ? Ce que vous trouvez va dans votre sac.`).addActionRowComponents(
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId("confirmer-fouille").setLabel(`Fouiller (${coutFou} PA)`).setStyle(ButtonStyle.Primary),
+            boutonRetour(),
+          ),
+        );
+
   const reponse = await interaction.reply({ components: [menu], flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
 
   let destination: Destination | undefined;
@@ -154,6 +174,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     } else if (clic.customId === "confirmer-observation") {
       await clic.deferUpdate();
       await clic.editReply({ components: [encadre(await confirmerObservation(joueurId, joueur.zoneActuelleId, groupeId))] });
+      return;
+    } else if (clic.customId === "fouiller") {
+      await clic.update({ components: [ecranFouille] });
+    } else if (clic.customId === "confirmer-fouille") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await confirmerFouille(joueurId, joueur.zoneActuelleId))] });
       return;
     } else if (clic.isStringSelectMenu() && clic.customId === "aller") {
       destination = destinations.find((d) => valeur(d) === clic.values[0]);
@@ -265,6 +291,50 @@ async function confirmerObservation(joueurId: number, zoneDepartId: number | nul
   return (
     `👁️ Depuis **${depuis}**, vous observez les environs (−${cout} PA, ${paRestants} restants) :\n${lignes.join("\n")}\n\n` +
     (nouvelles > 0 ? `🗺️ ${nouvelles} nouvelle(s) zone(s) ajoutée(s) à votre carte (\`/carte\`).` : "🗺️ Vous connaissiez déjà toutes ces zones.")
+  );
+}
+
+// Fouille confirmee : reverification, puis PA depenses et objets tires ajoutes a l'inventaire du joueur.
+// Renvoie le texte a afficher au joueur.
+async function confirmerFouille(joueurId: number, zoneDepartId: number | null): Promise<string> {
+  const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
+  const ville = actuel.ville!;
+  const zone = actuel.zoneActuelle;
+  const cout = coutFouille(ville.phaseActuelle);
+  const paRestants = (actuel.paActuel ?? 0) - cout;
+
+  if (actuel.statut !== StatutJoueur.VIVANT && actuel.statut !== StatutJoueur.EXCLU) return "Vous ne pouvez plus fouiller.";
+  if (!zone || actuel.zoneActuelleId !== zoneDepartId) return "Votre position a changé entre-temps : relancez `/action`.";
+  if (paRestants < 0) return `Il vous faut **${cout} PA** pour fouiller la zone.`;
+  const type = typeDeZone(zone.nom);
+  if (!type) throw new Error(`Type de zone inconnu : ${zone.nom}`);
+
+  const trouves = tirerLoot(LOOT_PAR_ZONE[type.cle][zone.palier]);
+  const objets = await prisma.objet.findMany({ where: { nom: { in: [...trouves.keys()] } } });
+  await prisma.$transaction([
+    prisma.joueur.update({ where: { id: joueurId }, data: { paActuel: { decrement: cout } } }),
+    ...objets.map((objet) =>
+      prisma.inventaireJoueur.upsert({
+        where: { joueurId_objetId: { joueurId, objetId: objet.id } },
+        update: { quantite: { increment: trouves.get(objet.nom)! } },
+        create: { joueurId, objetId: objet.id, quantite: trouves.get(objet.nom)! },
+      }),
+    ),
+    prisma.journalEntree.create({
+      data: {
+        villeId: ville.id,
+        joueurId,
+        message: `Fouille de ${zone.nom} : ${objets.length > 0 ? objets.map((o) => `${o.nom} ×${trouves.get(o.nom)}`).join(", ") : "rien"}`,
+        public: false, // rien de public en territoire externe (conception.md §7)
+      },
+    }),
+  ]);
+
+  if (objets.length === 0) return `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`;
+  return (
+    `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n` +
+    objets.map((o) => `• ${o.nom} × ${trouves.get(o.nom)}`).join("\n") +
+    "\n\n🎒 Tout est rangé dans votre sac (`/inventaire`)."
   );
 }
 

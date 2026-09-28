@@ -1,6 +1,7 @@
 import { Metier, TypePhase, type PalierZone } from "@prisma/client";
 import {
   COUT_DEPLACEMENT_JOUR,
+  COUT_FOUILLE_JOUR,
   COUT_OBSERVATION_ECLAIREUR,
   COUT_OBSERVATION_JOUR,
   COUT_RETOUR_VILLE_JOUR,
@@ -20,4 +21,9 @@ export function coutDeplacement(palierDestination: PalierZone | null, phase: Typ
 export function coutObservation(phase: TypePhase, metier: Metier | null): number {
   if (metier === Metier.ECLAIREUR) return COUT_OBSERVATION_ECLAIREUR[phase];
   return selonPhase(COUT_OBSERVATION_JOUR, phase);
+}
+
+// Cout en PA d'une fouille de la zone courante, selon la phase
+export function coutFouille(phase: TypePhase): number {
+  return selonPhase(COUT_FOUILLE_JOUR, phase);
 }
