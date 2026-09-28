@@ -1,8 +1,10 @@
-import { TypeRessourceDiscord } from "@prisma/client";
-import { PermissionFlagsBits, type Guild, type OverwriteResolvable, type Role } from "discord.js";
+import { StatutVille } from "@prisma/client";
+import { PermissionFlagsBits, type Collection, type Guild, type GuildMember, type OverwriteResolvable, type Role } from "discord.js";
 import { prisma } from "../db";
 import { synchroniserNomade } from "./joueurDiscord";
-import { ensureCategory, ensureRole, ensureTextChannel, renommerCle, supprimerRole } from "./reconcile";
+import { supprimerRestesDePartie } from "./nettoyage";
+import { publierRegles } from "./publicationRegles";
+import { ensureCategory, ensureRole, ensureTextChannel, supprimerRessources, tousLesMembres, trouverRole } from "./reconcile";
 import {
   CATEGORIE_ADMIN_MJ,
   CATEGORIE_DISCHORDES,
@@ -23,8 +25,20 @@ import {
   SALON_SIGNALEMENTS,
 } from "./structure";
 
-// Initialisation du serveur (bouton « Initialiser le serveur » du panneau /admin) : met en place ou met a
-// jour la structure fixe de structure.ts, sans dupliquer ni casser l'existant. Idempotente.
+// Initialisation du serveur (bouton « Initialiser le serveur » du panneau /admin) : efface la structure fixe de
+// structure.ts et la recree a neuf, pour repartir d'un etat sans reste d'anciennes versions. Refusee tant qu'une ville
+// est en creation ou en jeu (il faut d'abord « Reinitialiser la base »).
+// - Roles fixes supprimes puis recrees ; les roles du staff (Admin, MJ actif, MJ inactif) sont rendus a leurs membres.
+// - Categories et salons fixes supprimes puis recrees, sauf les salons a historique (general, annonces,
+//   commemoration, discussion-mj, signalements), gardes mais dont les permissions sont entierement reecrites.
+// - Restes de parties inconnus de la base supprimes (nettoyage.ts), regles republiees dans #regles.
+
+// Salons fixes dont on garde les messages
+const SALONS_CONSERVES = [SALON_GENERAL, SALON_ANNONCES, SALON_COMMEMORATION, SALON_DISCUSSION_MJ, SALON_SIGNALEMENTS];
+const SALONS_RECREES = [SALON_REGLES, SALON_FONDER_COLONIE, SALON_NOUVEL_ARRIVANT, SALON_GESTION];
+// Roles rendus a leurs membres apres recreation ; Citoyen, Mort et Radio n'ont pas de porteur hors partie, Nomade est
+// recalcule
+const ROLES_STAFF = [ROLE_ADMIN.cle, ROLE_MJ.cle, ROLE_MJ_INACTIF.cle];
 
 // Admin puis MJ juste sous le role du bot (un bot ne peut pas placer un role au-dessus du sien).
 // Renvoie false si le role du bot est trop bas dans la liste pour le faire.
@@ -43,42 +57,73 @@ async function placerStaffEnHaut(guild: Guild, roleAdmin: Role, roleMj: Role): P
   }
 }
 
-// Salons de jeu deja crees (villes, territoires, ondes radio) : vue donnee au MJ actif, pour les villes fondees avant
-// l'ajout de cette regle (les nouvelles l'ont des leur creation). Renvoie le nombre de categories et salons touches.
-const PREFIXES_SALONS_DE_JEU = ["categorie:ville:", "salon:ville:", "categorie:groupe:", "salon:zone:", "salon:groupe:"];
-
-async function ouvrirJeuAuMjActif(guild: Guild, roleMj: Role): Promise<number> {
-  const ressources = await prisma.ressourceDiscord.findMany({
-    where: {
-      guildId: guild.id,
-      type: { in: [TypeRessourceDiscord.SALON, TypeRessourceDiscord.CATEGORIE] },
-      OR: PREFIXES_SALONS_DE_JEU.map((prefixe) => ({ cle: { startsWith: prefixe } })),
-    },
-  });
-  let touches = 0;
-  for (const { discordId } of ressources) {
-    const salon = await guild.channels.fetch(discordId).catch(() => null);
-    if (!salon || !("permissionOverwrites" in salon)) continue;
-    await salon.permissionOverwrites.edit(roleMj, { ViewChannel: true }).catch(() => null);
-    touches++;
+// Porteurs actuels des roles du staff, par cle ; une ancienne cle renommee (structure.ts) compte pour la nouvelle
+async function porteursStaff(guild: Guild): Promise<Map<string, string[]>> {
+  const porteurs = new Map<string, string[]>();
+  const sources: (readonly [string, string])[] = [...ROLES_STAFF.map((cle) => [cle, cle] as const), ...CLES_RENOMMEES];
+  for (const [source, cible] of sources) {
+    const role = await trouverRole(guild, source);
+    if (!role) continue;
+    porteurs.set(cible, [...(porteurs.get(cible) ?? []), ...role.members.map((m) => m.id)]);
   }
-  return touches;
+  return porteurs;
+}
+
+async function rendreRolesStaff(guild: Guild, porteurs: Map<string, string[]>): Promise<number> {
+  let rendus = 0;
+  for (const [cle, membres] of porteurs) {
+    const role = await trouverRole(guild, cle);
+    if (!role) continue;
+    for (const id of new Set(membres)) {
+      const membre = await guild.members.fetch(id).catch(() => null);
+      if (membre && (await membre.roles.add(role).then(() => true).catch(() => false))) rendus++;
+    }
+  }
+  return rendus;
 }
 
 // Renvoie le compte rendu a afficher a l'Admin
 export async function initialiserServeur(guild: Guild): Promise<string> {
-  for (const [ancienneCle, nouvelleCle] of CLES_RENOMMEES) {
-    await renommerCle(guild.id, ancienneCle, nouvelleCle);
+  const partiesEnCours = await prisma.ville.count({ where: { statut: { in: [StatutVille.EN_CREATION, StatutVille.ACTIVE] } } });
+  if (partiesEnCours > 0) {
+    return (
+      `Initialisation refusée : ${partiesEnCours} ville(s) en création ou en jeu. ` +
+      "Lancez d'abord « Réinitialiser la base » (famille Serveur), puis relancez l'initialisation."
+    );
   }
 
+  // Liste complete des membres, demandee une seule fois (Discord la limite) : porteurs du staff, puis role Nomade
+  const membres = await tousLesMembres(guild);
+  const porteurs = await porteursStaff(guild);
+  let rendus = 0;
+  try {
+    await supprimerRessources(guild, [
+      ...ROLES_DESIRES.map((r) => r.cle),
+      ...ROLES_OBSOLETES,
+      ...CLES_RENOMMEES.map(([ancienne]) => ancienne),
+      CATEGORIE_ADMIN_MJ.cle,
+      CATEGORIE_DISCHORDES.cle,
+      ...SALONS_RECREES.map((s) => s.cle),
+    ]);
+    const restes = await supprimerRestesDePartie(guild);
+    return await creerStructure(guild, membres, restes);
+  } finally {
+    // Meme si la creation echoue en route : l'Admin ne doit pas perdre son role (/admin en depend)
+    rendus = await rendreRolesStaff(guild, porteurs);
+    console.log(`Initialisation : ${rendus} role(s) du staff rendu(s)`);
+  }
+}
+
+async function creerStructure(
+  guild: Guild,
+  membres: Collection<string, GuildMember>,
+  restes: { categories: number; roles: number },
+): Promise<string> {
   const roles: Record<string, Role> = {};
   for (const { cle, nom, couleur, separe } of ROLES_DESIRES) {
     roles[cle] = await ensureRole(guild, cle, nom, couleur, separe);
   }
   const staffPlace = await placerStaffEnHaut(guild, roles[ROLE_ADMIN.cle], roles[ROLE_MJ.cle]);
-  for (const cle of ROLES_OBSOLETES) {
-    await supprimerRole(guild, cle);
-  }
 
   const everyoneId = guild.roles.everyone.id;
   const mjId = roles[ROLE_MJ.cle].id;
@@ -133,19 +178,17 @@ export async function initialiserServeur(guild: Guild): Promise<string> {
     }
   }
 
-  const salonsDeJeu = await ouvrirJeuAuMjActif(guild, roles[ROLE_MJ.cle]);
-
   // Role Nomade sur les membres deja presents : donne a ceux sans ville en jeu, retire aux autres
-  const membres = await guild.members.fetch();
   for (const membre of membres.values()) {
     await synchroniserNomade(membre);
   }
 
   return (
-    "Structure Discord initialisée/mise à jour : rôles, catégorie Admin-MJ (signalements + discussion-mj + gestion) " +
+    "Structure Discord effacée puis recréée à neuf : rôles (staff rendu à ses membres), catégorie Admin-MJ (signalements + discussion-mj + gestion) " +
     "et catégorie Disc'Hordes (général + annonces + règles + fonder-une-colonie + nouvel-arrivant + commémoration). " +
     `Rôle Nomade synchronisé sur ${membres.filter((m) => !m.user.bot).size} membre(s). ` +
-    `MJ actif : vue ouverte sur ${salonsDeJeu} catégorie(s) et salon(s) de jeu.` +
+    `${restes.categories} catégorie(s) et ${restes.roles} rôle(s) d'anciennes parties supprimés. ` +
+    `Règles : ${await publierRegles(guild)}` +
     (staffPlace
       ? ""
       : "\n⚠️ Rôles Admin et MJ non placés en haut : glissez le rôle du bot tout en haut de la liste des rôles " +

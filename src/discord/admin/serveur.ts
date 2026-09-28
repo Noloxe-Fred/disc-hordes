@@ -12,18 +12,32 @@ import { prisma } from "../../db";
 import { initialiserServeur } from "../initialisation";
 import { synchroniserNomade } from "../joueurDiscord";
 import { supprimerMessagesRecrutement } from "../messageVille";
-import { supprimerRessources, trouverRole } from "../reconcile";
-import { ROLE_CITOYEN, ROLE_MORT } from "../structure";
-import { DELAI_CONFIRMATION_MS, journaliser, type FamilleAdmin } from "./outils";
+import { supprimerRestesDePartie } from "../nettoyage";
+import { supprimerRessources, tousLesMembres, trouverRole, trouverSalonTexte } from "../reconcile";
+import { ROLE_CITOYEN, ROLE_MORT, ROLE_RADIO, SALON_GESTION } from "../structure";
+import { confirmer, DELAI_CONFIRMATION_MS, journaliser, type FamilleAdmin } from "./outils";
 
 // Famille "Serveur" du panneau /admin : structure fixe du serveur et remise a zero de toutes les parties.
 
 // --- Initialiser le serveur (discord/initialisation.ts) ---
 
 async function initialiser(interaction: ButtonInteraction, guild: Guild) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  await interaction.editReply(await initialiserServeur(guild));
-  await journaliser(interaction.user, "Initialiser le serveur", "Structure fixe du serveur mise à jour");
+  const choix = await confirmer(
+    interaction,
+    "⚠️ **Initialisation du serveur** : les rôles, catégories et salons fixes de Disc'Hordes sont supprimés puis recréés. " +
+      "Les messages de #règles (republiées), #fonder-une-colonie, #nouvel-arrivant et #gestion sont perdus ; général, " +
+      "annonces, commémoration, discussion-mj et signalements gardent leur historique. Les rôles Admin, MJ actif et MJ " +
+      "inactif sont rendus à leurs membres. Refusé si une ville est en création ou en jeu.",
+    "Initialiser le serveur",
+  );
+  if (!choix) return;
+  const compteRendu = await initialiserServeur(guild);
+  await journaliser(interaction.user, "Initialiser le serveur", "Structure fixe effacée et recréée");
+  // Le panneau a pu etre ouvert depuis un salon supprime puis recree (#gestion) : compte rendu poste dans le nouveau
+  await choix.editReply(compteRendu).catch(async () => {
+    const salon = await trouverSalonTexte(guild, SALON_GESTION.cle);
+    await salon?.send({ content: `<@${interaction.user.id}> ${compteRendu}`, allowedMentions: { users: [interaction.user.id] } });
+  });
 }
 
 // --- Reinitialiser la base : conserve le catalogue (objets, recettes, succes) et la structure fixe du serveur ---
@@ -81,6 +95,8 @@ async function reinitialiserBase(interaction: ButtonInteraction, guild: Guild) {
   }
 
   await supprimerRessources(guild, [], PREFIXES_RESSOURCES_PARTIE);
+  // Restes d'anciennes parties que la base ne connait plus (categories de ville, territoires, roles Ville:/Position:)
+  const restes = await supprimerRestesDePartie(guild);
 
   // Ordre impose par les cles etrangeres sans cascade (Joueur <-> Ville via le maire, Zone -> Groupe...)
   await prisma.$transaction([
@@ -106,11 +122,13 @@ async function reinitialiserBase(interaction: ButtonInteraction, guild: Guild) {
   // Plus personne n'a de ville : roles de partie retires, role Nomade pour tous
   const roleCitoyen = await trouverRole(guild, ROLE_CITOYEN.cle);
   const roleMort = await trouverRole(guild, ROLE_MORT.cle);
-  const membres = await guild.members.fetch();
+  const roleRadio = await trouverRole(guild, ROLE_RADIO.cle);
+  const membres = await tousLesMembres(guild);
   for (const membre of membres.values()) {
     if (membre.user.bot) continue;
     if (roleCitoyen && membre.roles.cache.has(roleCitoyen.id)) await membre.roles.remove(roleCitoyen).catch(() => null);
     if (roleMort && membre.roles.cache.has(roleMort.id)) await membre.roles.remove(roleMort).catch(() => null);
+    if (roleRadio && membre.roles.cache.has(roleRadio.id)) await membre.roles.remove(roleRadio).catch(() => null);
     await synchroniserNomade(membre);
   }
 
@@ -120,6 +138,9 @@ async function reinitialiserBase(interaction: ButtonInteraction, guild: Guild) {
     content:
       "Base réinitialisée : villes, joueurs, demandes, groupes et territoires effacés, salons et rôles de partie supprimés, " +
       "rôle Nomade rendu à tous." +
+      (restes.categories + restes.roles > 0
+        ? ` Restes d'anciennes parties supprimés : ${restes.categories} catégorie(s), ${restes.roles} rôle(s).`
+        : "") +
       (avecComptes ? " Comptes joueurs et succès effacés." : ""),
     components: [],
   }).catch(() => null);
@@ -134,8 +155,11 @@ export const FAMILLE_SERVEUR: FamilleAdmin = {
     {
       cle: "init",
       libelle: "Initialiser le serveur",
-      description: "crée ou met à jour les rôles et salons fixes de Disc'Hordes, et synchronise le rôle Nomade.",
-      style: ButtonStyle.Primary,
+      description:
+        "efface puis recrée les rôles et salons fixes de Disc'Hordes (historique gardé pour général, annonces, commémoration, " +
+        "discussion-mj et signalements ; staff rendu à ses membres), supprime les restes d'anciennes parties et republie les " +
+        "règles. Refusé tant qu'une partie est en cours.",
+      style: ButtonStyle.Danger,
       executer: initialiser,
     },
     {
@@ -143,7 +167,8 @@ export const FAMILLE_SERVEUR: FamilleAdmin = {
       libelle: "Réinitialiser la base",
       description:
         "efface toutes les parties (villes, joueurs, demandes, groupes, territoires) ainsi que leurs salons et rôles " +
-        "Discord ; les comptes joueurs peuvent aussi être effacés.",
+        "Discord, y compris les restes que la base ne connaît plus ; la structure fixe n'est pas touchée. Les comptes " +
+        "joueurs peuvent aussi être effacés.",
       style: ButtonStyle.Danger,
       executer: reinitialiserBase,
     },

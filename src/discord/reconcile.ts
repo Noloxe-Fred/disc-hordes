@@ -1,4 +1,4 @@
-import { ChannelType, type CategoryChannel, type Guild, type OverwriteResolvable, type Role, type TextChannel, type VoiceChannel } from "discord.js";
+import { ChannelType, type CategoryChannel, type Collection, type Guild, type GuildMember, type OverwriteResolvable, type Role, type TextChannel, type VoiceChannel } from "discord.js";
 import { TypeRessourceDiscord } from "@prisma/client";
 import { prisma } from "../db";
 
@@ -193,4 +193,18 @@ export async function renommerRessource(guild: Guild, cle: string, nom: string):
       ? await guild.roles.fetch(ressource.discordId).catch(() => null)
       : await guild.channels.fetch(ressource.discordId).catch(() => null);
   if (cible && cible.name !== nom) await cible.setName(nom).catch((error) => console.error(`Renommage de ${cle} impossible`, error));
+}
+
+// Liste complete des membres. Discord limite cette demande (environ une toutes les 30 s par serveur) : en cas de refus,
+// on attend le delai indique puis on reessaie, plutot que d'echouer (initialisation relancee coup sur coup).
+export async function tousLesMembres(guild: Guild, essais = 3): Promise<Collection<string, GuildMember>> {
+  for (let essai = 1; ; essai++) {
+    try {
+      return await guild.members.fetch();
+    } catch (error) {
+      const attente = (error as { data?: { retry_after?: number } }).data?.retry_after;
+      if (attente === undefined || essai >= essais) throw error;
+      await new Promise((resolve) => setTimeout(resolve, Math.ceil(attente * 1000) + 500));
+    }
+  }
 }
