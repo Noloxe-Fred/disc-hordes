@@ -30,6 +30,7 @@ import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/com
 import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
 import { bonusGarde, estDeGarde, monterLaGarde } from "../discord/garde";
 import { formulaireSoin } from "../discord/soin";
+import { corpsAuMemeEndroit, formulaireFouilleCorps } from "../discord/depouilles";
 import { zombieErrantALArrivee } from "../discord/zombieErrant";
 import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
@@ -46,7 +47,7 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte », « Soigner », la nuit en ville « Monter la garde », dehors « Allumer un feu » puis
+// « Fouiller un corps » quand un corps est sur place (discord/depouilles.ts), « Carte », « Partager la carte », « Soigner », la nuit en ville « Monter la garde », dehors « Allumer un feu » puis
 // « Sieste », « Annonce » pour le maire,
 // « Quitter la ville »). Face a un zombie
 // (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
@@ -107,6 +108,8 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     (feuIci ? "\n🔥 Un feu brûle ici : zombies deux fois moins nombreux, sieste possible." : "") +
     (deGarde && ville.phaseActuelle === TypePhase.NUIT ? "\n🛡️ Vous montez la garde cette nuit : restez en ville jusqu'à l'aube." : "") +
     (exclu ? "\nVous êtes **exclu** de votre ville : vous ne pouvez pas y rentrer." : "");
+  // Corps dont le sac n'est pas vide, au meme endroit
+  const corpsIci = (await corpsAuMemeEndroit(joueur)).length > 0;
 
   // Allumer un feu : confirmation avant de depenser des PA
   const coutDuFeu = coutFeu(ville.phaseActuelle);
@@ -138,6 +141,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       // Fouille reservee au territoire externe
       ...(joueur.zoneActuelle
         ? [new ButtonBuilder().setCustomId("fouiller").setLabel("Fouiller").setEmoji("🔍").setStyle(ButtonStyle.Secondary)]
+        : []),
+      ...(corpsIci
+        ? [new ButtonBuilder().setCustomId("fouiller-corps").setLabel("Fouiller un corps").setEmoji("💀").setStyle(ButtonStyle.Secondary)]
         : []),
       new ButtonBuilder().setCustomId("carte").setLabel("Carte").setEmoji("🗺️").setStyle(ButtonStyle.Secondary),
       // Partage reserve aux citoyens vivants en ville
@@ -277,8 +283,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       return;
     } else if (clic.customId === "fouiller") {
       await clic.update({ components: [ecranFouille] });
-    } else if (clic.isButton() && clic.customId === "soigner") {
-      const resultat = await formulaireSoin(clic, joueurId);
+    } else if (clic.isButton() && (clic.customId === "soigner" || clic.customId === "fouiller-corps")) {
+      const resultat =
+        clic.customId === "soigner" ? await formulaireSoin(clic, joueurId) : await formulaireFouilleCorps(clic, joueurId);
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (!resultat.soumission) {
         await clic.update({

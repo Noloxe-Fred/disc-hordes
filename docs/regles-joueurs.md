@@ -190,6 +190,11 @@ En ville, le bouton **Banque** montre la réserve commune de ta ville. **Dépose
 ## ⚰️ Mourir
 Mort, tu **vois toujours ta ville** mais tu ne peux plus y écrire ni y parler.
 Avec `/action`, tu peux **quitter ta ville** pour redevenir Nomade et tenter ta chance ailleurs.
+🎒 Ton sac reste sur ton corps, là où tu es tombé : en ville ou dans ta zone.
+
+## 💀 Fouiller un corps
+Quand un corps gît au même endroit que toi, `/action` affiche le bouton **Fouiller un corps**. Choisis **un objet** sur l'un des corps et **combien** en prendre : c'est gratuit, tant que ton sac a de la place.
+En ville, tu fouilles les citoyens de ta ville morts en ville ; dehors, n'importe quel corps de ta zone. Impossible avec un zombie sur le dos. La fouille est annoncée dans le salon du lieu.
 
 ## 🚪 Partir
 Vivant, tu peux aussi **quitter ta ville pour toujours** avec le bouton **Quitter la ville** de `/action`, après confirmation. Ton départ est annoncé dans la mairie ; tu abandonnes ton personnage et ton sac, et tu redeviens **Nomade**, libre de rejoindre ou créer une autre ville, mais **jamais de revenir** dans celle-ci. Si tu étais le dernier vivant, la ville tombe.
@@ -204,7 +209,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, soigner, quitter ta ville)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, quitter ta ville)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 

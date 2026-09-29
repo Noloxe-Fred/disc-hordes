@@ -115,10 +115,10 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 - Non soigné à temps → le joueur devient zombie et s'ajoute à l'attaque de la nuit suivante
 
 ### Mort
-- Statut **post-mortem jouable** : le joueur mort devient une âme avec une influence légère sur la partie en cours (pas un simple spectateur passif)
+- Statut **post-mortem jouable** : le joueur mort devient une âme avec une influence légère sur la partie en cours (pas un simple spectateur passif) — **reporté après la V1** (mécanique à définir)
 - Le joueur mort voit toujours sa ville (rôle Mort à la place de Citoyen) mais ne peut plus y interagir : écriture, réactions et vocal lui sont retirés sur les salons de la ville
 - Depuis `/action`, il peut **quitter la ville** (confirmation obligatoire) : suppression de son rôle-ville et de ses rôles Citoyen/Mort, retour au rôle Nomade, perte de l'accès aux salons ; il peut alors rejoindre ou créer une **autre** ville avec un nouveau personnage. Tant qu'il ne l'a pas quittée, il reste engagé dans cette partie
-- **Objets à la mort** : les objets d'inventaire du joueur (dont une radio s'il en avait) deviennent **lootables sur place** par les autres joueurs présents dans la zone/ville
+- **Objets à la mort** : les objets d'inventaire du joueur (dont une radio s'il en avait) deviennent **lootables sur place** par les autres joueurs présents dans la zone/ville (bouton « Fouiller un corps » de `/action`, voir equilibrage.md §1)
 
 ### Cycle de vie du joueur (hors mort)
 - **Sortie volontaire d'un vivant** (bouton « Quitter la ville » de `/action`, confirmation obligatoire, en ville comme dehors, exclus compris) : annoncée dans la mairie, libère le rôle Position/Citoyen et la place de métier, un maire perd son mandat, le sac reste avec le personnage abandonné ; retour au rôle Nomade, sans retour possible dans cette ville. Si c'était le dernier habitant vivant, la ville tombe

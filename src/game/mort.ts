@@ -16,6 +16,8 @@ export async function enregistrerMort(guild: Guild, joueurId: number, cause: Cau
       statut: cause === CauseMort.INFECTION ? StatutJoueur.ZOMBIFIE : StatutJoueur.MORT,
       dateMort: new Date(),
       causeMort: cause,
+      // Le corps et son sac restent sur place (discord/depouilles.ts)
+      zoneMortId: avant.zoneActuelleId,
       zoneActuelleId: null,
       rencontrePvZombie: null,
       rencontreRetourZoneId: null,

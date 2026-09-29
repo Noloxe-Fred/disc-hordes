@@ -129,7 +129,7 @@ async function ressusciter(interaction: ButtonInteraction, guild: Guild) {
   await prisma.$transaction([
     prisma.joueur.update({
       where: { id: joueur.id },
-      data: { statut: StatutJoueur.VIVANT, pv: PV_MAX, infecteDepuis: null, dateMort: null, causeMort: null },
+      data: { statut: StatutJoueur.VIVANT, pv: PV_MAX, infecteDepuis: null, dateMort: null, causeMort: null, zoneMortId: null },
     }),
     // Un joueur transforme ramene a la vie n'erre plus en zombie
     prisma.zombieErrant.deleteMany({ where: { transformeId: joueur.id } }),

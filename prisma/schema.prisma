@@ -447,6 +447,8 @@ model Joueur {
   // Renseignes a la mort (MORT ou ZOMBIFIE) ; servent au recapitulatif de chute de la ville.
   dateMort              DateTime?
   causeMort             CauseMort?
+  // Zone ou le joueur est mort (null = en ville) : son corps y reste et son sac y est fouillable (conception.md §3)
+  zoneMortId            Int?
 
   utilisateur       Utilisateur        @relation(fields: [utilisateurId], references: [id])
   ville             Ville?             @relation("HabitantsVille", fields: [villeId], references: [id])
