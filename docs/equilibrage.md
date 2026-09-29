@@ -300,8 +300,8 @@ Coût par palier en **ressources déposées dans l'inventaire de ville**, puis *
 | | 8 | 400 Bois + 120 Ferraille | 104 | Défense +8 (total +52) |
 | **Atelier** | 1 | 30 Bois + 60 Ferraille + 15 Pièces mécaniques | 21 | Craft avancé de base + réparation voiture |
 | | 2 | 40 Bois + 100 Ferraille + 30 Pièces mécaniques | 34 | Recettes avancées supplémentaires |
-| **Puits** | 1 | 50 Pierre + 20 Ferraille | 14 | (fonctionnel, pas de bonus passif) |
-| | 2 | 90 Pierre + 40 Ferraille | 26 | +25 % capacité d'eau de ville / −20 % conso de soif collective |
+| **Puits** | 1 | 50 Pierre + 20 Ferraille | 14 | À chaque aube, **1 Ration d'eau purifiée par habitant vivant** versée dans la banque de ville (dans la limite de sa capacité, le surplus est perdu) — couvre ~75 % de la soif perdue en un cycle (2 × −20 contre +30) |
+| | 2 | 90 Pierre + 40 Ferraille | 26 | Production **+25 %** (arrondie au supérieur) / −20 % conso de soif collective (pas encore appliqué) |
 | **Place publique** | 1 | 50 Bois + 30 Tissu | 16 | Banque de ville : capacité 80 en poids (40 sans place publique, section 5) |
 | | 2 | 90 Bois + 60 Tissu | 30 | Banque de ville : capacité ×2, soit 160 en poids |
 | **Maison privée** (perso) | 1 | 30 Bois + 15 Tissu | 9 | (fonctionnel) — chaque joueur arrive sans maison (palier 0) et la construit |

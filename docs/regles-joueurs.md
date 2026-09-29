@@ -51,8 +51,9 @@ Ta ville apparaît dans #fonder-une-colonie avec quatre boutons :
 ☝️ Une seule ville (ou demande) à la fois.
 
 ## 🏙️ À la fondation
-La ville reçoit ses salons privés : mairie, place publique, chantiers, atelier, puits, maisons privées et un vocal.
-Le **créateur devient le premier maire** pour 4 cycles.
+La ville reçoit ses salons privés : mairie, place publique, chantiers, atelier, maisons privées et un vocal.
+🏛️ La **mairie** est le tableau d'affichage de la ville : tu la lis, mais tu n'y écris pas. On y trouve les annonces de la ville et celles du **maire**. Pour discuter, direction la **place publique**.
+Le **créateur devient le premier maire** pour 4 cycles. Le maire publie ses annonces dans la mairie avec le bouton **Annonce** de `/action`, en notifiant ou non toute la ville.
 Tous les habitants deviennent **Citoyens**. Plus personne ne peut rejoindre la ville ensuite.
 Les **Territoires externes** de la région (forêt, marécages, montagnes, ville en ruines) sont créés avec elle.
 

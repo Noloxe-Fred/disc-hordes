@@ -9,6 +9,7 @@ import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/fa
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { posterDansMairie } from "../discord/villeStructure";
+import { produireEauPuits } from "../services/puits";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
 // plutot que 24h/48h apres leur propre fondation (conception.md §2). Le bot ne gerant qu'un
@@ -189,7 +190,7 @@ export async function resoudreAttaque(
 
 // L'attaque de zombies se resout a l'aube, en cloture de la nuit qui s'acheve (pas a la
 // tombee de la nuit) : le minuit qui cloture une journee n'a donc jamais d'attaque, a chaque
-// cycle et pour toutes les villes (conception.md §2).
+// cycle et pour toutes les villes (conception.md §2). Puis le puits verse sa production du nouveau cycle dans la banque.
 async function basculerVersJour(guild: Guild, ville: Ville) {
   const { compteRendu, villeTombee } = await resoudreAttaque(guild, ville, true);
 
@@ -204,9 +205,13 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
     data: { phaseActuelle: TypePhase.JOUR, phaseDepuis: new Date(), cycleActuel: nouveauCycle },
   });
 
-  await posterDansMairie(guild, ville.id, `${compteRendu}\n☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`, {
-    mentionnerVille: true,
-  });
+  const puits = await produireEauPuits(ville.id);
+  await posterDansMairie(
+    guild,
+    ville.id,
+    `${compteRendu}\n☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).` + (puits ? `\n${puits}` : ""),
+    { mentionnerVille: true },
+  );
   await appliquerEffetsPhase(guild, ville.id);
 }
 

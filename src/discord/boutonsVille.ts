@@ -379,7 +379,7 @@ export async function fonderVille(guild: Guild, villeId: number): Promise<{ nomb
   await salonMairie.send(
     `**${ville.nom}** est fondée ! ${nombreHabitants} habitant(s), PA max individuel : **${paMax}**.\n` +
       `<@${ville.createur.discordId}> devient le premier maire (mandat de ${CYCLES_PAR_MANDAT_MAIRE} cycles).\n` +
-      "Faim et soif démarrent à 100/100. Les commandes `/action` et `/aide` arrivent bientôt.",
+      "Faim et soif démarrent à 100/100. Cette mairie ne sert qu'aux annonces de la ville et du maire : discutez sur la place publique.",
   );
 
   return { nombreHabitants, paMax };

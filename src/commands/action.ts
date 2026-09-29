@@ -23,6 +23,7 @@ import { deplacerJoueur } from "../discord/deplacement";
 import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
+import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
 import { formulaireSoin } from "../discord/soin";
 import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
@@ -37,7 +38,7 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte », « Soigner », « Quitter la ville ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en
+// « Carte », « Partager la carte », « Soigner », « Annonce » pour le maire, « Quitter la ville ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en
 // rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
@@ -104,6 +105,10 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
+      // Annonce dans la mairie, fermee aux joueurs : reservee au maire
+      ...(estMaireEnExercice(joueur)
+        ? [new ButtonBuilder().setCustomId("annonce").setLabel("Annonce").setEmoji("📢").setStyle(ButtonStyle.Primary)]
+        : []),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setEmoji("🚪").setStyle(ButtonStyle.Danger),
     ),
   );
@@ -227,6 +232,11 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
         });
         continue;
       }
+      if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
+      return;
+    } else if (clic.isButton() && clic.customId === "annonce") {
+      const resultat = await formulaireAnnonce(clic, joueurId);
+      if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
       return;
     } else if (clic.customId === "quitter-ville") {
@@ -469,6 +479,10 @@ async function actionsMort(interaction: ChatInputCommandInteraction, guild: Guil
   ).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
+      // Annonce dans la mairie, fermee aux joueurs : reservee au maire
+      ...(estMaireEnExercice(joueur)
+        ? [new ButtonBuilder().setCustomId("annonce").setLabel("Annonce").setEmoji("📢").setStyle(ButtonStyle.Primary)]
+        : []),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setStyle(ButtonStyle.Danger),
     ),
   );
