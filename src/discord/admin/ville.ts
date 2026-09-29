@@ -64,16 +64,8 @@ export async function effacerVille(guild: Guild, villeId: number): Promise<void>
     prisma.ville.delete({ where: { id: villeId } }), // demandes, inventaire et batiments supprimes en cascade
   ]);
 
-  // Groupe sans ville en jeu : salons et roles du groupe supprimes ; groupe vide : ses zones aussi
-  if (ville.groupeId !== null) {
-    await nettoyerGroupeSiTombe(guild, ville.groupeId);
-    if ((await prisma.ville.count({ where: { groupeId: ville.groupeId } })) === 0) {
-      await prisma.$transaction([
-        prisma.zone.deleteMany({ where: { groupeId: ville.groupeId } }),
-        prisma.groupe.delete({ where: { id: ville.groupeId } }),
-      ]);
-    }
-  }
+  // Groupe sans ville en creation ni en jeu : salons, roles, zones et groupe supprimes
+  if (ville.groupeId !== null) await nettoyerGroupeSiTombe(guild, ville.groupeId);
 }
 
 async function effacer(interaction: ButtonInteraction, guild: Guild) {

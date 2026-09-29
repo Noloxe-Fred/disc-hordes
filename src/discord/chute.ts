@@ -7,12 +7,13 @@ import { retirerJoueurDeVilleDiscord } from "./joueurDiscord";
 import { supprimerRessources, trouverSalonTexte } from "./reconcile";
 import { SALON_COMMEMORATION } from "./structure";
 
-// Chute d'une ville (conception.md §1, Multi-villes), declenchee par la mort de son dernier habitant
-// (game/mort.ts). Le recapitulatif est poste dans #commemoration, puis tous les joueurs quittent la
-// ville (retour au role Nomade). Les salons et roles d'une ville
-// tombee restent en place tant que d'autres villes de son groupe sont en jeu ; quand toutes les villes
-// du groupe sont tombees, tout ce qui appartient au groupe est supprime : roles-ville, categories
-// Ville et leurs salons, categorie Territoires externes, salons de zone et roles Position.
+// Chute d'une ville (conception.md §1, Multi-villes), declenchee par la mort ou le depart de son dernier habitant
+// vivant. Le recapitulatif est poste dans #commemoration, puis tous les joueurs quittent la ville (retour au role
+// Nomade) et l'etat de jeu de la ville est efface de la base : seul reste un historique leger (la ville, ses dates et
+// cycles tenus, ses habitants avec metier et cause de mort) pour le futur classement (conception.md §8). Les salons
+// et roles d'une ville tombee restent en place tant que d'autres villes de son groupe sont en jeu ; quand toutes les
+// villes du groupe sont tombees, tout ce qui appartient au groupe est supprime : roles-ville, categories Ville et
+// leurs salons, categorie Territoires externes, salons de zone et roles Position, puis en base le groupe et ses zones.
 export async function declarerChuteVille(guild: Guild, villeId: number): Promise<void> {
   const ville = await prisma.ville.update({
     where: { id: villeId },
@@ -24,8 +25,32 @@ export async function declarerChuteVille(guild: Guild, villeId: number): Promise
   );
 
   await faireQuitterHabitants(guild, villeId);
+  await purgerEtatVilleTombee(villeId);
 
   if (ville.groupeId !== null) await nettoyerGroupeSiTombe(guild, ville.groupeId);
+}
+
+// Etat de jeu d'une ville tombee, efface de la base : sacs et cartes de ses joueurs, banque, batiments, journal,
+// attaques et gardes, elections, signalements et demandes. Restent la ville et ses personnages (historique).
+export async function purgerEtatVilleTombee(villeId: number): Promise<void> {
+  const joueurIds = (await prisma.joueur.findMany({ where: { villeId }, select: { id: true } })).map((j) => j.id);
+  // Ordre impose par les cles etrangeres sans cascade vers Joueur (votes, gardes, signalements...)
+  await prisma.$transaction([
+    prisma.vote.deleteMany({ where: { OR: [{ votantId: { in: joueurIds } }, { election: { villeId } }] } }),
+    prisma.candidature.deleteMany({ where: { OR: [{ joueurId: { in: joueurIds } }, { election: { villeId } }] } }),
+    prisma.election.deleteMany({ where: { villeId } }),
+    prisma.gardeVolontaire.deleteMany({ where: { OR: [{ joueurId: { in: joueurIds } }, { cycleAttaque: { villeId } }] } }),
+    prisma.cycleAttaque.deleteMany({ where: { villeId } }),
+    prisma.signalement.deleteMany({ where: { OR: [{ signalantId: { in: joueurIds } }, { cibleId: { in: joueurIds } }] } }),
+    prisma.journalEntree.deleteMany({ where: { OR: [{ villeId }, { joueurId: { in: joueurIds } }] } }),
+    prisma.contributionBatiment.deleteMany({ where: { batiment: { villeId } } }),
+    prisma.batimentVille.deleteMany({ where: { villeId } }),
+    prisma.inventaireVille.deleteMany({ where: { villeId } }),
+    prisma.demandeInscription.deleteMany({ where: { villeId } }),
+    prisma.inventaireJoueur.deleteMany({ where: { joueurId: { in: joueurIds } } }),
+    prisma.carteDecouverte.deleteMany({ where: { joueurId: { in: joueurIds } } }),
+    prisma.joueur.updateMany({ where: { villeId }, data: { zoneActuelleId: null, bonusPaReveil: 0 } }),
+  ]);
 }
 
 // Tous les joueurs quittent la ville tombee : roles de la ville retires, retour au role Nomade
@@ -120,6 +145,8 @@ async function posterRecapitulatif(guild: Guild, villeId: number): Promise<void>
   });
 }
 
+// Groupe sans ville en creation ni en jeu : ses ressources Discord, puis en base ses zones (adjacences, stocks et
+// cartes supprimes en cascade) et le groupe lui-meme, les villes tombees gardant leur historique sans groupe.
 export async function nettoyerGroupeSiTombe(guild: Guild, groupeId: number): Promise<boolean> {
   const villesEnJeu = await prisma.ville.count({ where: { groupeId, statut: { not: StatutVille.TOMBEE } } });
   if (villesEnJeu > 0) return false;
@@ -139,5 +166,13 @@ export async function nettoyerGroupeSiTombe(guild: Guild, groupeId: number): Pro
     ],
     villes.map(({ id }) => `salon:ville:${id}:`),
   );
+
+  const zoneIds = zones.map(({ id }) => id);
+  await prisma.$transaction([
+    prisma.joueur.updateMany({ where: { zoneActuelleId: { in: zoneIds } }, data: { zoneActuelleId: null } }),
+    prisma.ville.updateMany({ where: { groupeId }, data: { groupeId: null } }),
+    prisma.zone.deleteMany({ where: { groupeId } }),
+    prisma.groupe.delete({ where: { id: groupeId } }),
+  ]);
   return true;
 }
