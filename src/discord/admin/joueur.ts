@@ -1,4 +1,4 @@
-import { Metier, StatutJoueur, StatutVille } from "@prisma/client";
+import { CauseMort, Metier, StatutJoueur, StatutVille } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonStyle,
@@ -10,8 +10,11 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 import { NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../../config/metiers";
-import { PV_MAX } from "../../config/sante";
+import { LIBELLE_CAUSE_MORT } from "../../config/mort";
+import { JAUGE_MAX, PV_MAX } from "../../config/sante";
 import { prisma } from "../../db";
+import { calculerPaMax } from "../../game/pa";
+import { infligerDegats } from "../../game/sante";
 import { deplacerJoueur } from "../deplacement";
 import { appliquerExclusionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
@@ -19,8 +22,11 @@ import {
   DELAI_SELECTION_MS,
   champChoix,
   champMembre,
+  champTexte,
   journaliser,
+  lireAjustement,
   lireChoix,
+  lireEntier,
   lireJoueur,
   ouvrirFormulaire,
   repondre,
@@ -28,8 +34,8 @@ import {
   type JoueurCible,
 } from "./outils";
 
-// Famille "Joueur" du panneau /admin (conception.md §4) : teleporter, ressusciter, guerir, infecter,
-// exclure et reintegrer de force, changer de metier. Le joueur est choisi parmi les membres du serveur ;
+// Famille "Joueur" du panneau /admin (conception.md §4) : teleporter, ressusciter, blesser, guerir, infecter,
+// exclure et reintegrer de force, changer de metier, ajuster faim, soif et PA. Le joueur est choisi parmi les membres du serveur ;
 // son personnage courant est retrouve en base.
 
 const VALEUR_EN_VILLE = "ville";
@@ -237,11 +243,122 @@ async function changerMetier(interaction: ButtonInteraction, guild: Guild) {
   );
 }
 
+// --- Blesser : retire des PV (la mort est possible, avec la cause choisie) ---
+
+const CAUSES_BLESSURE: { cause: CauseMort; libelle: string }[] = [
+  { cause: CauseMort.COMBAT_EXTERIEUR, libelle: "Combat en territoire externe" },
+  { cause: CauseMort.ATTAQUE_NOCTURNE, libelle: "Attaque nocturne" },
+  { cause: CauseMort.FAIM, libelle: "Faim" },
+  { cause: CauseMort.SOIF, libelle: "Soif" },
+  { cause: CauseMort.EAU_CONTAMINEE, libelle: "Eau croupie" },
+];
+
+async function blesser(interaction: ButtonInteraction, guild: Guild) {
+  const soumission = await ouvrirFormulaire(interaction, "Blesser un joueur", [
+    champMembre(),
+    champTexte("pv", `PV à retirer (1-${PV_MAX})`, { max: 2, exemple: "2" }),
+    champChoix(
+      "cause",
+      "Cause si le joueur meurt",
+      CAUSES_BLESSURE.map(({ cause, libelle }) => ({ label: libelle, value: cause })),
+    ),
+  ]);
+  if (!soumission) return;
+  const joueur = await lireJoueur(soumission);
+  if (!joueur) {
+    await repondre(soumission, SANS_PERSONNAGE);
+    return;
+  }
+  if (joueur.statut !== StatutJoueur.VIVANT && joueur.statut !== StatutJoueur.EXCLU) {
+    await repondre(soumission, `${mention(joueur)} n'est pas vivant.`);
+    return;
+  }
+  const pv = lireEntier(soumission.fields.getTextInputValue("pv"), 1, PV_MAX);
+  if (pv === null) {
+    await repondre(soumission, `Indiquez un nombre de PV entre 1 et ${PV_MAX}.`);
+    return;
+  }
+  const cause = (lireChoix(soumission, "cause") as CauseMort | null) ?? CauseMort.COMBAT_EXTERIEUR;
+
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+  const resultat = await infligerDegats(guild, joueur.id, pv, cause);
+  await journaliser(interaction.user, "Blesser un joueur", `${detailJournal(joueur)} : −${pv} PV${resultat.mort ? " (mort)" : ""}`);
+  await soumission.editReply({
+    content: resultat.mort
+      ? `${mention(joueur)} perd ${pv} PV et meurt (${LIBELLE_CAUSE_MORT[cause]})` + (resultat.villeTombee ? " : sa ville est tombée." : ".")
+      : `${mention(joueur)} perd ${pv} PV : ${joueur.pv} → **${resultat.pvRestants}** / ${PV_MAX}.`,
+    allowedMentions: { parse: [] },
+  });
+}
+
+// --- Ajuster faim, soif et PA : valeur fixe ("80") ou relative ("+20", "-10"), vide = inchange ---
+
+async function ajusterJauges(interaction: ButtonInteraction) {
+  const aide = "Ex. 80, +20 ou -10 ; vide = inchangé";
+  const soumission = await ouvrirFormulaire(interaction, "Ajuster faim, soif et PA", [
+    champMembre(),
+    champTexte("faim", "Faim (0-100)", { requis: false, max: 5, description: aide }),
+    champTexte("soif", "Soif (0-100)", { requis: false, max: 5, description: aide }),
+    champTexte("pa", "PA (0 au PA max effectif)", { requis: false, max: 5, description: aide }),
+  ]);
+  if (!soumission) return;
+
+  const joueur = await lireJoueur(soumission);
+  if (!joueur) {
+    await repondre(soumission, "Ce membre n'a pas de personnage dans une ville en jeu.");
+    return;
+  }
+  if (joueur.statut === StatutJoueur.MORT || joueur.statut === StatutJoueur.ZOMBIFIE) {
+    await repondre(soumission, `<@${joueur.utilisateur.discordId}> est mort.`);
+    return;
+  }
+
+  const { paMax } = calculerPaMax(joueur);
+  const paActuel = joueur.paActuel ?? 0;
+  const faim = lireAjustement(soumission.fields.getTextInputValue("faim"), joueur.faim, 0, JAUGE_MAX);
+  const soif = lireAjustement(soumission.fields.getTextInputValue("soif"), joueur.soif, 0, JAUGE_MAX);
+  const pa = lireAjustement(soumission.fields.getTextInputValue("pa"), paActuel, 0, paMax);
+  if (faim === null || soif === null || pa === null) {
+    await repondre(soumission, "Saisie invalide : indiquez un nombre (80), ou un ajustement (+20, -10).");
+    return;
+  }
+  if (faim === undefined && soif === undefined && pa === undefined) {
+    await repondre(soumission, "Aucune valeur saisie : rien n'a changé.");
+    return;
+  }
+
+  await prisma.joueur.update({
+    where: { id: joueur.id },
+    data: {
+      faim,
+      soif,
+      paActuel: pa,
+      // Une jauge remontee au-dessus de 0 remet a zero son compteur de phases a vide (malus de PA)
+      ...(faim !== undefined && faim > 0 ? { phasesFaimVide: 0 } : {}),
+      ...(soif !== undefined && soif > 0 ? { phasesSoifVide: 0 } : {}),
+    },
+  });
+
+  const changements = [
+    faim !== undefined ? `faim ${joueur.faim} → ${faim}` : null,
+    soif !== undefined ? `soif ${joueur.soif} → ${soif}` : null,
+    pa !== undefined ? `PA ${paActuel} → ${pa} (max ${paMax})` : null,
+  ]
+    .filter((ligne) => ligne !== null)
+    .join(", ");
+  await journaliser(
+    interaction.user,
+    "Ajuster faim/soif/PA",
+    `${joueur.utilisateur.pseudoCache ?? joueur.utilisateur.discordId} (${joueur.ville?.nom}) : ${changements}`,
+  );
+  await repondre(soumission, `<@${joueur.utilisateur.discordId}> : ${changements}.`);
+}
+
 export const FAMILLE_JOUEUR: FamilleAdmin = {
   cle: "joueur",
   titre: "Joueur",
   emoji: "🧍",
-  resume: "position, vie, santé, exclusion et métier d'un personnage",
+  resume: "position, vie, santé, faim, soif, PA, exclusion et métier d'un personnage",
   actions: [
     {
       cle: "teleporter",
@@ -256,6 +373,7 @@ export const FAMILLE_JOUEUR: FamilleAdmin = {
       style: ButtonStyle.Success,
       executer: ressusciter,
     },
+    { cle: "blesser", libelle: "Blesser", description: "retire des PV à un joueur ; à 0 PV il meurt, avec la cause choisie.", style: ButtonStyle.Danger, executer: blesser },
     { cle: "guerir", libelle: "Guérir", description: "rend tous ses PV à un joueur et soigne son infection.", style: ButtonStyle.Success, executer: guerir },
     { cle: "infecter", libelle: "Infecter", description: "déclenche une infection cachée (incubation de 96h).", style: ButtonStyle.Danger, executer: infecter },
     {
@@ -271,6 +389,12 @@ export const FAMILLE_JOUEUR: FamilleAdmin = {
       libelle: "Changer de métier",
       description: "change le métier d'un joueur, avant ou après la fondation (les places peuvent être dépassées).",
       executer: changerMetier,
+    },
+    {
+      cle: "jauges",
+      libelle: "Ajuster faim/soif/PA",
+      description: "fixe (80) ou ajuste (+20, -10) la faim, la soif et les PA d'un joueur ; les PA sont plafonnés au PA max effectif.",
+      executer: ajusterJauges,
     },
   ],
 };
