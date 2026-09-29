@@ -35,6 +35,7 @@ import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
 import { tirerLoot } from "../game/loot";
+import { indicesStocks, puiserDansLesStocks, stocksActuels } from "../game/stocks";
 import { feuActif } from "../game/feu";
 import { calculerPaMax } from "../game/pa";
 import { ajouterACarte } from "../services/carte";
@@ -499,10 +500,13 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
   const type = typeDeZone(zone.nom);
   if (!type) throw new Error(`Type de zone inconnu : ${zone.nom}`);
 
+  // Chaque objet tire puise dans le stock de la zone (naturel ou fini) ; stock vide, il ne rapporte rien
+  const { obtenus, restants } = puiserDansLesStocks(tirerLoot(LOOT_PAR_ZONE[type.cle][zone.palier]), type.cle, stocksActuels(zone));
+
   // Un objet trop lourd pour la place restante est laisse, mais un plus leger tire ensuite peut encore rentrer
   const trouves = new Map<string, number>();
   const laisses = new Map<string, number>();
-  for (const nom of tirerLoot(LOOT_PAR_ZONE[type.cle][zone.palier])) {
+  for (const nom of obtenus) {
     const poids = poidsObjet(nom);
     const cible = deborde(sac, poids) ? laisses : trouves;
     if (cible === trouves) sac.utilisee += poids;
@@ -513,6 +517,7 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
   const texteLaisses = laisses.size > 0 ? `\n\nVotre sac est trop lourd pour le reste, laissé sur place :\n${liste(laisses)}` : "";
   await prisma.$transaction([
     prisma.joueur.update({ where: { id: joueurId }, data: { paActuel: { decrement: cout } } }),
+    prisma.zone.update({ where: { id: zone.id }, data: { stockNaturel: restants.naturel, stockFini: restants.fini } }),
     ...objets.map((objet) =>
       prisma.inventaireJoueur.upsert({
         where: { joueurId_objetId: { joueurId, objetId: objet.id } },
@@ -540,9 +545,11 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
         ? `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants).${texteLaisses}`
         : `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n${liste(trouves)}` +
           `\n\n🎒 Rangé dans votre sac (${libelleCharge(sac)}, \`/inventaire\`).${texteLaisses}`;
+  const indices = indicesStocks(zone.palier, restants);
+  const bilan = indices.length > 0 ? `${compteRendu}\n\n${indices.join("\n")}` : compteRendu;
   // Le bruit attire parfois un zombie ; en cas de fuite, le joueur reste dans la zone
   const rencontre = await declencherRencontre(joueurId, zone.palier, ville.phaseActuelle, { zoneId: null, ville: false }, true);
-  return rencontre ? `${compteRendu}\n\n${rencontre}` : compteRendu;
+  return rencontre ? `${bilan}\n\n${rencontre}` : bilan;
 }
 
 // Sortie volontaire d'un vivant ou d'un exclu (conception.md §3) : annoncee dans la mairie, puis depart definitif

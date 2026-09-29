@@ -140,8 +140,10 @@ model UtilisateurSucces {
 // Le groupe reste fige une fois forme : pas de champ "nombre de villes", la regle des
 // 3 max et le non-remplacement des places liberees sont appliques cote code.
 model Groupe {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
+  id                      Int       @id @default(autoincrement())
+  createdAt               DateTime  @default(now())
+  // Derniere regeneration des ressources naturelles de ses zones : une par aube, meme avec plusieurs villes
+  derniereRegenRessources DateTime?
 
   villes Ville[]
   zones  Zone[]
@@ -225,13 +227,17 @@ model DemandeInscription {
 // =========================================================================
 
 model Zone {
-  id          Int        @id @default(autoincrement())
-  nom         String
-  palier      PalierZone
-  groupeId    Int
+  id           Int        @id @default(autoincrement())
+  nom          String
+  palier       PalierZone
+  groupeId     Int
   // Dernier feu allume dans la zone : il la securise jusqu'au changement de phase suivant (sieste possible, rencontres
   // deux fois moins probables, equilibrage.md §1 et §5)
-  feuAllumeLe DateTime?
+  feuAllumeLe  DateTime?
+  // Stocks communs de la zone (equilibrage.md §5) : ressources naturelles (bois de foret, baies, gibiers), regenerees
+  // a l'aube, et tout le reste du butin, sans regeneration. null = plein (zone jamais fouillee depuis leur creation).
+  stockNaturel Int?
+  stockFini    Int?
 
   groupe           Groupe               @relation(fields: [groupeId], references: [id])
   adjacentesDepuis ZoneAdjacence[]      @relation("ZoneA")

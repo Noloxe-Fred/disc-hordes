@@ -11,9 +11,21 @@ import { rafraichirMessageVille, supprimerMessagesRecrutement } from "../message
 import { renommerRessource, supprimerRessources } from "../reconcile";
 import { LONGUEUR_MAX_NOM_VILLE } from "../texteLibre";
 import { posterDansMairie } from "../villeStructure";
-import { champTexte, champVille, confirmer, journaliser, lireChoix, ouvrirFormulaire, repondre, type FamilleAdmin } from "./outils";
+import { PALIERS_ZONE, TYPES_ZONE, typeDeZone } from "../../config/zones";
+import { rechargerZones } from "../../services/stocks";
+import {
+  champChoix,
+  champTexte,
+  champVille,
+  confirmer,
+  journaliser,
+  lireChoix,
+  ouvrirFormulaire,
+  repondre,
+  type FamilleAdmin,
+} from "./outils";
 
-// Famille "Ville" du panneau /admin (conception.md §4) : effacer, renommer, forcer la fondation,
+// Famille "Ville" du panneau /admin (conception.md §4) : effacer, renommer, recharger des territoires, forcer la fondation,
 // forcer la chute, reset. Effacer, forcer la chute et reset demandent une confirmation.
 
 async function choisirVille(interaction: ButtonInteraction, titre: string, statuts: StatutVille[], aucune: string) {
@@ -94,6 +106,47 @@ async function effacer(interaction: ButtonInteraction, guild: Guild) {
 }
 
 // --- Renommer : base, role-ville, categorie et salon vocal (ou message de recrutement) ---
+
+// --- Recharger des territoires : stocks des zones du groupe d'une ville remis a leur maximum (equilibrage.md §5) ---
+
+const TOUS = "tous";
+
+async function recharger(interaction: ButtonInteraction) {
+  const champ = await champVille([StatutVille.ACTIVE]);
+  if (!champ) {
+    await repondre(interaction, "Aucune ville en jeu.");
+    return;
+  }
+  const soumission = await ouvrirFormulaire(interaction, "Recharger des territoires", [
+    champ,
+    champChoix("type", "Type de zone", [{ label: "Tous les types", value: TOUS }, ...TYPES_ZONE.map((t) => ({ label: t.nom, value: t.cle }))]),
+    champChoix("palier", "Distance", [{ label: "Toutes les distances", value: TOUS }, ...PALIERS_ZONE.map((p) => ({ label: p.nom, value: p.palier }))]),
+    champChoix("stock", "Stock à recharger", [
+      { label: "Les deux", value: TOUS },
+      { label: "Ressources naturelles (bois de forêt, baies, gibiers)", value: "naturel" },
+      { label: "Le reste du butin (sans régénération)", value: "fini" },
+    ]),
+  ]);
+  if (!soumission) return;
+  const ville = await prisma.ville.findUnique({ where: { id: Number(lireChoix(soumission, "ville")) } });
+  if (!ville?.groupeId) {
+    await repondre(soumission, "Cette ville n'a pas de territoires.");
+    return;
+  }
+  const type = lireChoix(soumission, "type");
+  const palier = lireChoix(soumission, "palier");
+  const stock = lireChoix(soumission, "stock");
+  const zones = (await prisma.zone.findMany({ where: { groupeId: ville.groupeId } })).filter(
+    (z) => (type === TOUS || typeDeZone(z.nom)?.cle === type) && (palier === TOUS || z.palier === palier),
+  );
+  const n = await rechargerZones(
+    zones.map((z) => z.id),
+    { naturel: stock !== "fini", fini: stock !== "naturel" },
+  );
+  const detail = `${n} zone(s) du groupe de ${ville.nom} : ${zones.map((z) => z.nom).join(", ")}`;
+  await journaliser(interaction.user, "Recharger des territoires", detail);
+  await repondre(soumission, `♻️ Stocks rechargés dans ${detail}.`);
+}
 
 async function renommer(interaction: ButtonInteraction, guild: Guild) {
   const champ = await champVille([StatutVille.EN_CREATION, StatutVille.ACTIVE]);
@@ -284,6 +337,13 @@ export const FAMILLE_VILLE: FamilleAdmin = {
       libelle: "Renommer",
       description: "change le nom d'une ville en création ou en jeu, ainsi que son rôle et ses salons.",
       executer: renommer,
+    },
+    {
+      cle: "recharger",
+      libelle: "Recharger des territoires",
+      description: "remet au maximum les stocks de butin des zones du groupe d'une ville (par type, distance et stock).",
+      style: ButtonStyle.Success,
+      executer: recharger,
     },
     {
       cle: "fonder",

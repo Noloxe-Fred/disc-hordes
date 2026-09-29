@@ -129,6 +129,12 @@ Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gib
   Le stock max croît avec l'éloignement, cohérent avec le fait que les zones lointaines rapportent déjà plus d'objets par fouille (voir section 5) — s'applique aux ressources marquées "Oui" dans le tableau des ressources brutes (bois en forêt, baies, gibier).
 - Ressources **transformées/loot fini** : **aucune régénération** — stock fini par zone, rechargé uniquement par événements IA ponctuels.
 
+**Stocks des zones (mise en œuvre validée le 2026-09-29, valeurs de test)** : chaque zone a **deux stocks communs**, et **chaque objet trouvé en fouille puise une unité** dans le sien (même s'il est ensuite laissé sur place faute de place). Stock vide : l'objet tiré ne rapporte rien (trouvaille sans valeur).
+- **Stock naturel** : bois **de forêt**, baies et **tous les gibiers** (gibier, petit, gros, rare) — max **100 / 150 / 200** (proche / moyenne / éloignée), zone pleine au départ, **+40 % du max à chaque aube** (une fois par aube pour le groupe, plafonné).
+- **Stock fini** : tout le reste du butin (y compris le bois de la ville en ruines) — départ **800 / 600 / 400**, **sans régénération**. Dimensionné pour qu'un groupe de 3 villes puisse tout construire (≈ 1 000 ressources non régénérantes par ville, dont 635 Ferraille pour palissade, atelier et puits) : l'épuisement est une contrainte de fin de partie.
+- **Recharge** : en attendant les événements IA, bouton « Recharger des territoires » (famille Ville de `/admin` et `/mj`) : remet au maximum le stock naturel, le stock fini ou les deux, pour les zones choisies (type, distance) du groupe d'une ville.
+- **Indices** après une fouille, sans chiffres : sous 25 % « se font rares » / « bien pillée », à 0 « épuisées » / « plus rien à récupérer ».
+
 ### Rationnement (maire)
 - Réduit la consommation individuelle prélevée sur le stock de ville de **−30 %**, mais si le stock de ville est insuffisant, le déficit est reporté tel quel sur la jauge du joueur.
 

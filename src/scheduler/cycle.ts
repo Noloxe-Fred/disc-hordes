@@ -14,6 +14,7 @@ import { posterDansMairie } from "../discord/villeStructure";
 import { verifierZombiesErrants } from "../discord/zombieErrant";
 import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
 import { produireEauPuits } from "../services/puits";
+import { regenererRessourcesNaturelles } from "../services/stocks";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
 // plutot que 24h/48h apres leur propre fondation (conception.md §2). Le bot ne gerant qu'un
@@ -224,6 +225,8 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   });
 
   const puits = await produireEauPuits(ville.id);
+  // Les ressources naturelles des territoires repoussent (une fois par aube pour le groupe)
+  if (ville.groupeId !== null) await regenererRessourcesNaturelles(ville.groupeId);
   await posterDansMairie(
     guild,
     ville.id,
