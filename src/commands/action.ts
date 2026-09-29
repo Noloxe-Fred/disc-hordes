@@ -26,11 +26,13 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions
 import { trouverSalonTexte } from "../discord/reconcile";
 import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
 import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
+import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
 import { formulaireSoin } from "../discord/soin";
 import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
 import { tirerLoot } from "../game/loot";
+import { feuActif } from "../game/feu";
 import { calculerPaMax } from "../game/pa";
 import { ajouterACarte } from "../services/carte";
 import { chargeSac, deborde, libelleCharge, MESSAGE_SAC_PLEIN, sacPlein } from "../services/charge";
@@ -40,7 +42,8 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte », « Soigner », « Annonce » pour le maire, « Quitter la ville »). Face a un zombie
+// « Carte », « Partager la carte », « Soigner », dehors « Allumer un feu » puis « Sieste », « Annonce » pour le maire,
+// « Quitter la ville »). Face a un zombie
 // (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
 // rejoindre une autre.
 
@@ -86,12 +89,26 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
 
   const exclu = joueur.statut === StatutJoueur.EXCLU;
   const paActuel = joueur.paActuel ?? 0;
+  const feuIci = feuActif(joueur.zoneActuelle, ville);
   const entete =
     `## Actions — ${ville.nom}\n` +
     `📍 ${joueur.zoneActuelle ? joueur.zoneActuelle.nom : "En ville"}` +
     ` · ⚡ ${paActuel} / ${calculerPaMax(joueur).paMax} PA` +
     (ville.phaseActuelle === TypePhase.NUIT ? " · 🌙 nuit : actions plus coûteuses" : " · ☀️ jour") +
+    (feuIci ? "\n🔥 Un feu brûle ici : zombies deux fois moins nombreux, sieste possible." : "") +
     (exclu ? "\nVous êtes **exclu** de votre ville : vous ne pouvez pas y rentrer." : "");
+
+  // Allumer un feu : confirmation avant de depenser des PA
+  const coutDuFeu = coutFeu(ville.phaseActuelle);
+  const ecranFeu = encadre(
+    `${entete}\n\n**Allumer un feu** pour **${coutDuFeu} PA** et 1 🔥 Feu de votre sac ? Jusqu'au changement de phase, ` +
+      "la zone est plus sûre et chacun peut y faire la sieste.",
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("confirmer-feu").setLabel(`Allumer (${coutDuFeu} PA)`).setEmoji("🔥").setStyle(ButtonStyle.Primary),
+      boutonRetour(),
+    ),
+  );
 
   const menu = encadre(`${entete}\nQue voulez-vous faire ?`).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -109,6 +126,14 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
+      // Dehors : allumer un feu, puis faire la sieste tant qu'il brule
+      ...(joueur.zoneActuelle
+        ? [
+            feuIci
+              ? new ButtonBuilder().setCustomId("sieste").setLabel("Sieste").setEmoji("😴").setStyle(ButtonStyle.Secondary)
+              : new ButtonBuilder().setCustomId("feu").setLabel("Allumer un feu").setEmoji("🔥").setStyle(ButtonStyle.Secondary),
+          ]
+        : []),
       // Annonce dans la mairie, fermee aux joueurs : reservee au maire
       ...(estMaireEnExercice(joueur)
         ? [new ButtonBuilder().setCustomId("annonce").setLabel("Annonce").setEmoji("📢").setStyle(ButtonStyle.Primary)]
@@ -248,6 +273,15 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
       return;
+    } else if (clic.customId === "feu") {
+      await clic.update({ components: [ecranFeu] });
+    } else if (clic.customId === "confirmer-feu") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await allumerFeu(guild, joueurId))] });
+      return;
+    } else if (clic.customId === "sieste") {
+      await clic.deferUpdate();
+      if (!(await afficherResultat(clic, joueurId, await faireSieste(joueurId)))) return;
     } else if (clic.customId === "quitter-ville") {
       await clic.update({ components: [ecranQuitter] });
     } else if (clic.customId === "confirmer-quitter") {
@@ -505,11 +539,6 @@ async function actionsMort(interaction: ChatInputCommandInteraction, guild: Guil
     COULEUR_MORT,
   ).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
-      // Annonce dans la mairie, fermee aux joueurs : reservee au maire
-      ...(estMaireEnExercice(joueur)
-        ? [new ButtonBuilder().setCustomId("annonce").setLabel("Annonce").setEmoji("📢").setStyle(ButtonStyle.Primary)]
-        : []),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setStyle(ButtonStyle.Danger),
     ),
   );

@@ -12,6 +12,8 @@ export const MAJORATION_RENCONTRE_NUIT = 1.5;
 // Chaque fouille d'affilee sans zombie ajoute 10 points a la chance des jets suivants (remis a 0 a la rencontre et au
 // retour en ville)
 export const BONUS_RENCONTRE_PAR_FOUILLE = 0.1;
+// Feu allume dans la zone : chance de rencontre divisee par deux (bonus des fouilles compris)
+export const FACTEUR_RENCONTRE_FEU = 0.5;
 
 export const PV_ZOMBIE: Record<PalierZone, number> = {
   [PalierZone.PROCHE]: 2,

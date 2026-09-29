@@ -3,6 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, TextDis
 import { DEGATS_RENCONTRE_PAR_PHASE, DEGATS_ZOMBIE, PV_ZOMBIE } from "../config/combat";
 import { emojiObjet } from "../config/objets";
 import { prisma } from "../db";
+import { feuActif } from "../game/feu";
 import { coutAttaque, coutFuite, echangerCoups, meilleureArme, tenterFuite, tirerRencontre } from "../game/combat";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { deplacerJoueur } from "./deplacement";
@@ -21,7 +22,8 @@ export interface RepliFuite {
   ville: boolean;
 }
 
-// Jet de rencontre dans la zone ou se trouve le joueur, plus probable a chaque fouille d'affilee sans zombie ; si un
+// Jet de rencontre dans la zone ou se trouve le joueur, plus probable a chaque fouille d'affilee sans zombie et deux
+// fois moins avec un feu allume ; si un
 // zombie surgit, la rencontre est enregistree et le compteur de fouilles remis a 0, sinon une fouille l'augmente.
 // Renvoie le texte a ajouter au compte rendu de l'action, ou null.
 export async function declencherRencontre(
@@ -31,8 +33,11 @@ export async function declencherRencontre(
   repli: RepliFuite,
   apresFouille: boolean,
 ): Promise<string | null> {
-  const { fouillesSansRencontre } = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
-  if (!tirerRencontre(palier, phase, fouillesSansRencontre)) {
+  const { fouillesSansRencontre, zoneActuelle, ville } = await prisma.joueur.findUniqueOrThrow({
+    where: { id: joueurId },
+    include: { zoneActuelle: true, ville: true },
+  });
+  if (!tirerRencontre(palier, phase, fouillesSansRencontre, ville !== null && feuActif(zoneActuelle, ville))) {
     if (apresFouille) await prisma.joueur.update({ where: { id: joueurId }, data: { fouillesSansRencontre: { increment: 1 } } });
     return null;
   }

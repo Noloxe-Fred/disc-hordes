@@ -61,8 +61,8 @@ Une fois déclenchée, l'infection est cachée (seul le joueur le sait) et suit 
 
 ### Régénération
 - **Complète** (retour à PA max) : au réveil de chaque phase (jour→nuit ou nuit→jour), condition = avoir dormi **en ville**.
-- **Partielle** : sieste en territoire externe (si zone jugée "calme" par l'IA) = +25 % du PA max individuel, une fois par phase, mais expose à une rencontre pendant la sieste (jet de risque — voir section 5 pour la table de rencontre qui détermine l'issue si le jet se déclenche).
-- Dormir dehors sans sécuriser la zone = pas de régénération (seule la sieste partielle s'applique).
+- **Partielle** : **sieste** en territoire externe (bouton « Sieste » de `/action`), uniquement dans une zone où **brûle un feu** (section 6), gratuite, **une fois par phase et par joueur** : **+25 % du PA max effectif** (arrondi à l'inférieur, sans dépasser le PA max ; refusée si déjà au max). Un jet de rencontre a lieu d'abord (taux de la zone, divisé par deux par le feu, section 5) : si un zombie surgit, la sieste est interrompue — aucun PA gagné, le combat commence.
+- Dormir dehors sans feu = pas de régénération.
 
 
 ---
@@ -189,6 +189,8 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Observer — éclaireur | 0 PA | 1 PA (valeur fixe, pas ×1,5) |
 | Partager sa carte (bouton de `/action`, en ville uniquement) | 0 PA | 0 PA |
 | Fouiller/looter la zone courante | 2 PA | 3 PA |
+| Allumer un feu (territoire externe, consomme 1 Feu) | 1 PA | 2 PA |
+| Sieste (zone avec un feu, une fois par phase) | 0 PA | 0 PA |
 | Combat — attaquer (par échange) | 2 PA (arme : −1 ou −2, jamais sous 1) | 3 PA (idem) |
 | Combat — fuir | 1 PA | 2 PA (+ risque d'échec accru la nuit) |
 | Craft simple (`/inventaire`) | 1 PA (symbolique) + ingrédients | idem |
@@ -264,6 +266,7 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 | Éloignée (palier 3) | 45 % |
 
 - *(Relevées le 2026-09-29, depuis 10 / 20 / 35 %, jugées trop rares en test.)*
+- **Feu** allumé dans la zone : chance finale (bonus compris) **divisée par deux** jusqu'au changement de phase (section 6).
 - **Risque qui monte à chaque fouille** : chaque fouille d'affilée sans zombie ajoute **+10 points** à la chance des jets suivants de ce joueur (fouille comme arrivée dans une zone), plafonnée à 100 %. Le compteur revient à 0 dès qu'un zombie surgit ou que le joueur rentre en ville. Ex. zone éloignée de jour : 45 %, puis 55, 65, 75 %…
 - **La nuit** : probabilité de base ×1,5 (22,5 / 45 / 67,5 %), avant le bonus des fouilles, cohérent avec le principe "la nuit, rencontres plus dangereuses".
 - **Jet** après chaque fouille et à chaque arrivée dans une zone. Tant que la rencontre dure, `/action` ne propose plus que « Attaquer » et « Fuir » : ni fouille, ni déplacement, ni observation, ni retour en ville.
@@ -291,7 +294,7 @@ Coût PA symbolique (1 PA), coût réel = ingrédients. Liste évolutive.
 |---|---|---|
 | Bandage | 2 Tissu | +2 PV |
 | Plat préparé | 1 Baies + 1 Gibier | +20 faim |
-| Feu | 2 Bois | Sécurise temporairement une zone (débloque la sieste, réduit le risque de rencontre) |
+| Feu | 2 Bois | Allumé en territoire externe (bouton « Allumer un feu » de `/action`, section 4), sécurise la zone **jusqu'au changement de phase suivant** pour tous les survivants présents : sieste possible (section 1) et chance de rencontre **divisée par deux** (section 5). Un seul feu par zone à la fois |
 | Arme de fortune | 1 Ferraille + 1 Bois | −1 PA de coût sur l'action "attaquer" |
 | Ration d'eau purifiée | 2 Eau brute + 1 Tissu (filtre) | +30 soif, sans risque contrairement à l'eau brute |
 | Torche | 1 Bois + 1 Tissu | Annule le surcoût nocturne d'un seul déplacement (consommable, un usage) |

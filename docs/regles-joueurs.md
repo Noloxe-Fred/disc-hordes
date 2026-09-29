@@ -101,7 +101,7 @@ Elle réduit peu à peu tes PA… et au bout de **96h** sans remède, tu deviens
 Dans `/action`, le bouton **Se déplacer** te propose les destinations possibles et leur coût : le bot te demande de confirmer avant de dépenser tes PA.
 🧭 On avance **de proche en proche** : de la ville vers les 4 zones **proches**, puis vers les zones **moyennes** et **éloignées** du même type, ou vers les zones voisines de même distance.
 ⚡ Coût : **2 PA** pour une zone proche (ou pour rentrer en ville), **3 PA** pour une moyenne, **4 PA** pour une éloignée. La nuit, c'est **50 % plus cher**.
-🔇 Dehors, tu ne vois plus ce qui se passe en ville : seule la **mairie** reste lisible, sans pouvoir y écrire, pour suivre les annonces. Tu ne récupères pas non plus tes PA au changement de phase. Tu ne vois que le salon de la zone où tu te trouves : personne ne voit ce qui se passe dans une zone sans y être.
+🔇 Dehors, tu ne vois plus ce qui se passe en ville : seule la **mairie** reste lisible, sans pouvoir y écrire, pour suivre les annonces. Tu ne récupères pas non plus tes PA au changement de phase (seule une sieste près d'un feu t'en rend un peu). Tu ne vois que le salon de la zone où tu te trouves : personne ne voit ce qui se passe dans une zone sans y être.
 📻 Avec une **radio**, tu rejoins le salon **ondes-radio**, où les porteurs de radio se parlent d'une zone à l'autre. Elle ne te montre pas ta ville quand tu es dehors, mais en ville, un porteur de radio écoute les ondes et peut relayer les nouvelles à ses concitoyens. La radio se trouve dans les marécages, loin de la ville ; elle ne pèse rien et s'affiche à côté de tes PA et de ta charge.
 
 ## 🗺️ Ta carte
@@ -120,6 +120,10 @@ Après chaque fouille et à chaque arrivée dans une zone, un **zombie** peut su
 🏃 **Fuir** pour **1 PA** (2 la nuit) : ça marche 3 fois sur 4 le jour, 1 fois sur 2 la nuit. Tu rebrousses chemin vers l'endroit d'où tu venais (ou tu restes sur place si tu fouillais). Raté, le zombie te frappe (−1 PV, sans infection).
 🗡️ Une **arme** dans ton sac aide : **arme de fortune** (−1 PA par attaque), **arme simple** (tu touches plus souvent), **arme avancée** (−2 PA et 2 dégâts par coup). Seule la meilleure compte.
 ⏳ Un zombie qu'on laisse là ne s'en va pas : **−1 PV à chaque changement de phase** tant que tu ne l'as pas réglé.
+
+## 🔥 Feu et sieste
+Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (2 Bois, à fabriquer) pour **1 PA** (2 la nuit). Jusqu'au prochain changement de phase, la zone est plus sûre pour tous ceux qui s'y trouvent : **deux fois moins de zombies**.
+😴 Tant que le feu brûle, le bouton **Sieste** te rend **25 % de tes PA max**, une fois par phase. Mais un zombie peut quand même te surprendre dans ton sommeil : la sieste est alors fichue, et il faut se battre.
 
 
 # 🎒 Ton sac
@@ -140,7 +144,7 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 🍶 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
 🔦 **Torche** : 1 Bois + 1 Tissu
 🪤 **Piège simple** : 2 Bois + 1 Ferraille
-🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner (`/action`). Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner et le feu à sécuriser une zone (`/action`), l'arme de fortune aide au combat. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
 
 ## 🍲 Manger et boire
 Le bouton **Manger / boire (sac)** consomme ce que tu as sur toi, partout, gratuitement. En ville, **Manger / boire (banque)** puise directement dans la réserve commune.

@@ -26,3 +26,6 @@ export const COUT_FOUILLE_JOUR = 2;
 // Soins (equilibrage.md §4) : basique ouvert a tous, avance reserve au medecin
 export const COUT_SOIN_BASIQUE_JOUR = 2;
 export const COUT_SOIN_AVANCE_JOUR = 4;
+
+// Allumer un feu en territoire externe (consomme 1 Feu du sac)
+export const COUT_FEU_JOUR = 1;

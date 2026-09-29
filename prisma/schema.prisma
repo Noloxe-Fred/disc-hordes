@@ -225,6 +225,9 @@ model Zone {
   nom      String
   palier   PalierZone
   groupeId Int
+  // Dernier feu allume dans la zone : il la securise jusqu'au changement de phase suivant (sieste possible, rencontres
+  // deux fois moins probables, equilibrage.md §1 et §5)
+  feuAllumeLe DateTime?
 
   groupe           Groupe               @relation(fields: [groupeId], references: [id])
   adjacentesDepuis ZoneAdjacence[]      @relation("ZoneA")
@@ -419,6 +422,8 @@ model Joueur {
   // Fouilles d'affilee sans zombie : chacune augmente la chance de rencontre suivante ; remis a 0 a chaque rencontre
   // et au retour en ville (equilibrage.md §5)
   fouillesSansRencontre Int     @default(0)
+  // Derniere sieste en territoire externe : une seule par phase (equilibrage.md §1)
+  derniereSieste        DateTime?
   xp             Int          @default(0)
   dateArrivee    DateTime     @default(now())
   dateSortie     DateTime?

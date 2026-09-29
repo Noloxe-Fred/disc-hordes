@@ -9,6 +9,7 @@ import {
   COUT_ATTAQUE_JOUR,
   COUT_ATTAQUE_MIN,
   COUT_FUITE_JOUR,
+  FACTEUR_RENCONTRE_FEU,
   DEGATS_JOUEUR,
   MAJORATION_RENCONTRE_NUIT,
   type Arme,
@@ -17,19 +18,22 @@ import { coutSelonPhase } from "./deplacement";
 
 // Regles du combat contre un zombie (equilibrage.md §4 et §5), sans acces a la base : tirages et couts.
 
-// fouillesSansRencontre : fouilles d'affilee sans zombie, +10 points chacune (chance plafonnee a 100 %)
-export function chanceRencontre(palier: PalierZone, phase: TypePhase, fouillesSansRencontre = 0): number {
+// fouillesSansRencontre : fouilles d'affilee sans zombie, +10 points chacune (chance plafonnee a 100 %) ; un feu dans
+// la zone divise le tout par deux
+export function chanceRencontre(palier: PalierZone, phase: TypePhase, fouillesSansRencontre = 0, feu = false): number {
   const base = CHANCE_RENCONTRE[palier] * (phase === TypePhase.NUIT ? MAJORATION_RENCONTRE_NUIT : 1);
-  return Math.min(1, base + fouillesSansRencontre * BONUS_RENCONTRE_PAR_FOUILLE);
+  const chance = Math.min(1, base + fouillesSansRencontre * BONUS_RENCONTRE_PAR_FOUILLE);
+  return feu ? chance * FACTEUR_RENCONTRE_FEU : chance;
 }
 
 export function tirerRencontre(
   palier: PalierZone,
   phase: TypePhase,
   fouillesSansRencontre = 0,
+  feu = false,
   alea: () => number = Math.random,
 ): boolean {
-  return alea() < chanceRencontre(palier, phase, fouillesSansRencontre);
+  return alea() < chanceRencontre(palier, phase, fouillesSansRencontre, feu);
 }
 
 // Meilleure arme du sac (ordre de ARMES), ou null
