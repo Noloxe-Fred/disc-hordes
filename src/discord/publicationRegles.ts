@@ -71,7 +71,7 @@ async function nettoyer(salon: TextChannel, botId: string): Promise<number> {
 }
 
 // Republie les regles joueurs (docs/regles-joueurs.md) dans #regles (bouton « Publier les règles » du panneau
-// /moderation) : un sommaire en embed, puis une image par section (titre "# ") avec sous l'image les liens vers
+// /mj) : un sommaire en embed, puis une image par section (titre "# ") avec sous l'image les liens vers
 // les salons cites ; un fil verrouille sous le sommaire contient le texte de toutes les sections (recherche et copie).
 // Renvoie le compte rendu a afficher.
 export async function publierRegles(guild: Guild): Promise<string> {

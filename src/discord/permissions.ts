@@ -2,7 +2,7 @@ import type { Guild } from "discord.js";
 import { trouverRole } from "./reconcile";
 import { ROLE_ADMIN, ROLE_MJ, ROLE_MJ_INACTIF } from "./structure";
 
-// MJ actif ou Admin : acces a /moderation et aux passe-droits du staff (fonder une ville sans minimum d'habitants).
+// MJ actif ou Admin : acces a /mj et aux passe-droits du staff (fonder une ville sans minimum d'habitants).
 // Un MJ inactif n'a pas plus de droits qu'un joueur.
 export async function estMjOuAdmin(guild: Guild, userId: string): Promise<boolean> {
   return aUnDesRoles(guild, userId, [ROLE_MJ.cle, ROLE_ADMIN.cle]);
@@ -22,7 +22,7 @@ export async function estMjInactif(guild: Guild, userId: string): Promise<boolea
 }
 
 export const MESSAGE_MJ_ACTIF_NE_JOUE_PAS =
-  "🛡️ Vous êtes **MJ actif** : vous voyez tout le jeu, vous ne pouvez donc pas jouer. Passez en MJ inactif depuis `/moderation` pour jouer.";
+  "🛡️ Vous êtes **MJ actif** : vous voyez tout le jeu, vous ne pouvez donc pas jouer. Passez en MJ inactif depuis `/mj` pour jouer.";
 
 async function aUnDesRoles(guild: Guild, userId: string, cles: string[]): Promise<boolean> {
   const membre = await guild.members.fetch(userId).catch(() => null);

@@ -148,8 +148,8 @@ export const FAMILLE_MODERATION: FamilleAdmin = {
     },
     {
       cle: "journal",
-      libelle: "Logs d'actions admin",
-      description: `affiche les ${ENTREES_JOURNAL_AFFICHEES} dernières actions faites depuis ce panneau.`,
+      libelle: "Logs d'actions admin/MJ",
+      description: `affiche les ${ENTREES_JOURNAL_AFFICHEES} dernières actions faites depuis les panneaux /admin et /mj.`,
       executer: consulterJournal,
     },
   ],

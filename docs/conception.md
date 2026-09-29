@@ -20,9 +20,9 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - **Radio** : géré automatiquement par le bot selon la possession de l'objet radio en inventaire (ajout/retrait synchronisé, pas de commande d'activation). Donne l'accès au salon `ondes-radio` du groupe, en ville comme dehors : c'est le seul lien entre la ville et ceux qui sont dehors. La radio ne pèse rien : elle s'affiche à part dans l'image du sac, à côté des PA et de la charge. Un joueur en territoire externe, radio ou non, ne voit plus que la mairie de sa ville, en lecture seule (annonces de cycle et d'attaque) : les autres salons de la ville lui sont masqués jusqu'à son retour, tant que la ville n'a pas de Tour Radio (qui rendra la ville visible depuis dehors aux seuls porteurs de radio). Accès recalculés par le bot à chaque déplacement, changement de statut ou radio gagnée/perdue (permissions propres au membre sur les salons).
 - **Mort**.
 - **Nomade** : membre sans ville en jeu. Donné à chaque nouvel arrivant sur le serveur (et par l'initialisation du serveur aux membres déjà présents sans ville), retiré à la fondation de sa ville, rendu quand il quitte sa ville ou quand elle tombe. Mentionné dans l'annonce de chaque ville créée par `/creer-ville` (notification au premier envoi seulement).
-- **MJ actif** / **MJ inactif** : animation et arbitrage du jeu. Un MJ est toujours dans l'un des deux rôles et bascule lui-même depuis `/moderation`.
-  - **MJ actif** (or, affiché à part) : voit tout le jeu — catégories de ville, salons de zone, salons `ondes-radio` — et a accès à `/moderation` et aux salons MJ de la catégorie Admin-MJ. **Il ne peut pas jouer** : `/action` et `/inventaire` lui sont refusés, et les restrictions de son éventuel personnage (ville masquée dehors…) sont levées tant qu'il est actif. Les nouvelles villes et territoires lui ouvrent leurs salons dès leur création ; « Initialiser le serveur » rattrape ceux qui existaient avant.
-  - **MJ inactif** (or terne) : voit le serveur exactement comme un joueur et peut jouer, avec en plus le salon `discussion-mj` pour garder le contact avec l'équipe. `/moderation` ne lui propose que « Redevenir MJ actif ».
+- **MJ actif** / **MJ inactif** : animation et arbitrage du jeu. Un MJ est toujours dans l'un des deux rôles et bascule lui-même depuis `/mj`.
+  - **MJ actif** (or, affiché à part) : voit tout le jeu — catégories de ville, salons de zone, salons `ondes-radio` — et a accès à `/mj` et aux salons MJ de la catégorie Admin-MJ. **Il ne peut pas jouer** : `/action` et `/inventaire` lui sont refusés, et les restrictions de son éventuel personnage (ville masquée dehors…) sont levées tant qu'il est actif. Les nouvelles villes et territoires lui ouvrent leurs salons dès leur création ; « Initialiser le serveur » rattrape ceux qui existaient avant.
+  - **MJ inactif** (or terne) : voit le serveur exactement comme un joueur et peut jouer, avec en plus le salon `discussion-mj` pour garder le contact avec l'équipe. `/mj` ne lui propose que « Redevenir MJ actif ».
   - Le reste repose sur la confiance accordée aux MJ.
 - **Admin** : gestion du serveur et du bot ; accès à tous les salons de la catégorie Admin-MJ, y compris `gestion` qui lui est réservé.
 - Admin et MJ sont placés par l'initialisation du serveur en haut de la liste des rôles (Admin au-dessus de MJ, juste sous le rôle du bot) et affichés séparément des autres membres.
@@ -159,7 +159,15 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 - Nombre de joueurs max par ville : **15** (évolutif)
 
 ### Commandes admin
-- `/moderation` (MJ actifs et Admins ; pour un MJ inactif, seulement le bouton « Redevenir MJ actif ») : ouvre un panneau de modération (Components V2, éphémère) dont chaque action est un bouton ; les droits sont revérifiés à chaque clic. Actions disponibles :
+- `/mj` (MJ actifs et Admins ; pour un MJ inactif, seulement le bouton « Redevenir MJ actif ») : ouvre le panneau MJ (Components V2, éphémère) ; les droits sont revérifiés à chaque clic. Il propose les outils MJ ci-dessous, puis les **familles d'actions de `/admin` limitées aux actions ouvertes aux MJ actifs** (même navigation, mêmes formulaires, inscrites au même journal) :
+  - **Ville** : Renommer, Forcer la fondation
+  - **Joueur** : Téléporter, Ressusciter, Guérir, Exclure / Réintégrer de force, Changer de métier, Ajuster faim/soif/PA (Blesser et Infecter restent réservés aux Admins)
+  - **Ressources** : Ajouter / Retirer un objet (joueur et banque de ville)
+  - **Politique** : toutes les actions
+  - **Modération** : Mute, Kick (jeu), journal des actions admin
+  - Réservés aux Admins : familles **Serveur** et **Temps**, et dans **Ville** : Effacer, Forcer la chute, Reset
+
+  Outils MJ :
   - **Passer en MJ inactif** / **Redevenir MJ actif** : échange les deux rôles MJ et recalcule les accès du personnage éventuel du MJ ; inscrit au journal des actions admin
   - **Publier les règles** : republie les règles joueurs dans le salon `règles` — supprime les anciens messages et fils du bot dans ce salon puis poste un sommaire (embed dont chaque titre est un lien vers le message de la section) suivi d'une **image par section** de `docs/regles-joueurs.md` (une section par titre « # », rendue par satori + resvg dans la charte MyHordes, emojis Twemoji), avec sous chaque image les liens vers les salons cités ; un **fil verrouillé** sous le sommaire contient le texte brut de toutes les sections (recherche, copie, liens de salons)
 - Effacer une ville en cours de création (accessible au créateur de la ville et aux admins)

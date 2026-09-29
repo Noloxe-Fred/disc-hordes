@@ -1,12 +1,12 @@
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../client";
-import { construirePanneauMjInactif, construirePanneauModeration } from "../discord/boutonsModeration";
+import { construirePanneauMj, construirePanneauMjInactif } from "../discord/boutonsAdmin";
 import { estMjActif, estMjInactif, estMjOuAdmin } from "../discord/permissions";
 
-// Panneau de moderation (MJ actifs et Admins) : chaque action est un bouton, gere par discord/boutonsModeration.ts.
-// Un MJ inactif n'y trouve que le bouton pour redevenir MJ actif.
+// Panneau MJ (MJ actifs et Admins) : outils MJ (discord/boutonsMj.ts) et actions de jeu ouvertes aux MJ, par famille
+// comme dans /admin (discord/boutonsAdmin.ts). Un MJ inactif n'y trouve que le bouton pour redevenir MJ actif.
 const command: Command = {
-  data: new SlashCommandBuilder().setName("moderation").setDescription("Ouvre le panneau de modération (MJ/Admin)"),
+  data: new SlashCommandBuilder().setName("mj").setDescription("Ouvre le panneau MJ (MJ/Admin)"),
 
   async execute(interaction) {
     const guild = interaction.guild;
@@ -24,7 +24,7 @@ const command: Command = {
     }
 
     await interaction.reply({
-      components: [construirePanneauModeration({ mjActif: await estMjActif(guild, interaction.user.id) })],
+      components: [construirePanneauMj({ mjActif: await estMjActif(guild, interaction.user.id) })],
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
     });
   },

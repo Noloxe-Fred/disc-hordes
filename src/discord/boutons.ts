@@ -2,8 +2,8 @@ import { StatutDemande } from "@prisma/client";
 import type { ButtonInteraction } from "discord.js";
 import { JOUEURS_MAX_PAR_VILLE, NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../config/metiers";
 import { prisma } from "../db";
-import { gererBoutonAdmin } from "./boutonsAdmin";
-import { gererBoutonModeration } from "./boutonsModeration";
+import { gererBoutonPanneau } from "./boutonsAdmin";
+import { gererBoutonOutilMj } from "./boutonsMj";
 import { gererBoutonVille } from "./boutonsVille";
 import { rafraichirMessageVille } from "./messageVille";
 
@@ -85,13 +85,13 @@ export async function gererBouton(interaction: ButtonInteraction) {
   const [prefixe, action, id] = interaction.customId.split(":");
   if (!action) return;
 
-  // Panneau /admin : "admin:<famille>:<action>" ; panneau /moderation : pas d'identifiant
-  if (prefixe === "admin") {
-    await gererBoutonAdmin(interaction, action, id);
+  // Panneaux /admin et /mj : "<mode>:<famille>:<action>" ; outils propres a /mj : "mj:outils:<action>"
+  if (prefixe === "mj" && action === "outils") {
+    if (id) await gererBoutonOutilMj(interaction, id);
     return;
   }
-  if (prefixe === "moderation") {
-    await gererBoutonModeration(interaction, action);
+  if (prefixe === "admin" || prefixe === "mj") {
+    await gererBoutonPanneau(interaction, prefixe, action, id);
     return;
   }
   if (!id) return;
