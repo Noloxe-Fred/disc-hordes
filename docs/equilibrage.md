@@ -146,6 +146,8 @@ Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gib
 
 **Défense totale = base + bonus palissade (palier atteint) + Σ bonus des gardes assignés cette nuit-là.**
 
+**Garde volontaire** (bouton « Monter la garde » de `/action`, avec confirmation) : **la nuit uniquement**, pour un citoyen **vivant en ville**, une fois par nuit, **6 PA**. Le bonus compte à l'attaque de l'aube si le garde est **toujours vivant et en ville** à ce moment-là (parti dehors, il ne compte plus). Annonce sur la place publique ; le compte rendu de l'aube détaille la défense (base, palissade, nombre de gardes et leur bonus).
+
 ### Attaque de zombies
 - Force de base, nuit 1 : **15**
 - Croissance : **+10 % composé** par cycle nuit suivant — validé tel quel pour le lancement V1 (cohérent avec l'objectif d'une palissade palier 8 atteinte juste avant que l'attaque dépasse le mur passif, voir section 9)

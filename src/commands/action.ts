@@ -14,6 +14,7 @@ import {
   type Guild,
 } from "discord.js";
 import type { Command } from "../client";
+import { COUT_GARDE } from "../config/defense";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
@@ -27,6 +28,7 @@ import { trouverSalonTexte } from "../discord/reconcile";
 import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
 import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
 import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
+import { bonusGarde, estDeGarde, monterLaGarde } from "../discord/garde";
 import { formulaireSoin } from "../discord/soin";
 import { zombieErrantALArrivee } from "../discord/zombieErrant";
 import { sortirDeVille } from "../discord/sortie";
@@ -43,7 +45,8 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte », « Soigner », dehors « Allumer un feu » puis « Sieste », « Annonce » pour le maire,
+// « Carte », « Partager la carte », « Soigner », la nuit en ville « Monter la garde », dehors « Allumer un feu » puis
+// « Sieste », « Annonce » pour le maire,
 // « Quitter la ville »). Face a un zombie
 // (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
 // rejoindre une autre.
@@ -91,12 +94,17 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   const exclu = joueur.statut === StatutJoueur.EXCLU;
   const paActuel = joueur.paActuel ?? 0;
   const feuIci = feuActif(joueur.zoneActuelle, ville);
+  const deGarde = await estDeGarde(joueurId, ville.id, ville.cycleActuel);
+  // Garde volontaire : la nuit, en ville, pour les vivants qui ne la montent pas deja
+  const gardePossible =
+    ville.phaseActuelle === TypePhase.NUIT && joueur.zoneActuelleId === null && joueur.statut === StatutJoueur.VIVANT && !deGarde;
   const entete =
     `## Actions — ${ville.nom}\n` +
     `📍 ${joueur.zoneActuelle ? joueur.zoneActuelle.nom : "En ville"}` +
     ` · ⚡ ${paActuel} / ${calculerPaMax(joueur).paMax} PA` +
     (ville.phaseActuelle === TypePhase.NUIT ? " · 🌙 nuit : actions plus coûteuses" : " · ☀️ jour") +
     (feuIci ? "\n🔥 Un feu brûle ici : zombies deux fois moins nombreux, sieste possible." : "") +
+    (deGarde && ville.phaseActuelle === TypePhase.NUIT ? "\n🛡️ Vous montez la garde cette nuit : restez en ville jusqu'à l'aube." : "") +
     (exclu ? "\nVous êtes **exclu** de votre ville : vous ne pouvez pas y rentrer." : "");
 
   // Allumer un feu : confirmation avant de depenser des PA
@@ -107,6 +115,17 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   ).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("confirmer-feu").setLabel(`Allumer (${coutDuFeu} PA)`).setEmoji("🔥").setStyle(ButtonStyle.Primary),
+      boutonRetour(),
+    ),
+  );
+
+  // Monter la garde : confirmation avant de depenser des PA
+  const ecranGarde = encadre(
+    `${entete}\n\n**Monter la garde** cette nuit pour **${COUT_GARDE} PA** ? À l'aube, vous ajoutez **+${bonusGarde(joueur.metier)}** ` +
+      "à la défense de la ville, si vous êtes toujours en ville.",
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("confirmer-garde").setLabel(`Monter la garde (${COUT_GARDE} PA)`).setEmoji("🛡️").setStyle(ButtonStyle.Primary),
       boutonRetour(),
     ),
   );
@@ -127,6 +146,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
+      ...(gardePossible
+        ? [new ButtonBuilder().setCustomId("garde").setLabel("Monter la garde").setEmoji("🛡️").setStyle(ButtonStyle.Primary)]
+        : []),
       // Dehors : allumer un feu, puis faire la sieste tant qu'il brule
       ...(joueur.zoneActuelle
         ? [
@@ -273,6 +295,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       const resultat = await formulaireAnnonce(clic, joueurId);
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
+      return;
+    } else if (clic.customId === "garde") {
+      await clic.update({ components: [ecranGarde] });
+    } else if (clic.customId === "confirmer-garde") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await monterLaGarde(guild, joueurId))] });
       return;
     } else if (clic.customId === "feu") {
       await clic.update({ components: [ecranFeu] });

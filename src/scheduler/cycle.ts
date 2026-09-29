@@ -2,13 +2,14 @@ import { CauseMort, MeteoType, StatutJoueur, StatutVille, TypeBatiment, TypePhas
 import type { Guild } from "discord.js";
 import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
-import { AVANCE_ALERTE_ATTAQUE_MINUTES } from "../config/defense";
+import { AVANCE_ALERTE_ATTAQUE_MINUTES, BONUS_PALISSADE_CUMULE, DEFENSE_BASE } from "../config/defense";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
 import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { evenementsTombeeNuit, hordeAube } from "../discord/combat";
+import { gardesDeLaNuit } from "../discord/garde";
 import { posterDansMairie } from "../discord/villeStructure";
 import { verifierZombiesErrants } from "../discord/zombieErrant";
 import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
@@ -172,8 +173,11 @@ export async function resoudreAttaque(
 
   const meteoMauvaise = ville.meteoActuelle === MeteoType.MAUVAIS_TEMPS;
   const forceAttaque = calculerForceAttaque(ville.cycleActuel, meteoMauvaise);
-  // Aucun systeme de garde volontaire pour l'instant : bonus de garde toujours nul.
-  const defenseTotale = calculerDefenseTotale(palissade?.palierActuel ?? 0, 0);
+  // Gardes volontaires de la nuit encore vivants et en ville (discord/garde.ts)
+  const gardes = await gardesDeLaNuit(ville.id, ville.cycleActuel);
+  const bonusGardes = gardes.reduce((somme, g) => somme + g.bonus, 0);
+  const palierPalissade = palissade?.palierActuel ?? 0;
+  const defenseTotale = calculerDefenseTotale(palierPalissade, bonusGardes);
 
   if (enregistrer) {
     // Upsert : un admin a pu reculer le cycle sur un numero deja joue
@@ -190,6 +194,8 @@ export async function resoudreAttaque(
   const deficit = Math.max(0, forceAttaque - defenseTotale);
   const compteRendu =
     `🧟 Attaque de zombies sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
+    ` (base ${DEFENSE_BASE}, palissade +${BONUS_PALISSADE_CUMULE[Math.min(palierPalissade, BONUS_PALISSADE_CUMULE.length - 1)]}` +
+    `, ${gardes.length} garde${gardes.length > 1 ? "s" : ""} +${bonusGardes})` +
     (deficit > 0
       ? ` — déficit de ${deficit.toFixed(1)}.` + (lignes.length > 0 ? `\n${lignes.join("\n")}` : "\nPersonne n'a été touché.")
       : " — repoussée sans difficulté.");

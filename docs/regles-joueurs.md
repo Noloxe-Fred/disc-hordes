@@ -65,6 +65,7 @@ Chaque ville vit au rythme d'une **horloge commune** : le jour et la nuit durent
 🌙 **À la tombée de la nuit**, les zombies se rassemblent… La mairie prévient toute la ville à chaque changement de phase, puis **une heure avant l'attaque**.
 ☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, les citoyens présents en ville risquent d'être **blessés**. Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
 
+🛡️ **La nuit, en ville**, le bouton **Monter la garde** de `/action` renforce la défense de l'aube : **+3** pour un citoyen, **+6** pour un **Garde**, pour **6 PA**. Il faut être encore en ville au moment de l'attaque pour que ça compte.
 📈 Les attaques deviennent **plus fortes à chaque nuit**. Une ville qui ne se défend pas finira par tomber.
 
 😴 À chaque changement de phase, si tu es **en ville**, tu as dormi : tes **PA reviennent à leur maximum**.
