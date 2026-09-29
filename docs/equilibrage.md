@@ -280,7 +280,12 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 - **Attaquer** (coût : section 4) : le joueur touche à **70 %** et retire **1 PV** au zombie. Si le zombie est encore debout, il **riposte à 30 %** : **−1 PV** pour le joueur, et c'est un coup reçu (**10 % d'infection**, section 1). Zombie à 0 PV : rencontre terminée, pas de butin pour l'instant.
 - **Armes** portées dans le sac, seule la meilleure compte (dans cet ordre, sans cumul) : **Armes/outils avancés** et **Arme avancée** : −2 PA par attaque et **2 dégâts** par coup ; **Arme simple** : **+10 %** de chance de toucher ; **Arme de fortune** : −1 PA par attaque. Une attaque coûte toujours au moins 1 PA.
 - **Fuir** (coût : section 4) : réussite **75 % le jour, 50 % la nuit**. Réussie : le joueur rebrousse chemin vers la zone (ou la ville) d'où il arrivait, ou reste sur place libéré si le zombie a surgi pendant une fouille. Ratée : le zombie frappe (**−1 PV, sans infection** : fuir n'expose jamais à l'infection) et la rencontre continue.
-- **Rencontre laissée en suspens** (plus assez de PA, joueur absent) : **−1 PV à chaque changement de phase** tant qu'elle dure.
+- **Rencontre laissée en suspens** (plus assez de PA, joueur absent) : **−1 PV à la tombée de la nuit** tant qu'elle dure (à l'aube, seule la horde frappe).
+
+### Changements de phase pour les survivants dehors (vivants ou exclus)
+- **Tombée de la nuit** : pas d'attaque. Sauf zombie déjà présent (−1 PV ci-dessus), **jet de rencontre au taux de nuit** de la zone (22,5 / 45 / 67,5 %), divisé par deux si un feu brûlait pendant la journée qui s'achève, **sans** le bonus des fouilles. Un zombie qui surgit ouvre la rencontre, sans dégâts immédiats ; le joueur est mentionné dans le salon de sa zone.
+- **Aube — la horde** (en même temps que l'attaque de la ville, avant faim/soif) : **tout survivant dehors est attaqué**, sans jet. **PV perdus d'entrée : 1 / 2 / 3** (proche / moyenne / éloignée), **−1 si un feu brûlait** pendant la nuit qui s'achève ; c'est un coup reçu (**10 % d'infection**). S'il survit, un combat s'ouvre contre un zombie aux PV de la zone (s'il en avait déjà un sur le dos, il ne prend que les dégâts). Mention dans le salon de zone ; les morts (« dévoré par la horde ») sont annoncées dans la mairie avec le compte rendu de l'attaque. Rester dehors la nuit coûte donc toujours cher : il faut être rentré avant l'aube.
+- *(Point de conception tranché le 2026-09-29 : auparavant un joueur dehors échappait entièrement à l'attaque de l'aube.)*
 - Mort en combat : cause « tué en territoire externe ».
 - Ordre de grandeur : à mains nues, un zombie moyen demande ~4,3 échanges (~9 PA le jour) et coûte ~1 PV.
 

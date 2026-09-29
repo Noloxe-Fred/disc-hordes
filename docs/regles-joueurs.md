@@ -63,7 +63,7 @@ Les **Territoires externes** de la région (forêt, marécages, montagnes, ville
 Chaque ville vit au rythme d'une **horloge commune** : le jour et la nuit durent **24h réelles** chacun, et basculent à **minuit**.
 
 🌙 **À la tombée de la nuit**, les zombies se rassemblent… La mairie prévient toute la ville à chaque changement de phase, puis **une heure avant l'attaque**.
-☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, les citoyens présents en ville risquent d'être **blessés**. Le compte rendu est posté dans la mairie.
+☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, les citoyens présents en ville risquent d'être **blessés**. Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
 
 📈 Les attaques deviennent **plus fortes à chaque nuit**. Une ville qui ne se défend pas finira par tomber.
 
@@ -119,7 +119,9 @@ Après chaque fouille et à chaque arrivée dans une zone, un **zombie** peut su
 ⚔️ **Attaquer** pour **2 PA** (3 la nuit) : tu touches 7 fois sur 10. Un zombie a **2 PV** en zone proche, **3** en moyenne, **4** en éloignée. S'il tient encore debout, il riposte (3 fois sur 10) : **−1 PV**, et chaque coup reçu peut t'**infecter**.
 🏃 **Fuir** pour **1 PA** (2 la nuit) : ça marche 3 fois sur 4 le jour, 1 fois sur 2 la nuit. Tu rebrousses chemin vers l'endroit d'où tu venais (ou tu restes sur place si tu fouillais). Raté, le zombie te frappe (−1 PV, sans infection).
 🗡️ Une **arme** dans ton sac aide : **arme de fortune** (−1 PA par attaque), **arme simple** (tu touches plus souvent), **arme avancée** (−2 PA et 2 dégâts par coup). Seule la meilleure compte.
-⏳ Un zombie qu'on laisse là ne s'en va pas : **−1 PV à chaque changement de phase** tant que tu ne l'as pas réglé.
+⏳ Un zombie qu'on laisse là ne s'en va pas : **−1 PV à la tombée de la nuit** tant que tu ne l'as pas réglé.
+🌙 **À la tombée de la nuit**, si tu es dehors, un zombie peut sortir de l'ombre et te tomber dessus.
+☀️ **À l'aube, la horde déferle** sur tous ceux qui sont encore dehors : **−1 PV** en zone proche, **−2** en moyenne, **−3** en éloignée (un feu allumé t'en épargne 1), puis un zombie reste sur toi. **Rentre avant l'aube !**
 
 ## 🔥 Feu et sieste
 Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (2 Bois, à fabriquer) pour **1 PA** (2 la nuit). Jusqu'au prochain changement de phase, la zone est plus sûre pour tous ceux qui s'y trouvent : **deux fois moins de zombies**.

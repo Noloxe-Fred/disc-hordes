@@ -8,7 +8,7 @@ import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
-import { blesserRencontresEnSuspens } from "../discord/combat";
+import { evenementsTombeeNuit, hordeAube } from "../discord/combat";
 import { posterDansMairie } from "../discord/villeStructure";
 import { produireEauPuits } from "../services/puits";
 
@@ -99,16 +99,14 @@ async function regenererPa(villeId: number) {
   }
 }
 
-// Effets de chaque changement de phase sur les habitants : faim/soif, rencontres de zombie laissees en suspens
-// (-1 PV), puis regeneration des PA
+// Effets de chaque changement de phase sur les habitants : faim/soif, puis regeneration des PA
 async function appliquerEffetsPhase(guild: Guild, villeId: number) {
   if (await appliquerFaimSoif(guild, villeId)) return;
-  const { morts, villeTombee } = await blesserRencontresEnSuspens(guild, villeId);
-  if (morts.length > 0 && !villeTombee) await posterDansMairie(guild, villeId, morts.join("\n"));
-  if (villeTombee) return;
   await regenererPa(villeId);
 }
 
+// A la tombee de la nuit, rien pour la ville ; dehors, un zombie laisse en plan ronge son joueur (-1 PV) et les
+// autres risquent une rencontre (discord/combat.ts)
 async function basculerVersNuit(guild: Guild, ville: Ville) {
   await prisma.ville.update({
     where: { id: ville.id },
@@ -116,12 +114,16 @@ async function basculerVersNuit(guild: Guild, ville: Ville) {
   });
 
   const aube = Math.floor(prochaineBascule().getTime() / 1000);
+  const dehors = await evenementsTombeeNuit(guild, ville.id, ville.phaseDepuis);
   await posterDansMairie(
     guild,
     ville.id,
-    `🌙 La nuit tombe sur **${ville.nom}**. Les zombies attaqueront à l'aube, <t:${aube}:R>.`,
+    `🌙 La nuit tombe sur **${ville.nom}**. Les zombies attaqueront à l'aube, <t:${aube}:R>.` +
+      (dehors.lignes.length > 0 ? `\n${dehors.lignes.join("\n")}` : "") +
+      (dehors.villeTombee ? `\n\n**${ville.nom}** est tombée.` : ""),
     { mentionnerVille: true },
   );
+  if (dehors.villeTombee) return;
   await appliquerEffetsPhase(guild, ville.id);
 }
 
@@ -197,9 +199,12 @@ export async function resoudreAttaque(
 // tombee de la nuit) : le minuit qui cloture une journee n'a donc jamais d'attaque, a chaque
 // cycle et pour toutes les villes (conception.md §2). Puis le puits verse sa production du nouveau cycle dans la banque.
 async function basculerVersJour(guild: Guild, ville: Ville) {
-  const { compteRendu, villeTombee } = await resoudreAttaque(guild, ville, true);
+  const attaque = await resoudreAttaque(guild, ville, true);
+  // En meme temps, la horde balaie les territoires : tout survivant dehors est attaque (discord/combat.ts)
+  const horde = attaque.villeTombee ? { lignes: [], villeTombee: false } : await hordeAube(guild, ville.id, ville.phaseDepuis);
+  const compteRendu = attaque.compteRendu + (horde.lignes.length > 0 ? `\n${horde.lignes.join("\n")}` : "");
 
-  if (villeTombee) {
+  if (attaque.villeTombee || horde.villeTombee) {
     await posterDansMairie(guild, ville.id, `${compteRendu}\n\n**${ville.nom}** est tombée.`, { mentionnerVille: true });
     return;
   }

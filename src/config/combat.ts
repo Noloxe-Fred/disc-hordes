@@ -37,8 +37,17 @@ export const CHANCE_FUITE: Record<TypePhase, number> = {
   [TypePhase.NUIT]: 0.5,
 };
 
-// Rencontre laissee en suspens : -1 PV a chaque changement de phase tant qu'elle dure
+// Rencontre laissee en suspens : -1 PV a la tombee de la nuit tant qu'elle dure (a l'aube, seule la horde frappe)
 export const DEGATS_RENCONTRE_PAR_PHASE = 1;
+
+// Horde de l'aube : tout survivant dehors est attaque, PV perdus d'entree selon le palier de sa zone (un feu encore
+// allume en retire 1), puis un combat s'ouvre contre un zombie de la zone
+export const DEGATS_HORDE_AUBE: Record<PalierZone, number> = {
+  [PalierZone.PROCHE]: 1,
+  [PalierZone.MOYENNE]: 2,
+  [PalierZone.ELOIGNEE]: 3,
+};
+export const PROTECTION_FEU_HORDE = 1;
 
 // Armes portees dans le sac : seule la meilleure compte (ordre de la liste), sans cumul
 export interface Arme {

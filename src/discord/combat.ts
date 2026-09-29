@@ -1,12 +1,13 @@
-import { CauseMort, StatutJoueur, type PalierZone, type TypePhase } from "@prisma/client";
+import { CauseMort, StatutJoueur, TypePhase, type PalierZone } from "@prisma/client";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, TextDisplayBuilder, type Guild } from "discord.js";
-import { DEGATS_RENCONTRE_PAR_PHASE, DEGATS_ZOMBIE, PV_ZOMBIE } from "../config/combat";
+import { DEGATS_HORDE_AUBE, DEGATS_RENCONTRE_PAR_PHASE, DEGATS_ZOMBIE, PROTECTION_FEU_HORDE, PV_ZOMBIE } from "../config/combat";
 import { emojiObjet } from "../config/objets";
 import { prisma } from "../db";
 import { feuActif } from "../game/feu";
 import { coutAttaque, coutFuite, echangerCoups, meilleureArme, tenterFuite, tirerRencontre } from "../game/combat";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { deplacerJoueur } from "./deplacement";
+import { trouverSalonTexte } from "./reconcile";
 
 // Rencontres de zombies en territoire externe et combat (equilibrage.md §4 et §5). Une rencontre se tire apres chaque
 // fouille et a chaque arrivee dans une zone ; tant qu'elle dure, /action ne propose plus qu'« Attaquer » et « Fuir ».
@@ -170,18 +171,88 @@ export async function fuir(guild: Guild, joueurId: number): Promise<ResultatComb
   return { texte: `🏃 Vous prenez la fuite (−${cout} PA). ${destination}`, enCours: false };
 }
 
-// Rencontres laissees en suspens au changement de phase : -1 PV (le zombie rode toujours). Renvoie les annonces de
-// mort pour la mairie, et si la ville est tombee.
-export async function blesserRencontresEnSuspens(guild: Guild, villeId: number): Promise<{ morts: string[]; villeTombee: boolean }> {
-  const joueurs = await prisma.joueur.findMany({
-    where: { villeId, statut: StatutJoueur.VIVANT, dateSortie: null, rencontrePvZombie: { not: null } },
-    include: { utilisateur: true },
+// --- Evenements des changements de phase pour les survivants dehors (vivants ou exclus) de la ville ---
+// debutPhaseFinie : debut de la phase qui s'acheve, pour savoir si un feu y brulait encore au moment de la bascule.
+
+export interface BilanDehors {
+  // Lignes du compte rendu de la mairie (morts)
+  lignes: string[];
+  villeTombee: boolean;
+}
+
+function survivantsDehors(villeId: number) {
+  return prisma.joueur.findMany({
+    where: {
+      villeId,
+      statut: { in: [StatutJoueur.VIVANT, StatutJoueur.EXCLU] },
+      dateSortie: null,
+      zoneActuelleId: { not: null },
+    },
+    include: { utilisateur: true, zoneActuelle: true },
   });
-  const morts: string[] = [];
-  for (const joueur of joueurs) {
-    const resultat = await infligerDegats(guild, joueur.id, DEGATS_RENCONTRE_PAR_PHASE, CauseMort.COMBAT_EXTERIEUR);
-    if (resultat.mort) morts.push(`💀 <@${joueur.utilisateur.discordId}> a été dévoré par un zombie en territoire externe.`);
-    if (resultat.villeTombee) return { morts, villeTombee: true };
+}
+
+async function prevenirDansLaZone(guild: Guild, zoneId: number, discordId: string, texte: string) {
+  const salon = await trouverSalonTexte(guild, `salon:zone:${zoneId}`);
+  await salon?.send({ content: `<@${discordId}> ${texte}`, allowedMentions: { users: [discordId] } }).catch(() => null);
+}
+
+async function ouvrirRencontre(joueurId: number, palier: PalierZone) {
+  await prisma.joueur.update({
+    where: { id: joueurId },
+    data: { rencontrePvZombie: PV_ZOMBIE[palier], rencontreRetourZoneId: null, rencontreRetourVille: false, fouillesSansRencontre: 0 },
+  });
+}
+
+// Tombee de la nuit : un zombie laisse en plan ronge son joueur (-1 PV) ; sinon, jet de rencontre au taux de nuit de la zone
+// (feu : /2, sans le bonus des fouilles). Un zombie qui surgit ouvre la rencontre, sans degats immediats.
+export async function evenementsTombeeNuit(guild: Guild, villeId: number, debutPhaseFinie: Date | null): Promise<BilanDehors> {
+  const lignes: string[] = [];
+  for (const joueur of await survivantsDehors(villeId)) {
+    const zone = joueur.zoneActuelle!;
+    const mention = joueur.utilisateur.discordId;
+    if (joueur.rencontrePvZombie !== null) {
+      const resultat = await infligerDegats(guild, joueur.id, DEGATS_RENCONTRE_PAR_PHASE, CauseMort.COMBAT_EXTERIEUR);
+      if (resultat.mort) lignes.push(`💀 <@${mention}> a été dévoré par un zombie en territoire externe.`);
+      if (resultat.villeTombee) return { lignes, villeTombee: true };
+      if (!resultat.mort) {
+        const texte = `🧟 le zombie que vous avez laissé vous ronge : −${DEGATS_RENCONTRE_PAR_PHASE} PV. Réglez-le dans \`/action\`.`;
+        await prevenirDansLaZone(guild, zone.id, mention, texte);
+      }
+      continue;
+    }
+    if (!tirerRencontre(zone.palier, TypePhase.NUIT, 0, feuActif(zone, { phaseDepuis: debutPhaseFinie }))) continue;
+    await ouvrirRencontre(joueur.id, zone.palier);
+    await prevenirDansLaZone(guild, zone.id, mention, "🌙 la nuit tombe et un zombie sort de l'ombre ! Combattez ou fuyez dans `/action`.");
   }
-  return { morts, villeTombee: false };
+  return { lignes, villeTombee: false };
+}
+
+// Aube : la horde balaie les territoires. Tout survivant dehors perd d'entree 1/2/3 PV selon sa zone (un feu encore
+// allume en retire 1), coup recu (10 % d'infection), puis un combat s'ouvre s'il n'avait pas deja un zombie sur le dos.
+export async function hordeAube(guild: Guild, villeId: number, debutPhaseFinie: Date | null): Promise<BilanDehors> {
+  const lignes: string[] = [];
+  for (const joueur of await survivantsDehors(villeId)) {
+    const zone = joueur.zoneActuelle!;
+    const mention = joueur.utilisateur.discordId;
+    const feu = feuActif(zone, { phaseDepuis: debutPhaseFinie });
+    const degats = Math.max(0, DEGATS_HORDE_AUBE[zone.palier] - (feu ? PROTECTION_FEU_HORDE : 0));
+    let pvRestants = joueur.pv;
+    if (degats > 0) {
+      const resultat = await infligerDegats(guild, joueur.id, degats, CauseMort.COMBAT_EXTERIEUR);
+      if (resultat.mort) lignes.push(`💀 <@${mention}> a été dévoré par la horde à l'aube (${zone.nom}).`);
+      if (resultat.villeTombee) return { lignes, villeTombee: true };
+      if (resultat.mort) continue;
+      pvRestants = resultat.pvRestants;
+      await tenterInfection(joueur.id); // infection cachee
+    }
+    if (joueur.rencontrePvZombie === null) await ouvrirRencontre(joueur.id, zone.palier);
+    const coup =
+      degats === 0
+        ? ", mais votre feu la tient à distance"
+        : ` : −${degats} PV (${pvRestants} restants)${feu ? ", votre feu vous a épargné un coup" : ""}`;
+    const texte = `☀️ l'aube se lève et la horde déferle sur vous${coup}. Un zombie reste sur vous : combattez ou fuyez dans \`/action\`.`;
+    await prevenirDansLaZone(guild, zone.id, mention, texte);
+  }
+  return { lignes, villeTombee: false };
 }
