@@ -175,6 +175,8 @@ model Ville {
   // Message d'annonce poste dans #fonder-une-colonie a /creer-ville ; supprime avec les
   // messages de demande a /fonder-ville (conception.md §4 : "messages ... supprimes/archives").
   messageAnnonceId      String?
+  // Panneau permanent des chantiers poste dans #chantiers a la fondation (discord/chantiers.ts)
+  messageChantiersId    String?
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
   projet                String?     @db.Text
 
@@ -365,6 +367,8 @@ model BatimentVille {
   villeId      Int
   type         TypeBatiment
   palierActuel Int          @default(0)
+  // PA deja verses pour installer le prochain palier (2 PA par tranche de 10 ressources deposees, equilibrage.md §7)
+  paInstalles  Int          @default(0)
 
   ville         Ville                  @relation(fields: [villeId], references: [id], onDelete: Cascade)
   contributions ContributionBatiment[]

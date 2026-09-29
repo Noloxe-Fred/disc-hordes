@@ -203,7 +203,7 @@ Règles :
 - **Rationnement** : le maire peut limiter l'eau/nourriture de ville si les stocks baissent (décision directe, comme les autres décisions de ville)
 
 ### Chantiers & bâtiments
-- Chantiers communautaires : contribution libre, avec directives de priorité du maire (source de tension si non respectées)
+- Chantiers communautaires : contribution libre, avec directives de priorité du maire (source de tension si non respectées). Interface : **panneau permanent dans `#chantiers`** (état de chaque bâtiment, boutons « Contribuer (sac) », « Contribuer (banque) », « Installer »), mis à jour à chaque avancée ; règles détaillées dans equilibrage.md §7
 - Chaque joueur peut aussi upgrader sa maison personnelle, indépendamment
 - **Bâtiments à paliers** : amélioration par contribution libre comme les chantiers actuels ; **coût de contribution croissant à chaque palier**, pour tous les bâtiments à paliers multiples
 

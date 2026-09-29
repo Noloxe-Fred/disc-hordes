@@ -316,7 +316,9 @@ Coût PA symbolique (1 PA), coût réel = ingrédients. Liste évolutive.
 
 ## 7. Bâtiments — bonus passifs & coûts en ressources
 
-Coût par palier en **ressources déposées dans l'inventaire de ville**, puis **installation** = 2 PA par tranche de 10 points de ressources déposées, gardé tel quel pour le lancement V1 (le vrai goulot d'étranglement est l'acquisition — chaque fouille ne rapporte que 2-5 objets, donc réunir plusieurs centaines de points de ressources prend naturellement plusieurs phases, même si l'installation elle-même est peu coûteuse en PA).
+**Fonctionnement (validé le 2026-09-29)** : panneau permanent dans le salon `#chantiers` de chaque ville, mis à jour à chaque avancée. Les citoyens **vivants présents en ville** (faim et soif ≥ 10) déposent des ressources sur le prochain palier d'un bâtiment, **depuis leur sac ou directement depuis la banque de ville** (gratuit, au plus ce qui manque ; journal public), et versent des **PA d'installation au fur et à mesure** : à tout moment, on peut installer jusqu'à **2 PA par tranche de 10 ressources déjà déposées** (plafonné au coût du palier). Le palier est construit quand ressources et PA sont complets : bonus immédiat, annonce dans `#chantiers` et dans la mairie, avancement remis à zéro pour le palier suivant. La maison privée (personnelle) n'est pas encore sur le panneau.
+
+Coût par palier en **ressources déposées sur le chantier**, puis **installation** = 2 PA par tranche de 10 points de ressources déposées, gardé tel quel pour le lancement V1 (le vrai goulot d'étranglement est l'acquisition — chaque fouille ne rapporte que 2-5 objets, donc réunir plusieurs centaines de points de ressources prend naturellement plusieurs phases, même si l'installation elle-même est peu coûteuse en PA).
 
 | Bâtiment | Palier | Coût en ressources | Installation (PA) | Bonus passif |
 |---|---|---|---|---|

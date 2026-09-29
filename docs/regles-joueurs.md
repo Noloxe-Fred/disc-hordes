@@ -129,6 +129,15 @@ Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (
 😴 Tant que le feu brûle, le bouton **Sieste** te rend **25 % de tes PA max**, une fois par phase. Mais un zombie peut quand même te surprendre dans ton sommeil : la sieste est alors fichue, et il faut se battre.
 
 
+# 🏗️ Les chantiers
+
+Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâtiment : la **palissade** (défense contre l'attaque de l'aube), la **place publique** (plus de place dans la banque), le **puits** (de l'eau chaque matin), l'**atelier** et la **mairie**.
+🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** : dépose des ressources sur le prochain palier d'un bâtiment, depuis ton sac ou directement depuis la banque. C'est gratuit.
+🔨 **Installer** : verse tes PA pour bâtir, **2 PA par tranche de 10 ressources déposées**. Pas besoin d'attendre que tout soit réuni : on installe au fur et à mesure.
+✅ Quand toutes les ressources et tous les PA sont là, le palier est construit et son effet s'applique tout de suite. La mairie l'annonce.
+Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim et soif d'au moins 10).
+
+
 # 🎒 Ton sac
 
 `/inventaire` affiche ce que tu portes, en ville comme dehors.
@@ -192,7 +201,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 En préparation
-🔨 Chantiers et atelier · 🗳️ Élections du maire
+🔧 Atelier et maisons · 🗳️ Élections du maire
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

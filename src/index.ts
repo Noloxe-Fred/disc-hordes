@@ -8,6 +8,7 @@ import { gererBouton } from "./discord/boutons";
 import { synchroniserNomade } from "./discord/joueurDiscord";
 import { ensureAdjacencesGroupe } from "./services/zones";
 import { demarrerHorlogeCycle } from "./scheduler/cycle";
+import { rafraichirTousLesPanneaux } from "./discord/chantiers";
 
 const client = createClient();
 
@@ -35,6 +36,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   for (const { id } of await prisma.groupe.findMany({ select: { id: true } })) {
     await ensureAdjacencesGroupe(id).catch((error) => console.error(`Adjacences du groupe ${id} impossibles`, error));
   }
+
+  // Panneau des chantiers de chaque ville en jeu (villes fondees avant sa mise en place, message supprime...)
+  const guild = readyClient.guilds.cache.first();
+  if (guild) await rafraichirTousLesPanneaux(guild);
 
   demarrerHorlogeCycle(client);
 });
