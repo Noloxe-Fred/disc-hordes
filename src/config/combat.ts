@@ -4,9 +4,9 @@ import { PalierZone, TypePhase } from "@prisma/client";
 
 // Chance de rencontre apres chaque fouille et a chaque arrivee dans une zone, selon son palier ; x1,5 la nuit
 export const CHANCE_RENCONTRE: Record<PalierZone, number> = {
-  [PalierZone.PROCHE]: 0.1,
-  [PalierZone.MOYENNE]: 0.2,
-  [PalierZone.ELOIGNEE]: 0.35,
+  [PalierZone.PROCHE]: 0.15,
+  [PalierZone.MOYENNE]: 0.3,
+  [PalierZone.ELOIGNEE]: 0.45,
 };
 export const MAJORATION_RENCONTRE_NUIT = 1.5;
 

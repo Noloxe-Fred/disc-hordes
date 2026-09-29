@@ -259,11 +259,12 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 
 | Palier | Probabilité de rencontre zombie (par fouille/déplacement) |
 |---|---|
-| Proche (palier 1) | 10 % |
-| Moyenne (palier 2) | 20 % |
-| Éloignée (palier 3) | 35 % |
+| Proche (palier 1) | 15 % |
+| Moyenne (palier 2) | 30 % |
+| Éloignée (palier 3) | 45 % |
 
-- **La nuit** : probabilité ×1,5, cohérent avec le principe "la nuit, rencontres plus dangereuses".
+- *(Relevées le 2026-09-29, depuis 10 / 20 / 35 %, jugées trop rares en test.)*
+- **La nuit** : probabilité ×1,5 (22,5 / 45 / 67,5 %), cohérent avec le principe "la nuit, rencontres plus dangereuses".
 - **Jet** après chaque fouille et à chaque arrivée dans une zone. Tant que la rencontre dure, `/action` ne propose plus que « Attaquer » et « Fuir » : ni fouille, ni déplacement, ni observation, ni retour en ville.
 
 ### Combat contre un zombie
