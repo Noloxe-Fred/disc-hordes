@@ -258,7 +258,7 @@ Règles :
 - IA gérée en local, en surcouche du jeu
 - Génère des événements aléatoires en ville (incendie, tempête, attaque de bandits, nourriture contaminée, etc.)
 - Gère les rencontres en territoire externe : monstres à combattre, mais aussi humains avec qui parler, échanger, commercer ou se battre via des discussions en temps réel
-  - **V0.1** : stub simplifié, zombie uniquement, probabilité liée au palier de zone (10/20/35 % proche/moyenne/éloignée, ×1,5 la nuit) — rencontres humaines/bandits et table complète de dangerosité reportées à la bêta, confirmé hors scope V1 ; valeurs stub détaillées dans le document d'équilibrage
+  - **V0.1** : stub simplifié, zombie uniquement, probabilité liée au palier de zone (15/30/45 % proche/moyenne/éloignée, ×1,5 la nuit) — rencontres humaines/bandits et table complète de dangerosité reportées à la bêta, confirmé hors scope V1 ; valeurs stub détaillées dans le document d'équilibrage
 - Journal de bord automatique posté par le bot ; réflexion sur un appui IA pour raconter de petits événements narrés du point de vue des gardes ou des joueurs bloqués dehors
 - Flux public dans le journal de bord pour les actions en ville ; rien de public pour le territoire externe — les joueurs doivent raconter eux-mêmes ; un joueur doit prévenir de sa zone s'il pourrait avoir besoin d'être rapatrié ; prévoir une fusée de détresse pour indiquer sa zone sinon
 - Scénarios narratifs : événements aléatoires en V1, avec possibilité d'un petit arbre de mini-quête proposé par un PNJ extérieur ; scénarios complexes reportés en V2
