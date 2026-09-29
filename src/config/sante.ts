@@ -38,3 +38,7 @@ export const BONUS_PA_MAISON_PALIER_2 = 0.15;
 
 // Sieste en territoire externe, pres d'un feu : +25 % du PA max effectif, une fois par phase (equilibrage.md §1)
 export const FRACTION_PA_SIESTE = 0.25;
+
+// Infusion medicinale : malus PA de l'infection reduit de 10 points jusqu'au prochain changement de phase
+// (equilibrage.md §8), sans ralentir l'incubation
+export const ATTENUATION_INFUSION_POINTS = 10;

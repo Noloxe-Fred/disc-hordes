@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille, type TypeBatiment } from "@prisma/client";
+import { StatutJoueur, StatutVille, TypeBatiment } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -15,6 +15,7 @@ import {
   type Guild,
 } from "discord.js";
 import { CHANTIERS, chantier, type Chantier } from "../config/batiments";
+import { BONUS_STRUCTURE_DEFENSE, OBJET_STRUCTURE_DEFENSE, STRUCTURES_DEFENSE_MAX } from "../config/defense";
 import { emojiObjet } from "../config/objets";
 import { SEUIL_CRITIQUE_FAIM_SOIF } from "../config/sante";
 import { prisma } from "../db";
@@ -23,7 +24,7 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
-import { posterDansMairie } from "./villeStructure";
+import { posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
 
 // Chantiers communautaires (conception.md §5, equilibrage.md §7) : un panneau permanent dans #chantiers de chaque ville,
 // mis a jour a chaque avancee. « Contribuer (sac) » / « Contribuer (banque) » deposent des ressources sur le prochain
@@ -94,6 +95,11 @@ function ligneChantier(etat: EtatChantier): string {
 
 export async function construirePanneauChantiers(villeId: number): Promise<ContainerBuilder> {
   const etats = await etatsChantiers(villeId);
+  const { structuresDefense } = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
+  const structures =
+    `🛡️ **Structures de défense avancées** — ${structuresDefense} / ${STRUCTURES_DEFENSE_MAX} posées` +
+    ` (+${structuresDefense * BONUS_STRUCTURE_DEFENSE} défense)\n-# Fabriquées par un ingénieur à l'atelier, posées avec le bouton ` +
+    `ci-dessous : +${BONUS_STRUCTURE_DEFENSE} défense chacune, pour toujours.`;
   return new ContainerBuilder()
     .setAccentColor(COULEUR)
     .addTextDisplayComponents(
@@ -101,7 +107,8 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
         "## 🏗️ Chantiers de la ville\n" +
           "Déposez des ressources (depuis votre sac ou la banque, gratuit), puis installez-les avec vos PA : " +
           "2 PA par tranche de 10 ressources déposées. Un palier est construit quand tout est réuni.\n\n" +
-          etats.map(ligneChantier).join("\n\n"),
+          etats.map(ligneChantier).join("\n\n") +
+          `\n\n${structures}`,
       ),
     )
     .addActionRowComponents(
@@ -109,6 +116,12 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
         new ButtonBuilder().setCustomId(`chantier:sac:${villeId}`).setLabel("Contribuer (sac)").setEmoji("🎒").setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`chantier:banque:${villeId}`).setLabel("Contribuer (banque)").setEmoji("🏦").setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`chantier:installer:${villeId}`).setLabel("Installer").setEmoji("🔨").setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`chantier:structure:${villeId}`)
+          .setLabel("Poser une structure")
+          .setEmoji("🛡️")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(structuresDefense >= STRUCTURES_DEFENSE_MAX),
       ),
     );
 }
@@ -133,6 +146,7 @@ export async function rafraichirPanneauChantiers(guild: Guild, villeId: number):
 export async function rafraichirTousLesPanneaux(guild: Guild): Promise<void> {
   for (const { id } of await prisma.ville.findMany({ where: { statut: StatutVille.ACTIVE }, select: { id: true } })) {
     await rafraichirPanneauChantiers(guild, id).catch((error) => console.error(`Panneau des chantiers de la ville ${id}`, error));
+    await synchroniserSalonAtelier(guild, id).catch((error) => console.error(`Salon atelier de la ville ${id}`, error));
   }
 }
 
@@ -174,6 +188,10 @@ export async function gererBoutonChantier(interaction: ButtonInteraction, action
   const { refus, joueur } = await ouvrier(interaction, villeId);
   if (refus || !joueur) {
     await interaction.reply({ content: refus, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (action === "structure") {
+    await interaction.reply({ content: await poserStructure(interaction.guild, joueur.id, villeId), flags: MessageFlags.Ephemeral });
     return;
   }
   const etats = (await etatsChantiers(villeId)).filter((e) => prochainPalier(e) !== null);
@@ -353,5 +371,37 @@ async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatime
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:chantiers`);
   await salon?.send({ content: `${annonce} Dernière pierre posée par <@${joueur.utilisateur.discordId}>.`, allowedMentions: { parse: [] } }).catch(() => null);
   await posterDansMairie(guild, villeId, annonce);
+  // L'atelier construit ouvre son salon, ou se fait le craft avance
+  if (type === TypeBatiment.ATELIER) await synchroniserSalonAtelier(guild, villeId);
   return annonce;
+}
+
+// Structure de defense avancee posee (sac, puis banque) : +3 defense definitive pour la ville, 5 au plus
+async function poserStructure(guild: Guild, joueurId: number, villeId: number): Promise<string> {
+  const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
+  if (ville.structuresDefense >= STRUCTURES_DEFENSE_MAX) return `La ville a déjà ${STRUCTURES_DEFENSE_MAX} structures de défense : c'est le maximum.`;
+  const objet = await prisma.objet.findUniqueOrThrow({ where: { nom: OBJET_STRUCTURE_DEFENSE } });
+  const sac = await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId, objetId: objet.id } } });
+  const banque = await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId, objetId: objet.id } } });
+  const source = sac && sac.quantite > 0 ? "sac" : banque && banque.quantite > 0 ? "banque" : null;
+  if (!source) return `Il faut une ${emojiObjet(objet.nom)} **${objet.nom}** dans votre sac ou dans la banque (fabriquée par un ingénieur à l'atelier).`;
+
+  await prisma.$transaction([
+    source === "sac"
+      ? prisma.inventaireJoueur.update({ where: { id: sac!.id }, data: { quantite: { decrement: 1 } } })
+      : prisma.inventaireVille.update({ where: { id: banque!.id }, data: { quantite: { decrement: 1 } } }),
+    prisma.ville.update({ where: { id: villeId }, data: { structuresDefense: { increment: 1 } } }),
+    prisma.journalEntree.create({ data: { villeId, joueurId, message: `Structure de défense posée${source === "banque" ? " (banque)" : ""}` } }),
+  ]);
+  const total = (ville.structuresDefense + 1) * BONUS_STRUCTURE_DEFENSE;
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
+  const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:chantiers`);
+  await salon
+    ?.send({
+      content: `🛡️ <@${joueur.utilisateur.discordId}> pose une structure de défense : +${BONUS_STRUCTURE_DEFENSE} défense (total +${total}).`,
+      allowedMentions: { parse: [] },
+    })
+    .catch(() => null);
+  await rafraichirPanneauChantiers(guild, villeId);
+  return `🛡️ Vous posez une structure de défense${source === "banque" ? " prise à la banque" : ""} : **+${BONUS_STRUCTURE_DEFENSE} défense** pour la ville (total +${total}).`;
 }

@@ -1,9 +1,21 @@
+import { TypeBatiment } from "@prisma/client";
 import { PermissionFlagsBits, type Guild, type Role, type TextChannel } from "discord.js";
-import { ensureCategory, ensureRole, ensureTextChannel, ensureVoiceChannel, trouverRole, trouverSalonTexte } from "./reconcile";
+import { prisma } from "../db";
+import { synchroniserAccesJoueur } from "./joueurDiscord";
+import {
+  ensureCategory,
+  ensureRole,
+  ensureTextChannel,
+  ensureVoiceChannel,
+  supprimerRessources,
+  trouverCategorie,
+  trouverRole,
+  trouverSalonTexte,
+} from "./reconcile";
 import { ROLE_MJ } from "./structure";
 
 // Structure de la categorie "Ville" a la fondation (conception.md §1) : mairie, place
-// publique, chantiers, atelier, un salon "maisons privees" (un seul salon partage,
+// publique, chantiers, un salon "maisons privees" (un seul salon partage,
 // la gestion par joueur se fait via Joueur.maisonPalier plutot que par salon dedie), et un
 // salon vocal general lie au role-ville. La mairie est fermee : seules y paraissent les annonces
 // de la ville (bot) et celles du maire (bouton « Annonce » de /action) ; les joueurs n'y ecrivent pas.
@@ -43,7 +55,6 @@ export async function creerStructureVille(guild: Guild, villeId: number, nomVill
   ]);
   await ensureTextChannel(guild, `salon:ville:${villeId}:place-publique`, "place-publique", categorie.id);
   await ensureTextChannel(guild, `salon:ville:${villeId}:chantiers`, "chantiers", categorie.id);
-  await ensureTextChannel(guild, `salon:ville:${villeId}:atelier`, "atelier", categorie.id);
   await ensureTextChannel(guild, `salon:ville:${villeId}:maisons-privees`, "maisons-privées", categorie.id);
   await ensureVoiceChannel(guild, `salon:ville:${villeId}:vocal`, `Ville ${nomVille}`, categorie.id);
 
@@ -67,4 +78,21 @@ export async function posterDansMairie(
       allowedMentions: { parse: ["users"], roles: roleVille ? [roleVille.id] : [] },
     })
     .catch(() => null);
+}
+
+// Salon « atelier » : il n'existe que lorsque l'atelier de la ville est construit (palier 1 ou plus) ; c'est la que se
+// fait le craft avance (/inventaire). Cree ou supprime selon le palier, puis acces des habitants recalcules.
+export async function synchroniserSalonAtelier(guild: Guild, villeId: number): Promise<void> {
+  const cle = `salon:ville:${villeId}:atelier`;
+  const atelier = await prisma.batimentVille.findUnique({ where: { villeId_type: { villeId, type: TypeBatiment.ATELIER } } });
+  if ((atelier?.palierActuel ?? 0) < 1) {
+    await supprimerRessources(guild, [cle]);
+    return;
+  }
+  if (await trouverSalonTexte(guild, cle)) return;
+  const categorie = await trouverCategorie(guild, `categorie:ville:${villeId}`);
+  if (!categorie) return;
+  await ensureTextChannel(guild, cle, "atelier", categorie.id);
+  const habitants = await prisma.joueur.findMany({ where: { villeId, dateSortie: null }, select: { id: true } });
+  for (const { id } of habitants) await synchroniserAccesJoueur(guild, id);
 }

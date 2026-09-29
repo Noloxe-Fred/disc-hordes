@@ -13,6 +13,8 @@ export interface Soin {
   coutJour: number;
   ingredients: { nom: string; quantite: number }[];
   metier?: Metier;
+  // Remede contre l'infection : guerit l'infection de la cible au lieu de rendre des PV (gratuit en PA)
+  gueritInfection?: boolean;
 }
 
 export const SOINS: readonly Soin[] = [
@@ -35,6 +37,15 @@ export const SOINS: readonly Soin[] = [
       { nom: "Plante médicinale", quantite: 1 },
     ],
     metier: Metier.MEDECIN,
+  },
+  {
+    id: "remede",
+    libelle: "Remède contre l'infection",
+    pv: 0,
+    coutJour: 0,
+    ingredients: [{ nom: "Remède contre l'infection", quantite: 1 }],
+    metier: Metier.MEDECIN,
+    gueritInfection: true,
   },
 ];
 

@@ -10,7 +10,7 @@ import { rafraichirPanneauChantiers } from "../chantiers";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "../messageVille";
 import { renommerRessource, supprimerRessources } from "../reconcile";
 import { LONGUEUR_MAX_NOM_VILLE } from "../texteLibre";
-import { posterDansMairie } from "../villeStructure";
+import { posterDansMairie, synchroniserSalonAtelier } from "../villeStructure";
 import { PALIERS_ZONE, TYPES_ZONE, typeDeZone } from "../../config/zones";
 import { rechargerZones } from "../../services/stocks";
 import {
@@ -265,6 +265,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
           maisonPalier: 0,
           bonusPaReveil: 0,
           fouillesSansRencontre: 0,
+          infusionJusqua: null,
           rencontrePvZombie: null, rencontreRetourZoneId: null, rencontreRetourVille: false,
           xp: 0,
           dateMort: null,
@@ -281,6 +282,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
         phaseDepuis: new Date(),
         meteoActuelle: MeteoType.NORMALE,
         rationnementActif: false,
+        structuresDefense: 0,
         mandatFinCycle: ville.maireId !== null ? CYCLES_PAR_MANDAT_MAIRE : null,
       },
     }),
@@ -315,6 +317,7 @@ async function reset(interaction: ButtonInteraction, guild: Guild) {
   await resetVille(guild, ville.id);
   await posterDansMairie(guild, ville.id, `🔄 **${ville.nom}** repart de zéro : cycle 1, le jour se lève.`);
   await rafraichirPanneauChantiers(guild, ville.id);
+  await synchroniserSalonAtelier(guild, ville.id);
   await journaliser(interaction.user, "Reset d'une ville", `${ville.nom} (#${ville.id}), était au cycle ${ville.cycleActuel}`);
   await choix.editReply(`**${ville.nom}** a été réinitialisée (cycle 1).`);
 }

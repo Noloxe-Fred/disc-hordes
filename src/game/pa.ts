@@ -1,5 +1,6 @@
 import type { Joueur } from "@prisma/client";
 import {
+  ATTENUATION_INFUSION_POINTS,
   BONUS_PA_MAISON_PALIER_2,
   JAUGE_MAX,
   MALUS_PA_JAUGE_MAX,
@@ -25,7 +26,7 @@ export interface EtatPa {
 
 type JoueurPa = Pick<
   Joueur,
-  "paMax" | "pv" | "faim" | "soif" | "phasesFaimVide" | "phasesSoifVide" | "infecteDepuis" | "maisonPalier"
+  "paMax" | "pv" | "faim" | "soif" | "phasesFaimVide" | "phasesSoifVide" | "infecteDepuis" | "maisonPalier" | "infusionJusqua"
 >;
 
 // Malus progressif : faible quand la jauge commence a baisser, de plus en plus fort en approchant de 0
@@ -48,7 +49,10 @@ export function calculerPaMax(joueur: JoueurPa, maintenant: Date = new Date()): 
   if (malusSoif > 0) modificateurs.push({ libelle: "soif", fraction: -malusSoif });
 
   if (joueur.infecteDepuis) {
-    const { malusPaPourcent } = calculerEtatInfection(joueur.infecteDepuis, maintenant);
+    const { malusPaPourcent: malusBrut } = calculerEtatInfection(joueur.infecteDepuis, maintenant);
+    // Infusion medicinale bue pendant la phase : malus attenue
+    const attenuation = joueur.infusionJusqua && joueur.infusionJusqua > maintenant ? ATTENUATION_INFUSION_POINTS : 0;
+    const malusPaPourcent = Math.max(0, malusBrut - attenuation);
     if (malusPaPourcent > 0) modificateurs.push({ libelle: "infection", fraction: -malusPaPourcent / 100 });
   }
 

@@ -179,6 +179,8 @@ model Ville {
   messageAnnonceId      String?
   // Panneau permanent des chantiers poste dans #chantiers a la fondation (discord/chantiers.ts)
   messageChantiersId    String?
+  // Structures de defense avancees posees (ingenieur) : +3 defense chacune, definitivement (equilibrage.md §8)
+  structuresDefense     Int         @default(0)
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
   projet                String?     @db.Text
 
@@ -437,6 +439,8 @@ model Joueur {
   fouillesSansRencontre Int          @default(0)
   // Derniere sieste en territoire externe : une seule par phase (equilibrage.md §1)
   derniereSieste        DateTime?
+  // Infusion medicinale bue : malus PA de l'infection attenue jusqu'a cette date (prochain changement de phase)
+  infusionJusqua        DateTime?
   xp                    Int          @default(0)
   dateArrivee           DateTime     @default(now())
   dateSortie            DateTime?

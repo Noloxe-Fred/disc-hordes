@@ -363,6 +363,13 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 | **Chasseur/trappeur** | Pièges avancés | 2 Ferraille + 2 Bois + 1 Gibier (appât) | 5 | Chance de loot passif nettement supérieure au piège simple |
 | **Artisan** | Armes/outils avancés | 3 Ferraille + 2 Bois + 1 Pièce mécanique | 6 | −2 PA sur "attaquer" + bonus dégâts en combat |
 
+**Fonctionnement (validé le 2026-09-29)** :
+- Le salon **`atelier`** de la ville n'existe qu'une fois l'atelier construit (palier 1). Le bouton **« Craft avancé »** de `/inventaire` n'apparaît que si la commande est lancée **dans ce salon**, par un citoyen vivant en ville, faim et soif ≥ 10. Il propose les recettes du métier du joueur ; les ingrédients sont pris **dans le sac, puis complétés par la banque de ville** ; coût en PA de la recette, identique la nuit. Aucune recette n'est encore réservée au palier 2 de l'atelier.
+- **Remède contre l'infection** : administré par le **médecin** (option du bouton « Soigner » de `/action`, sur soi ou un survivant au même endroit, gratuit en PA). L'infection étant cachée, le joueur doit dire au médecin qu'il est infecté : si la cible ne l'était pas, le remède est **consommé** et un message d'erreur le signale.
+- **Structures de défense avancées** : posées avec le bouton « Poser une structure » du panneau `#chantiers` (sac, puis banque) : **+3 défense définitive** chacune, **5 au plus (+15)**, comptées dans la défense de l'aube (section 3).
+- **Infusion médicinale** : le malus PA de l'infection est réduit de **10 points** (ex. −25 % → −15 %, sans passer sous 0) jusqu'au prochain changement de phase ; l'incubation n'est pas ralentie.
+- **Réparation voiture** et **Pièges avancés** : fabricables, effet à venir (voiture T39, pièges non chiffrés).
+
 **Coûts PA (validés)** : seuls le remède et la réparation voiture avaient un chiffre exact au premier jet ; les 6 autres recettes n'étaient couvertes que par la fourchette générale de la section 4 (4–8 PA). Chiffrage retenu par palier d'utilité, cohérent avec les deux valeurs déjà fixées : 8 PA pour les bonus durables/structurels (structures de défense, à l'image de la réparation voiture), 6 PA pour un bonus de combat permanent (armes/outils avancés, même tier que le remède), 5 PA pour un effet notable mais consommable (pièges avancés, ragoût fortifiant), 4 PA pour un effet mineur/de confort (conserve longue durée, infusion médicinale).
 
 Les 3 recettes cuisinier sont gardées telles quelles pour le lancement V1 (pas de nerf), malgré le déséquilibre relevé face aux autres métiers à une seule recette exclusive — à surveiller pendant la bêta plutôt qu'à corriger a priori.

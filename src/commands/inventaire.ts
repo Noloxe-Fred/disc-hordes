@@ -22,6 +22,7 @@ import { CAPACITE_SAC, emojiObjet, estEquipement, OBJET_RADIO, poidsObjet } from
 import { prisma } from "../db";
 import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
+import { ecranConfirmationAvance, ecranCraftAvance, estDansAtelier, fabriquerAvance, type RecetteAvancee } from "../discord/atelier";
 import { formulaireConsommer } from "../discord/consommation";
 import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
@@ -100,6 +101,8 @@ function manquants(recette: RecetteSimple, sac: Map<number, number>): string[] {
 async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueurId: number) {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   const actif = peutAgir(joueur);
+  // Craft avance : seulement depuis le salon atelier de sa ville, une fois l'atelier construit (discord/atelier.ts)
+  const atelier = interaction.guild !== null && (await estDansAtelier(interaction.guild, interaction.channelId, joueur));
   const paActuel = joueur.paActuel ?? 0;
 
   const entete = `## 🎒 Inventaire — ${interaction.user.username}` + (actif ? `\n⚡ ${paActuel} PA` : "");
@@ -134,6 +137,9 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
             ? [new ButtonBuilder().setCustomId("banque").setLabel("Banque").setEmoji("🏦").setStyle(ButtonStyle.Secondary)]
             : []),
           new ButtonBuilder().setCustomId("poser").setLabel("Déposer un objet").setEmoji("⬇️").setStyle(ButtonStyle.Secondary),
+          ...(atelier
+            ? [new ButtonBuilder().setCustomId("craft-avance").setLabel("Craft avancé").setEmoji("🛠️").setStyle(ButtonStyle.Primary)]
+            : []),
         ),
         new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder().setCustomId("consommer-sac").setLabel("Manger / boire (sac)").setEmoji("🍲").setStyle(ButtonStyle.Success),
@@ -153,6 +159,8 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
   const recettes = await recettesSimples();
   let quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
   let recette: RecetteSimple | undefined;
+  let recetteAvancee: RecetteAvancee | undefined;
+  let recettesAvancees: RecetteAvancee[] = [];
 
   for (;;) {
     const clic = await reponse.awaitMessageComponent({ time: DELAI_CHOIX_MS }).catch(() => null);
@@ -173,6 +181,19 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       const ecran = { components: [conteneur], attachments: [], files: fichiers };
       if (!resultat.soumission) await clic.update(ecran);
       else if (resultat.soumission.isFromMessage()) await resultat.soumission.update(ecran);
+    } else if (clic.customId === "craft-avance") {
+      const { recettes: liste, ecran } = await ecranCraftAvance(joueurId, entete, boutonRetour());
+      recettesAvancees = liste;
+      await clic.update({ components: [ecran], attachments: [] });
+    } else if (clic.isStringSelectMenu() && clic.customId === "recette-avancee") {
+      recetteAvancee = recettesAvancees.find((r) => String(r.id) === clic.values[0]);
+      if (!recetteAvancee) return;
+      await clic.update({ components: [await ecranConfirmationAvance(joueurId, recetteAvancee, entete, boutonRetour())] });
+    } else if (clic.customId === "confirmer-avance" && recetteAvancee) {
+      await clic.deferUpdate();
+      const texte = await fabriquerAvance(clic.guild!, interaction.channelId, joueurId, recetteAvancee.id);
+      await clic.editReply({ components: [encadre(texte)], attachments: [] });
+      return;
     } else if (clic.customId === "fabriquer") {
       await clic.update({
         components: [

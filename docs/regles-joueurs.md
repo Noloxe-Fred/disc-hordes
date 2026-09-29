@@ -51,7 +51,7 @@ Ta ville apparaît dans #fonder-une-colonie avec quatre boutons :
 ☝️ Une seule ville (ou demande) à la fois.
 
 ## 🏙️ À la fondation
-La ville reçoit ses salons privés : mairie, place publique, chantiers, atelier, maisons privées et un vocal.
+La ville reçoit ses salons privés : mairie, place publique, chantiers, maisons privées et un vocal. Le salon **atelier** s'ouvre quand l'atelier est construit.
 🏛️ La **mairie** est le tableau d'affichage de la ville : tu la lis, mais tu n'y écris pas. On y trouve les annonces de la ville et celles du **maire**. Pour discuter, direction la **place publique**.
 Le **créateur devient le premier maire** pour 4 cycles. Le maire publie ses annonces dans la mairie avec le bouton **Annonce** de `/action`, en notifiant ou non toute la ville.
 Tous les habitants deviennent **Citoyens**. Plus personne ne peut rejoindre la ville ensuite.
@@ -87,6 +87,7 @@ Deux jauges de **0 à 100**, qui baissent à chaque changement de phase. La mair
 Le bouton **Soigner** de `/action` soigne **toi-même** ou un survivant **au même endroit** que toi (un citoyen en ville, n'importe qui dans ta zone dehors) :
 🩹 **Soin basique** : **+2 PV** avec **1 Bandage**, pour **2 PA** (3 la nuit). Tout le monde peut le faire.
 💊 **Soin avancé** : **+5 PV** avec **1 Médicament basique**, ou **1 Bandage + 1 Plante médicinale**, pour **4 PA** (6 la nuit). Réservé au **Médecin**.
+💉 **Remède contre l'infection** : le **Médecin** l'administre gratuitement. Personne ne voit ton infection : c'est à toi de la lui avouer ! S'il soigne quelqu'un qui n'était pas infecté, le remède est perdu.
 On ne dépasse jamais **10 PV**, et chaque PV rendu redonne des PA max. Soigner quelqu'un est annoncé dans le salon du lieu.
 
 ## 🏠 Ta maison
@@ -136,6 +137,11 @@ Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (
 Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâtiment : la **palissade** (défense contre l'attaque de l'aube), la **place publique** (plus de place dans la banque), le **puits** (de l'eau chaque matin), l'**atelier** et la **mairie**.
 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** : dépose des ressources sur le prochain palier d'un bâtiment, depuis ton sac ou directement depuis la banque. C'est gratuit.
 🔨 **Installer** : verse tes PA pour bâtir, **2 PA par tranche de 10 ressources déposées**. Pas besoin d'attendre que tout soit réuni : on installe au fur et à mesure.
+🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense pour toujours** (5 au plus).
+
+## 🛠️ L'atelier
+Une fois l'atelier construit, son salon s'ouvre. Lance `/inventaire` **dans ce salon** : le bouton **Craft avancé** te propose les recettes de ton métier. Les ingrédients viennent de ton sac, puis de la banque.
+💉 **Médecin** : remède contre l'infection · 🛡️ **Ingénieur** : structures de défense (et réparation de voiture, bientôt utile) · 🥘 **Cuisinier** : ragoût fortifiant (+40 faim, +2 PA au réveil), conserve (+25 faim), infusion (+15 soif, soulage l'infection) · 🪤 **Chasseur** : pièges avancés (bientôt utiles) · 🛠️ **Artisan** : armes/outils avancés (−2 PA et 2 dégâts par coup en combat)
 ✅ Quand toutes les ressources et tous les PA sont là, le palier est construit et son effet s'applique tout de suite. La mairie l'annonce.
 Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim et soif d'au moins 10).
 
@@ -203,7 +209,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 En préparation
-🔧 Atelier et maisons · 🗳️ Élections du maire
+🏠 Maisons · 🗳️ Élections du maire
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

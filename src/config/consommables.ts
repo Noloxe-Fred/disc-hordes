@@ -8,6 +8,8 @@ export interface EffetConsommable {
   // Chance, a chaque unite consommee, de perdre des PV
   risque?: { chance: number; pv: number };
   bonusPaReveil?: number;
+  // Attenue le malus PA de l'infection jusqu'au prochain changement de phase (infusion medicinale)
+  attenueInfection?: boolean;
 }
 
 const CONSOMMABLES: Record<string, EffetConsommable> = {
@@ -21,7 +23,7 @@ const CONSOMMABLES: Record<string, EffetConsommable> = {
   // Craft avance (cuisinier)
   "Ragoût fortifiant": { faim: 40, bonusPaReveil: 2 },
   "Conserve longue durée": { faim: 25 },
-  "Infusion médicinale": { soif: 15 },
+  "Infusion médicinale": { soif: 15, attenueInfection: true },
 };
 
 export function effetConsommable(nom: string): EffetConsommable | undefined {
@@ -34,6 +36,7 @@ export function libelleEffet(effet: EffetConsommable): string {
     effet.faim ? `+${effet.faim} faim` : null,
     effet.soif ? `+${effet.soif} soif` : null,
     effet.bonusPaReveil ? `+${effet.bonusPaReveil} PA au réveil` : null,
+    effet.attenueInfection ? "soulage l'infection" : null,
     effet.risque ? `risque −${effet.risque.pv} PV (${Math.round(effet.risque.chance * 100)} %)` : null,
   ]
     .filter((l) => l !== null)

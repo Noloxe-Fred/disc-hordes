@@ -8,6 +8,7 @@ import { calculerPaMax } from "../game/pa";
 import { infligerDegats } from "../game/sante";
 import { empechementBanque } from "./banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
+import { prochaineBascule } from "../scheduler/cycle";
 import { posterDansMairie } from "./villeStructure";
 
 // Manger et boire (equilibrage.md §2, « Consommation ») depuis /inventaire : partout avec ce qu'on a dans son sac, et
@@ -116,7 +117,10 @@ async function consommer(guild: Guild, joueurId: number, source: SourceConsommat
     source === "sac"
       ? prisma.inventaireJoueur.update({ ...sac, data: { quantite: { decrement: quantite } } })
       : prisma.inventaireVille.update({ ...banque, data: { quantite: { decrement: quantite } } }),
-    prisma.joueur.update({ where: { id: joueurId }, data: { ...apres, bonusPaReveil: { increment: bonusPa } } }),
+    prisma.joueur.update({
+      where: { id: joueurId },
+      data: { ...apres, bonusPaReveil: { increment: bonusPa }, ...(effet.attenueInfection ? { infusionJusqua: prochaineBascule() } : {}) },
+    }),
     prisma.journalEntree.create({
       data: {
         villeId,
@@ -126,7 +130,7 @@ async function consommer(guild: Guild, joueurId: number, source: SourceConsommat
       },
     }),
   ]);
-  const paMaxApres = calculerPaMax({ ...joueur, ...apres }).paMax;
+  const paMaxApres = calculerPaMax({ ...joueur, ...apres, ...(effet.attenueInfection ? { infusionJusqua: prochaineBascule() } : {}) }).paMax;
 
   const lignes = [
     `${effet.soif && !effet.faim ? "💧 Vous avez bu" : "🍲 Vous avez mangé"} **${nom} × ${quantite}**${source === "banque" ? " pris à la banque" : ""}.`,

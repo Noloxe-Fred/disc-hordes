@@ -2,7 +2,7 @@ import { CauseMort, MeteoType, StatutJoueur, StatutVille, TypeBatiment, TypePhas
 import type { Guild } from "discord.js";
 import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
-import { AVANCE_ALERTE_ATTAQUE_MINUTES, BONUS_PALISSADE_CUMULE, DEFENSE_BASE } from "../config/defense";
+import { AVANCE_ALERTE_ATTAQUE_MINUTES, BONUS_PALISSADE_CUMULE, BONUS_STRUCTURE_DEFENSE, DEFENSE_BASE } from "../config/defense";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
 import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
@@ -178,7 +178,7 @@ export async function resoudreAttaque(
   const gardes = await gardesDeLaNuit(ville.id, ville.cycleActuel);
   const bonusGardes = gardes.reduce((somme, g) => somme + g.bonus, 0);
   const palierPalissade = palissade?.palierActuel ?? 0;
-  const defenseTotale = calculerDefenseTotale(palierPalissade, bonusGardes);
+  const defenseTotale = calculerDefenseTotale(palierPalissade, bonusGardes, ville.structuresDefense);
 
   if (enregistrer) {
     // Upsert : un admin a pu reculer le cycle sur un numero deja joue
@@ -196,6 +196,7 @@ export async function resoudreAttaque(
   const compteRendu =
     `🧟 Attaque de zombies sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
     ` (base ${DEFENSE_BASE}, palissade +${BONUS_PALISSADE_CUMULE[Math.min(palierPalissade, BONUS_PALISSADE_CUMULE.length - 1)]}` +
+    (ville.structuresDefense > 0 ? `, structures +${ville.structuresDefense * BONUS_STRUCTURE_DEFENSE}` : "") +
     `, ${gardes.length} garde${gardes.length > 1 ? "s" : ""} +${bonusGardes})` +
     (deficit > 0
       ? ` — déficit de ${deficit.toFixed(1)}.` + (lignes.length > 0 ? `\n${lignes.join("\n")}` : "\nPersonne n'a été touché.")

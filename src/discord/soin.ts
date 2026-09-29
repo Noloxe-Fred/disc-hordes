@@ -75,7 +75,9 @@ export async function formulaireSoin(
             .setRequired(true)
             .addOptions(
               soins.map((s) => ({
-                label: `${s.libelle} : +${s.pv} PV, ${coutSelonPhase(s.coutJour, phase)} PA`,
+                label: s.gueritInfection
+                  ? `${s.libelle} : guérit l'infection`
+                  : `${s.libelle} : +${s.pv} PV, ${coutSelonPhase(s.coutJour, phase)} PA`,
                 value: s.id,
                 description: `${libelleIngredients(s)}${manquants(s, sac).length > 0 ? " — il vous en manque" : ""}`.slice(0, 100),
               })),
@@ -119,6 +121,7 @@ async function soigner(guild: Guild, joueurId: number, soin: Soin, cibleId: numb
   const cible = soi ? joueur : (await survivantsAuMemeEndroit(joueur)).find((v) => v.id === cibleId);
   if (!cible) return "Ce survivant n'est plus à côté de vous.";
   const qui = soi ? "Vous" : `**${nomJoueur(cible)}**`;
+  if (soin.gueritInfection) return administrerRemede(guild, joueur, cible, soin);
   if (cible.pv >= PV_MAX) return `${qui} ${soi ? "êtes" : "est"} déjà en pleine santé (${PV_MAX} / ${PV_MAX} PV).`;
 
   const cout = coutSelonPhase(soin.coutJour, joueur.ville.phaseActuelle);
@@ -177,4 +180,52 @@ async function soigner(guild: Guild, joueurId: number, soin: Soin, cibleId: numb
     `PV ${cible.pv} → **${pv}** / ${PV_MAX}` +
     (paMaxApres !== paMaxAvant ? ` · PA max ${soi ? "" : "du soigné "}${paMaxAvant} → **${paMaxApres}**` : "")
   );
+}
+
+// Remede contre l'infection, administre par le medecin (equilibrage.md §8) : le joueur doit lui avoir dit qu'il est
+// infecte. Le remede est consomme dans tous les cas ; si le soigne n'etait pas infecte, il est perdu.
+async function administrerRemede(
+  guild: Guild,
+  medecin: { id: number; villeId: number | null; zoneActuelleId: number | null; utilisateur: { discordId: string; pseudoCache: string | null } },
+  cible: { id: number; villeId: number | null; infecteDepuis: Date | null; utilisateur: { discordId: string; pseudoCache: string | null } },
+  soin: Soin,
+): Promise<string> {
+  const manque = manquants(soin, await contenuSac(medecin.id));
+  if (manque.length > 0) return `Il vous manque : ${manque.join(", ")}.`;
+  const soi = cible.id === medecin.id;
+  const infecte = cible.infecteDepuis !== null;
+  const objets = await prisma.objet.findMany({ where: { nom: { in: soin.ingredients.map((i) => i.nom) } } });
+  await prisma.$transaction([
+    ...soin.ingredients.map((i) =>
+      prisma.inventaireJoueur.update({
+        where: { joueurId_objetId: { joueurId: medecin.id, objetId: objets.find((o) => o.nom === i.nom)!.id } },
+        data: { quantite: { decrement: i.quantite } },
+      }),
+    ),
+    ...(infecte ? [prisma.joueur.update({ where: { id: cible.id }, data: { infecteDepuis: null, infusionJusqua: null } })] : []),
+    prisma.journalEntree.create({
+      data: {
+        villeId: medecin.villeId!,
+        joueurId: medecin.id,
+        message: `Remède administré à ${soi ? "soi-même" : nomJoueur(cible)}${infecte ? "" : " (pas infecté, remède perdu)"}`,
+        public: false,
+      },
+    }),
+  ]);
+  if (!soi) {
+    const salon = await trouverSalonTexte(
+      guild,
+      medecin.zoneActuelleId === null ? `salon:ville:${medecin.villeId}:place-publique` : `salon:zone:${medecin.zoneActuelleId}`,
+    );
+    await salon
+      ?.send({
+        content: `💉 <@${medecin.utilisateur.discordId}> administre un remède à <@${cible.utilisateur.discordId}>.`,
+        allowedMentions: { users: [cible.utilisateur.discordId] },
+      })
+      .catch(() => null);
+  }
+  const qui = soi ? "Vous" : `**${nomJoueur(cible)}**`;
+  return infecte
+    ? `💉 Le remède fait effet : ${qui} ${soi ? "êtes guéri" : "est guéri"} de l'infection.`
+    : `❌ ${qui} ${soi ? "n'étiez" : "n'était"} pas infecté : le remède est perdu.`;
 }
