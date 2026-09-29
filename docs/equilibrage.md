@@ -189,7 +189,7 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Observer — éclaireur | 0 PA | 1 PA (valeur fixe, pas ×1,5) |
 | Partager sa carte (bouton de `/action`, en ville uniquement) | 0 PA | 0 PA |
 | Fouiller/looter la zone courante | 2 PA | 3 PA |
-| Combat — attaquer (par échange) | 2 PA | 3 PA |
+| Combat — attaquer (par échange) | 2 PA (arme : −1 ou −2, jamais sous 1) | 3 PA (idem) |
 | Combat — fuir | 1 PA | 2 PA (+ risque d'échec accru la nuit) |
 | Craft simple (`/inventaire`) | 1 PA (symbolique) + ingrédients | idem |
 | Craft avancé (atelier) | 4–8 PA selon recette + ingrédients | — (en ville uniquement) |
@@ -234,7 +234,7 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Tirage d'une fouille** : le nombre d'objets est tiré uniformément dans la fourchette de la case (ex. 2–3), puis chaque objet est tiré indépendamment avec les probabilités de la case telles quelles. Le complément à 100 % (ex. 10 % pour 50 + 30 + 10 %) est une trouvaille sans valeur : cet objet-là ne rapporte rien. Une fouille peut donc rapporter moins d'objets que la fourchette, voire aucun.
 
-**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Arme simple, Arme avancée, Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
+**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
 
 ### Poids et capacité (sac et banque de ville)
 
@@ -254,7 +254,7 @@ Chaque objet a une classe de poids, qui compte de la même façon dans le sac et
 - **Déposer un objet** (`/inventaire`, gratuit) : l'objet quitte le sac et disparaît, pour alléger un sac trop lourd. Gestion des objets au sol reportée.
 - **Inventaire déjà au-dessus de sa capacité** (mise en place de la limite, ajout par un admin) : rien n'est supprimé, mais il n'accepte plus rien qui l'alourdisse tant qu'il n'est pas repassé sous la limite.
 
-### Rencontres en territoire externe (stub v0.1 — confirmé suffisant pour le lancement V1)
+### Rencontres en territoire externe (zombies uniquement pour la V1)
 Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au palier de la zone (aucune rencontre humaine/bandit encore implémentée — la table complète est confirmée hors scope V1, voir section 11) :
 
 | Palier | Probabilité de rencontre zombie (par fouille/déplacement) |
@@ -264,7 +264,20 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 | Éloignée (palier 3) | 35 % |
 
 - **La nuit** : probabilité ×1,5, cohérent avec le principe "la nuit, rencontres plus dangereuses".
-- Une rencontre déclenchée passe par les boutons combat/fuite de `/action` (section coûts en PA, section 4). Combattre expose au risque d'infection (10 % par coup reçu, section 1). Fuir n'expose jamais à l'infection.
+- **Jet** après chaque fouille et à chaque arrivée dans une zone. Tant que la rencontre dure, `/action` ne propose plus que « Attaquer » et « Fuir » : ni fouille, ni déplacement, ni observation, ni retour en ville.
+
+### Combat contre un zombie
+
+| | Proche | Moyenne | Éloignée |
+|---|---|---|---|
+| PV du zombie | 2 | 3 | 4 |
+
+- **Attaquer** (coût : section 4) : le joueur touche à **70 %** et retire **1 PV** au zombie. Si le zombie est encore debout, il **riposte à 30 %** : **−1 PV** pour le joueur, et c'est un coup reçu (**10 % d'infection**, section 1). Zombie à 0 PV : rencontre terminée, pas de butin pour l'instant.
+- **Armes** portées dans le sac, seule la meilleure compte (dans cet ordre, sans cumul) : **Armes/outils avancés** et **Arme avancée** : −2 PA par attaque et **2 dégâts** par coup ; **Arme simple** : **+10 %** de chance de toucher ; **Arme de fortune** : −1 PA par attaque. Une attaque coûte toujours au moins 1 PA.
+- **Fuir** (coût : section 4) : réussite **75 % le jour, 50 % la nuit**. Réussie : le joueur rebrousse chemin vers la zone (ou la ville) d'où il arrivait, ou reste sur place libéré si le zombie a surgi pendant une fouille. Ratée : le zombie frappe (**−1 PV, sans infection** : fuir n'expose jamais à l'infection) et la rencontre continue.
+- **Rencontre laissée en suspens** (plus assez de PA, joueur absent) : **−1 PV à chaque changement de phase** tant qu'elle dure.
+- Mort en combat : cause « tué en territoire externe ».
+- Ordre de grandeur : à mains nues, un zombie moyen demande ~4,3 échanges (~9 PA le jour) et coûte ~1 PV.
 
 ---
 
@@ -360,4 +373,4 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 
 - **Tour Radio (nouveau bâtiment)** : une fois terminée, elle donne à tous les habitants de la ville l'accès au salon `ondes-radio` du groupe (aujourd'hui réservé aux porteurs de radio, en ville comme dehors), et rend les salons de la ville visibles depuis le territoire externe **aux seuls porteurs de radio** (aujourd'hui masqués dehors, sauf la mairie, radio ou non). Restent à chiffrer : coût en ressources, installation, paliers éventuels (section 7).
 
-- **Effet mécanique des objets de loot sans recette** (section 5) : Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.
+- **Effet mécanique des objets de loot sans recette** (section 5) : Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.

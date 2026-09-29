@@ -10,6 +10,7 @@ import {
   StringSelectMenuBuilder,
   TextDisplayBuilder,
   type ChatInputCommandInteraction,
+  type MessageComponentInteraction,
   type Guild,
 } from "discord.js";
 import type { Command } from "../client";
@@ -24,6 +25,7 @@ import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
+import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
 import { formulaireSoin } from "../discord/soin";
 import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
@@ -38,7 +40,8 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte », « Soigner », « Annonce » pour le maire, « Quitter la ville ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en
+// « Carte », « Partager la carte », « Soigner », « Annonce » pour le maire, « Quitter la ville »). Face a un zombie
+// (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
 // rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
@@ -46,6 +49,7 @@ const COULEUR_VIVANT = 0x2ecc71;
 const COULEUR_MORT = 0xc0392b;
 const VALEUR_VILLE = "ville";
 const OBJET_TORCHE = "Torche";
+const MESSAGE_ZOMBIE = "🧟 Un zombie vous barre la route : combattez-le ou fuyez d'abord (`/action`).";
 
 function encadre(texte: string, couleur = COULEUR_VIVANT): ContainerBuilder {
   return new ContainerBuilder().setAccentColor(couleur).addTextDisplayComponents(new TextDisplayBuilder().setContent(texte));
@@ -190,7 +194,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
           ),
         );
 
-  const reponse = await interaction.reply({ components: [menu], flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+  // Face a un zombie, seul le combat est propose
+  const enCombat = joueur.rencontrePvZombie !== null;
+  const reponse = await interaction.reply({
+    components: [enCombat ? await ecranCombat(joueurId) : menu],
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+  });
 
   let destination: Destination | undefined;
   for (;;) {
@@ -247,8 +256,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       return;
     } else if (clic.customId === "confirmer-fouille") {
       await clic.deferUpdate();
-      await clic.editReply({ components: [encadre(await confirmerFouille(guild, joueurId, joueur.zoneActuelleId))] });
-      return;
+      if (!(await afficherResultat(clic, joueurId, await confirmerFouille(guild, joueurId, joueur.zoneActuelleId)))) return;
     } else if (clic.isStringSelectMenu() && clic.customId === "aller") {
       destination = destinations.find((d) => valeur(d) === clic.values[0]);
       if (!destination) return;
@@ -285,12 +293,23 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     } else if ((clic.customId === "confirmer" || clic.customId === "confirmer-torche") && destination) {
       const avecTorche = clic.customId === "confirmer-torche";
       await clic.deferUpdate();
-      await clic.editReply({
-        components: [encadre(await confirmerDeplacement(guild, joueurId, joueur.zoneActuelleId, groupeId, destination, avecTorche))],
-      });
-      return;
+      const texte = await confirmerDeplacement(guild, joueurId, joueur.zoneActuelleId, groupeId, destination, avecTorche);
+      if (!(await afficherResultat(clic, joueurId, texte))) return;
+    } else if (clic.customId === "attaquer" || clic.customId === "fuir") {
+      await clic.deferUpdate();
+      const resultat = clic.customId === "attaquer" ? await attaquer(guild, joueurId) : await fuir(guild, joueurId);
+      if (!(await afficherResultat(clic, joueurId, resultat.texte))) return;
     }
   }
+}
+
+// Compte rendu d'une action : ecran de combat si le joueur est (toujours) face a un zombie, texte seul sinon. Renvoie
+// true si le combat continue (le message reste a l'ecoute des boutons « Attaquer » et « Fuir »).
+async function afficherResultat(clic: MessageComponentInteraction, joueurId: number, texte: string): Promise<boolean> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
+  const enCombat = joueur.rencontrePvZombie !== null && (joueur.statut === StatutJoueur.VIVANT || joueur.statut === StatutJoueur.EXCLU);
+  await clic.editReply({ components: [enCombat ? await ecranCombat(joueurId, texte) : encadre(texte)], attachments: [] });
+  return enCombat;
 }
 
 // Deplacement confirme : reverification (phase, PA ou position ont pu changer pendant la confirmation), puis
@@ -320,6 +339,7 @@ async function confirmerDeplacement(
 
   if (actuel.statut !== StatutJoueur.VIVANT && actuel.statut !== StatutJoueur.EXCLU) return "Vous ne pouvez plus vous déplacer.";
   if (actuel.zoneActuelleId !== zoneDepartId || !toujoursAccessible) return "Votre position a changé entre-temps : relancez `/action`.";
+  if (actuel.rencontrePvZombie !== null) return MESSAGE_ZOMBIE;
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour ce déplacement.`;
 
   if (torche) await prisma.inventaireJoueur.update({ where: { id: torche.id }, data: { quantite: { decrement: 1 } } });
@@ -336,10 +356,15 @@ async function confirmerDeplacement(
   const bilan = `−${cout} PA, ${paRestants} restants${torche ? ", une torche consumée 🔥" : ""}`;
   if (destination.id === null) return `🏠 Vous êtes rentré à **${ville.nom}** (${bilan}).`;
   const salon = await trouverSalonTexte(guild, `salon:zone:${destination.id}`);
-  return (
+  const arrivee =
     `🧭 Vous êtes arrivé : **${destination.nom}**${salon ? ` — ${salon}` : ""} (${bilan}).\n` +
-    "Tant que vous êtes dehors, vous ne pouvez plus écrire dans les salons de la ville."
-  );
+    "Tant que vous êtes dehors, vous ne pouvez plus écrire dans les salons de la ville.";
+  // Zombie a l'arrivee ; en cas de fuite, le joueur rebrousse chemin vers la zone (ou la ville) d'ou il vient
+  const rencontre = await declencherRencontre(joueurId, destination.palier!, ville.phaseActuelle, {
+    zoneId: zoneDepartId,
+    ville: zoneDepartId === null,
+  });
+  return rencontre ? `${arrivee}\n\n${rencontre}` : arrivee;
 }
 
 // Observation confirmee : reverification, puis PA depenses, zones adjacentes ajoutees a la carte et survivants
@@ -352,6 +377,7 @@ async function confirmerObservation(joueurId: number, zoneDepartId: number | nul
 
   if (actuel.statut !== StatutJoueur.VIVANT && actuel.statut !== StatutJoueur.EXCLU) return "Vous ne pouvez plus observer les environs.";
   if (actuel.zoneActuelleId !== zoneDepartId) return "Votre position a changé entre-temps : relancez `/action`.";
+  if (actuel.rencontrePvZombie !== null) return MESSAGE_ZOMBIE;
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour observer les environs.`;
 
   const { zones } = await destinationsDepuis(groupeId, actuel.zoneActuelleId);
@@ -399,6 +425,7 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
 
   if (actuel.statut !== StatutJoueur.VIVANT && actuel.statut !== StatutJoueur.EXCLU) return "Vous ne pouvez plus fouiller.";
   if (!zone || actuel.zoneActuelleId !== zoneDepartId) return "Votre position a changé entre-temps : relancez `/action`.";
+  if (actuel.rencontrePvZombie !== null) return MESSAGE_ZOMBIE;
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour fouiller la zone.`;
   const sac = await chargeSac(joueurId);
   if (sacPlein(sac)) return `${MESSAGE_SAC_PLEIN} (${libelleCharge(sac)}).`;
@@ -439,14 +466,16 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
   ]);
   if (trouves.has(OBJET_RADIO)) await synchroniserAccesJoueur(guild, joueurId);
 
-  if (trouves.size === 0 && laisses.size === 0) {
-    return `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`;
-  }
-  if (trouves.size === 0) return `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants).${texteLaisses}`;
-  return (
-    `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n${liste(trouves)}` +
-    `\n\n🎒 Rangé dans votre sac (${libelleCharge(sac)}, \`/inventaire\`).${texteLaisses}`
-  );
+  const compteRendu =
+    trouves.size === 0 && laisses.size === 0
+      ? `🔍 Vous fouillez **${zone.nom}**… sans rien trouver d'utile (−${cout} PA, ${paRestants} restants).`
+      : trouves.size === 0
+        ? `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants).${texteLaisses}`
+        : `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n${liste(trouves)}` +
+          `\n\n🎒 Rangé dans votre sac (${libelleCharge(sac)}, \`/inventaire\`).${texteLaisses}`;
+  // Le bruit attire parfois un zombie ; en cas de fuite, le joueur reste dans la zone
+  const rencontre = await declencherRencontre(joueurId, zone.palier, ville.phaseActuelle, { zoneId: null, ville: false });
+  return rencontre ? `${compteRendu}\n\n${rencontre}` : compteRendu;
 }
 
 // Sortie volontaire d'un vivant ou d'un exclu (conception.md §3) : annoncee dans la mairie, puis depart definitif

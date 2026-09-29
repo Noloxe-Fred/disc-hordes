@@ -411,6 +411,11 @@ model Joueur {
   maisonPalier   Int          @default(0)
   // PA ajoutes au-dela du PA max a la prochaine regeneration en ville (ragout fortifiant, equilibrage.md §8)
   bonusPaReveil  Int          @default(0)
+  // Rencontre de zombie en cours en territoire externe (equilibrage.md §5) : PV restants du zombie, null = aucune.
+  // En cas de fuite reussie, le joueur repart vers la zone d'ou il venait (ou la ville) ; aucune = il reste sur place.
+  rencontrePvZombie     Int?
+  rencontreRetourZoneId Int?
+  rencontreRetourVille  Boolean @default(false)
   xp             Int          @default(0)
   dateArrivee    DateTime     @default(now())
   dateSortie     DateTime?

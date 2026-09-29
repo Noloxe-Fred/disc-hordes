@@ -8,6 +8,7 @@ import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
+import { blesserRencontresEnSuspens } from "../discord/combat";
 import { posterDansMairie } from "../discord/villeStructure";
 import { produireEauPuits } from "../services/puits";
 
@@ -98,9 +99,13 @@ async function regenererPa(villeId: number) {
   }
 }
 
-// Effets de chaque changement de phase sur les habitants : faim/soif, puis regeneration des PA
+// Effets de chaque changement de phase sur les habitants : faim/soif, rencontres de zombie laissees en suspens
+// (-1 PV), puis regeneration des PA
 async function appliquerEffetsPhase(guild: Guild, villeId: number) {
   if (await appliquerFaimSoif(guild, villeId)) return;
+  const { morts, villeTombee } = await blesserRencontresEnSuspens(guild, villeId);
+  if (morts.length > 0 && !villeTombee) await posterDansMairie(guild, villeId, morts.join("\n"));
+  if (villeTombee) return;
   await regenererPa(villeId);
 }
 

@@ -15,7 +15,14 @@ export async function deplacerJoueur(
 ): Promise<void> {
   await prisma.joueur.update({
     where: { id: joueur.id },
-    data: { zoneActuelleId: zoneId, ...(coutPa > 0 ? { paActuel: { decrement: coutPa } } : {}) },
+    // Changer de lieu met fin a une rencontre de zombie en cours (fuite reussie, teleportation par un admin)
+    data: {
+      zoneActuelleId: zoneId,
+      rencontrePvZombie: null,
+      rencontreRetourZoneId: null,
+      rencontreRetourVille: false,
+      ...(coutPa > 0 ? { paActuel: { decrement: coutPa } } : {}),
+    },
   });
   if (zoneId !== null) await ajouterACarte(joueur.id, [zoneId]);
 

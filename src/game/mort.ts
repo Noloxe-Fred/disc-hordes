@@ -17,6 +17,7 @@ export async function enregistrerMort(guild: Guild, joueurId: number, cause: Cau
       dateMort: new Date(),
       causeMort: cause,
       zoneActuelleId: null,
+      rencontrePvZombie: null, rencontreRetourZoneId: null, rencontreRetourVille: false,
     },
     include: { utilisateur: true },
   });

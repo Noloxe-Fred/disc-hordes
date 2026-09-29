@@ -13,7 +13,10 @@ export async function sortirDeVille(guild: Guild, joueurId: number): Promise<boo
   const ville = joueur.ville!;
 
   await prisma.$transaction([
-    prisma.joueur.update({ where: { id: joueurId }, data: { dateSortie: new Date(), zoneActuelleId: null } }),
+    prisma.joueur.update({
+      where: { id: joueurId },
+      data: { dateSortie: new Date(), zoneActuelleId: null, rencontrePvZombie: null, rencontreRetourZoneId: null, rencontreRetourVille: false },
+    }),
     ...(ville.maireId === joueurId ? [prisma.ville.update({ where: { id: ville.id }, data: { maireId: null, mandatFinCycle: null } })] : []),
   ]);
   await changerPositionDiscord(guild, joueur.utilisateur.discordId, joueur.zoneActuelleId, null);
