@@ -23,6 +23,7 @@ import { deplacerJoueur } from "../discord/deplacement";
 import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
+import { formulaireSoin } from "../discord/soin";
 import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
@@ -36,7 +37,7 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte », « Quitter la ville ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en
+// « Carte », « Partager la carte », « Soigner », « Quitter la ville ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en
 // rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
@@ -102,6 +103,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
         : []),
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setEmoji("🚪").setStyle(ButtonStyle.Danger),
     ),
   );
@@ -212,6 +214,21 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       return;
     } else if (clic.customId === "fouiller") {
       await clic.update({ components: [ecranFouille] });
+    } else if (clic.isButton() && clic.customId === "soigner") {
+      const resultat = await formulaireSoin(clic, joueurId);
+      if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
+      if (!resultat.soumission) {
+        await clic.update({
+          components: [
+            encadre(`${entete}\n\n${resultat.texte}`).addActionRowComponents(
+              new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()),
+            ),
+          ],
+        });
+        continue;
+      }
+      if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
+      return;
     } else if (clic.customId === "quitter-ville") {
       await clic.update({ components: [ecranQuitter] });
     } else if (clic.customId === "confirmer-quitter") {
@@ -451,6 +468,7 @@ async function actionsMort(interaction: ChatInputCommandInteraction, guild: Guil
     COULEUR_MORT,
   ).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("soigner").setLabel("Soigner").setEmoji("🩹").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setStyle(ButtonStyle.Danger),
     ),
   );

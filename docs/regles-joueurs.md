@@ -81,6 +81,12 @@ Deux jauges de **0 à 100**, qui baissent à chaque changement de phase. La mair
 ☠️ **À 0**, tu perds **2 PV** par phase, et tes PA max baissent encore de **15 %** à chaque phase passée à vide.
 🍲 Manger et boire font remonter tes jauges, et donc **tes PA max tout de suite** (voir « Manger et boire » dans ton sac).
 
+## 🩹 Se soigner
+Le bouton **Soigner** de `/action` soigne **toi-même** ou un survivant **au même endroit** que toi (un citoyen en ville, n'importe qui dans ta zone dehors) :
+🩹 **Soin basique** : **+2 PV** avec **1 Bandage**, pour **2 PA** (3 la nuit). Tout le monde peut le faire.
+💊 **Soin avancé** : **+5 PV** avec **1 Médicament basique**, ou **1 Bandage + 1 Plante médicinale**, pour **4 PA** (6 la nuit). Réservé au **Médecin**.
+On ne dépasse jamais **10 PV**, et chaque PV rendu redonne des PA max. Soigner quelqu'un est annoncé dans le salon du lieu.
+
 ## 🏠 Ta maison
 Tu arrives **sans maison**. Une maison améliorée réduit tes chances d'être blessé pendant les attaques.
 
@@ -126,7 +132,7 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 🍶 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
 🔦 **Torche** : 1 Bois + 1 Tissu
 🪤 **Piège simple** : 2 Bois + 1 Ferraille
-🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous). Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner (`/action`). Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
 
 ## 🍲 Manger et boire
 Le bouton **Manger / boire (sac)** consomme ce que tu as sur toi, partout, gratuitement. En ville, **Manger / boire (banque)** puise directement dans la réserve commune.
@@ -166,12 +172,12 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, quitter ta ville)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, soigner, quitter ta ville)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 En préparation
-⚔️ Combats · 🩹 Se soigner · 🔨 Chantiers et atelier · 🗳️ Élections du maire
+⚔️ Combats · 🔨 Chantiers et atelier · 🗳️ Élections du maire
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

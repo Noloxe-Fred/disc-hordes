@@ -48,7 +48,7 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 - Chaque joueur a **10 PV** (maximum, et valeur de départ).
 - Les PV remplacent les anciennes « blessures légères » : il n'y a plus de blessure comptée à part ni d'hospitalisation, et **la mort n'arrive qu'à 0 PV ou moins**.
 - **Pertes de PV** : attaque nocturne en défense insuffisante (section 3), faim et soif critiques ou vides (section 2), combat raté en territoire externe (montant à définir avec le gameplay de combat).
-- **Soins** : soin basique ou bandage **+2 PV**, soin avancé (médecin) **+5 PV**, sans jamais dépasser 10.
+- **Soins** (bouton « Soigner » de `/action`, sur soi ou sur un survivant au même endroit : les citoyens présents en ville quand on est en ville, tout survivant de la même zone dehors) : soin basique **+2 PV** (ouvert à tous, consomme **1 Bandage**), soin avancé **+5 PV** (médecin uniquement, consomme au choix **1 Médicament basique** ou **1 Bandage + 1 Plante médicinale**), sans jamais dépasser 10. Coûts en PA : section 4. Soigner quelqu'un d'autre est annoncé dans le salon du lieu.
 - **Mort** : le joueur voit toujours sa ville mais ne peut plus y agir ; il peut la quitter depuis `/action` pour rejoindre une autre ville. La mort du dernier habitant vivant fait tomber la ville.
 
 ### Déclenchement de l'infection
@@ -195,8 +195,8 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Craft avancé (atelier) | 4–8 PA selon recette + ingrédients | — (en ville uniquement) |
 | Contribution à un chantier (par unité de ressources déposées) | voir section 6 | — |
 | Se porter volontaire pour la garde | — | 6 PA |
-| Soin basique (+2 PV) | 2 PA | 3 PA |
-| Soin avancé, médecin (+5 PV) | 4 PA + ingrédients | 6 PA |
+| Soin basique (+2 PV) | 2 PA + 1 Bandage | 3 PA + 1 Bandage |
+| Soin avancé, médecin (+5 PV) | 4 PA + 1 Médicament basique, ou 1 Bandage + 1 Plante médicinale | 6 PA + mêmes ingrédients |
 | Craft remède infection (médecin, exclusif) | 6 PA + ingrédients rares | — |
 | Réparation voiture (ingénieur, atelier palier 1) | 8 PA + pièces | — |
 | Voiture — déplacement à plusieurs (bonus) | −50 % PA du trajet, partagé entre passagers | idem |
@@ -234,7 +234,7 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Tirage d'une fouille** : le nombre d'objets est tiré uniformément dans la fourchette de la case (ex. 2–3), puis chaque objet est tiré indépendamment avec les probabilités de la case telles quelles. Le complément à 100 % (ex. 10 % pour 50 + 30 + 10 %) est une trouvaille sans valeur : cet objet-là ne rapporte rien. Une fouille peut donc rapporter moins d'objets que la fourchette, voire aucun.
 
-**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Médicament basique, Arme simple, Arme avancée, Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
+**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Arme simple, Arme avancée, Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
 
 ### Poids et capacité (sac et banque de ville)
 
@@ -360,4 +360,4 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 
 - **Tour Radio (nouveau bâtiment)** : une fois terminée, elle donne à tous les habitants de la ville l'accès au salon `ondes-radio` du groupe (aujourd'hui réservé aux porteurs de radio, en ville comme dehors), et rend les salons de la ville visibles depuis le territoire externe **aux seuls porteurs de radio** (aujourd'hui masqués dehors, sauf la mairie, radio ou non). Restent à chiffrer : coût en ressources, installation, paliers éventuels (section 7).
 
-- **Effet mécanique des objets de loot sans recette** (section 5) : Médicament basique, Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.
+- **Effet mécanique des objets de loot sans recette** (section 5) : Arme simple, Arme avancée, Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.

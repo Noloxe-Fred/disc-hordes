@@ -29,6 +29,7 @@ import { trouverSalonTexte } from "../discord/reconcile";
 import { rendreInventaire } from "../discord/renduInventaire";
 import { chargeSac, deborde, libelleCharge, poidsTotal } from "../services/charge";
 import { trouverJoueurActif } from "../services/joueur";
+import { survivantsAuMemeEndroit } from "../services/voisins";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
@@ -39,7 +40,6 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 const DELAI_CHOIX_MS = 120_000;
 const COULEUR = 0x95a5a6;
-const OPTIONS_MAX = 25;
 const FICHIER_SAC = "sac.png";
 
 function encadre(texte: string): ContainerBuilder {
@@ -81,23 +81,6 @@ async function recettesSimples() {
   });
 }
 type RecetteSimple = Awaited<ReturnType<typeof recettesSimples>>[number];
-
-// Survivants a qui donner : au meme endroit que le joueur. En ville, les citoyens vivants de sa ville presents en
-// ville ; dehors, tout survivant (vivant ou exclu, quelle que soit sa ville) dans la meme zone.
-async function destinatairesPossibles(joueur: { id: number; villeId: number | null; zoneActuelleId: number | null }) {
-  return prisma.joueur.findMany({
-    where: {
-      id: { not: joueur.id },
-      dateSortie: null,
-      ...(joueur.zoneActuelleId === null
-        ? { villeId: joueur.villeId, zoneActuelleId: null, statut: StatutJoueur.VIVANT }
-        : { zoneActuelleId: joueur.zoneActuelleId, statut: { in: [StatutJoueur.VIVANT, StatutJoueur.EXCLU] } }),
-    },
-    include: { utilisateur: true },
-    orderBy: { id: "asc" },
-    take: OPTIONS_MAX,
-  });
-}
 
 // « 🪵 Bois » : nom d'objet precede de son emoji, pour les textes
 function objetAvecEmoji(nom: string): string {
@@ -368,7 +351,7 @@ async function formulaireDon(
   sac: Awaited<ReturnType<typeof contenuSac>>,
 ) {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
-  const destinataires = await destinatairesPossibles(joueur);
+  const destinataires = await survivantsAuMemeEndroit(joueur);
   if (sac.length === 0 || destinataires.length === 0) {
     await clic.update({
       components: [
@@ -426,7 +409,7 @@ async function formulaireDon(
 async function donner(guild: Guild, joueurId: number, destinataireId: number, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   if (!peutAgir(joueur)) return "Vous ne pouvez plus donner d'objet.";
-  const destinataire = (await destinatairesPossibles(joueur)).find((d) => d.id === destinataireId);
+  const destinataire = (await survivantsAuMemeEndroit(joueur)).find((d) => d.id === destinataireId);
   if (!destinataire) return "Ce survivant n'est plus à côté de vous.";
   const entree = await prisma.inventaireJoueur.findUnique({
     where: { joueurId_objetId: { joueurId, objetId } },

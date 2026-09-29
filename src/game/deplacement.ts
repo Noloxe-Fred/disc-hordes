@@ -23,6 +23,11 @@ export function coutObservation(phase: TypePhase, metier: Metier | null): number
   return selonPhase(COUT_OBSERVATION_JOUR, phase);
 }
 
+// Cout en PA d'une action a cout de jour fixe (soin...), selon la phase
+export function coutSelonPhase(coutJour: number, phase: TypePhase): number {
+  return selonPhase(coutJour, phase);
+}
+
 // Cout en PA d'une fouille de la zone courante, selon la phase
 export function coutFouille(phase: TypePhase): number {
   return selonPhase(COUT_FOUILLE_JOUR, phase);

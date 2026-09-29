@@ -22,3 +22,7 @@ export const MAJORATION_NUIT = 1.5;
 
 // Fouiller la zone courante (equilibrage.md §4)
 export const COUT_FOUILLE_JOUR = 2;
+
+// Soins (equilibrage.md §4) : basique ouvert a tous, avance reserve au medecin
+export const COUT_SOIN_BASIQUE_JOUR = 2;
+export const COUT_SOIN_AVANCE_JOUR = 4;
