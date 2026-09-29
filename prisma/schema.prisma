@@ -31,6 +31,7 @@ enum CauseMort {
   FAIM
   SOIF
   INFECTION
+  EAU_CONTAMINEE // eau brute bue sans la purifier (equilibrage.md §2)
 }
 
 enum StatutJoueur {
@@ -408,6 +409,8 @@ model Joueur {
   infecteDepuis  DateTime?
   // 0 = pas encore de maison ; la maison privee se construit (palier 1) puis s'ameliore (palier 2), equilibrage.md §7
   maisonPalier   Int          @default(0)
+  // PA ajoutes au-dela du PA max a la prochaine regeneration en ville (ragout fortifiant, equilibrage.md §8)
+  bonusPaReveil  Int          @default(0)
   xp             Int          @default(0)
   dateArrivee    DateTime     @default(now())
   dateSortie     DateTime?

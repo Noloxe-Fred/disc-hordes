@@ -216,6 +216,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
           pv: PV_MAX,
           infecteDepuis: null,
           maisonPalier: 0,
+          bonusPaReveil: 0,
           xp: 0,
           dateMort: null,
           causeMort: null,

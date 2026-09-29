@@ -18,7 +18,7 @@ function formatDureeHeures(heures: number): string {
   return `${h}h${m.toString().padStart(2, "0")}`;
 }
 
-// Faim/soif sous le seuil d'alerte, sous le seuil critique (malus actifs) ou a 0
+// Faim/soif sous le seuil d'alerte, sous le seuil critique (perte de PV) ou a 0
 const ICONE_NIVEAU: Record<NiveauJauge, string> = { normal: "", alerte: " ⚠️", critique: " 🔴", vide: " ☠️" };
 
 const command: Command = {
@@ -44,7 +44,8 @@ const command: Command = {
       pa.modificateurs.length > 0
         ? `\n${pa.paMaxBase} de base : ` +
           pa.modificateurs
-            .map((m) => `${m.libelle} ${m.fraction > 0 ? "+" : "−"}${Math.round(Math.abs(m.fraction) * 100)} %`)
+            // Au dixieme : le malus de faim/soif est progressif (ex. −0,8 %)
+            .map((m) => `${m.libelle} ${m.fraction > 0 ? "+" : "−"}${(Math.round(Math.abs(m.fraction) * 1000) / 10).toLocaleString("fr-FR")} %`)
             .join(", ")
         : "";
 
@@ -59,7 +60,9 @@ const command: Command = {
           value:
             joueur.paMax === null
               ? "à déterminer à la fondation"
-              : `${joueur.paActuel} / ${pa.paMax}${detailPa}`,
+              : `${joueur.paActuel} / ${pa.paMax}${detailPa}` +
+                (joueur.bonusPaReveil > 0 ? `
++${joueur.bonusPaReveil} PA au prochain réveil en ville` : ""),
           inline: true,
         },
         { name: "Faim", value: `${joueur.faim} / 100${ICONE_NIVEAU[niveauJauge(joueur.faim)]}`, inline: true },

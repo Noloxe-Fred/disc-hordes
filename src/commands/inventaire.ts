@@ -22,6 +22,7 @@ import { CAPACITE_SAC, emojiObjet, estEquipement, OBJET_RADIO, poidsObjet } from
 import { prisma } from "../db";
 import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
+import { formulaireConsommer } from "../discord/consommation";
 import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
@@ -31,8 +32,8 @@ import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
-// « donner a » un autre survivant present au meme endroit, « deposer » un objet pour alleger le sac, et, en ville,
-// acces a la banque (discord/banque.ts). Le sac a une capacite en poids (equilibrage.md §5, services/charge.ts).
+// « donner a » un autre survivant present au meme endroit, « deposer » un objet pour alleger le sac, manger et boire
+// (discord/consommation.ts) et, en ville, acces a la banque (discord/banque.ts). Le sac a une capacite en poids (equilibrage.md §5, services/charge.ts).
 // Le menu montre le sac en image (renduInventaire.ts) ; le menu et chaque ecran remplacent le meme message,
 // « Retour » ramene au menu.
 
@@ -151,6 +152,13 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
             : []),
           new ButtonBuilder().setCustomId("poser").setLabel("Déposer un objet").setEmoji("⬇️").setStyle(ButtonStyle.Secondary),
         ),
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder().setCustomId("consommer-sac").setLabel("Manger / boire (sac)").setEmoji("🍲").setStyle(ButtonStyle.Success),
+          // En ville, on peut aussi puiser directement dans la banque
+          ...(empechementBanque(joueur) === null
+            ? [new ButtonBuilder().setCustomId("consommer-banque").setLabel("Manger / boire (banque)").setEmoji("🏦").setStyle(ButtonStyle.Success)]
+            : []),
+        ),
       );
     }
     return { components: [menu], files: [new AttachmentBuilder(png, { name: FICHIER_SAC })] };
@@ -239,9 +247,12 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
         await resultat.soumission.update({ components: [encadre(resultat.texte)], attachments: [] });
       }
       return;
-    } else if (clic.isButton() && clic.customId === "poser") {
-      // Apres avoir depose, retour sur le menu du sac rafraichi, le resultat en tete
-      const resultat = await formulairePoser(clic, joueurId, sac);
+    } else if (clic.isButton() && (clic.customId === "poser" || clic.customId === "consommer-sac" || clic.customId === "consommer-banque")) {
+      // Apres avoir depose ou consomme, retour sur le menu du sac rafraichi, le resultat en tete
+      const resultat =
+        clic.customId === "poser"
+          ? await formulairePoser(clic, joueurId, sac)
+          : await formulaireConsommer(clic, joueurId, clic.customId === "consommer-sac" ? "sac" : "banque");
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       sac = await contenuSac(joueurId);
       quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
@@ -477,7 +488,7 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
 }
 
 const command: Command = {
-  data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner ou déposer des objets"),
+  data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner, déposer, manger ou boire"),
 
   async execute(interaction) {
     if (interaction.guild && (await estMjActif(interaction.guild, interaction.user.id))) {

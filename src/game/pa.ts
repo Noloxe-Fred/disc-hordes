@@ -1,11 +1,11 @@
 import type { Joueur } from "@prisma/client";
 import {
   BONUS_PA_MAISON_PALIER_2,
-  MALUS_PA_JAUGE_CRITIQUE,
+  JAUGE_MAX,
+  MALUS_PA_JAUGE_MAX,
   MALUS_PA_PAR_PHASE_JAUGE_VIDE,
   MALUS_PA_PAR_PV_MANQUANT,
   PV_MAX,
-  SEUIL_CRITIQUE_FAIM_SOIF,
 } from "../config/sante";
 import { calculerEtatInfection } from "./infection";
 
@@ -28,9 +28,11 @@ type JoueurPa = Pick<
   "paMax" | "pv" | "faim" | "soif" | "phasesFaimVide" | "phasesSoifVide" | "infecteDepuis" | "maisonPalier"
 >;
 
+// Malus progressif : faible quand la jauge commence a baisser, de plus en plus fort en approchant de 0
+// (100 : 0 %, 70 : -2,7 %, 30 : -14,7 %, 0 : -30 %), puis -15 % par phase supplementaire a 0
 function malusJauge(valeur: number, phasesVide: number): number {
-  if (valeur >= SEUIL_CRITIQUE_FAIM_SOIF) return 0;
-  return MALUS_PA_JAUGE_CRITIQUE + (valeur <= 0 ? phasesVide * MALUS_PA_PAR_PHASE_JAUGE_VIDE : 0);
+  const manque = Math.min(JAUGE_MAX, Math.max(0, JAUGE_MAX - valeur)) / JAUGE_MAX;
+  return MALUS_PA_JAUGE_MAX * manque * manque + (valeur <= 0 ? phasesVide * MALUS_PA_PAR_PHASE_JAUGE_VIDE : 0);
 }
 
 export function calculerPaMax(joueur: JoueurPa, maintenant: Date = new Date()): EtatPa {

@@ -76,8 +76,10 @@ Tu as **10 PV**. Chaque PV perdu réduit tes **PA max de 5 %** : un survivant bl
 
 ## 🍖 Faim et 💧 soif
 Deux jauges de **0 à 100**, qui baissent à chaque changement de phase. La mairie te prévient quand tu passes sous 30.
-⚠️ **Sous 10**, tes **PA max baissent de 30 %** et tu perds **1 PV** par phase, pour chaque jauge.
+📉 **Dès qu'une jauge baisse, tes PA max baissent aussi**, un peu au début puis de plus en plus : à 70, −2,7 % ; à 50, −7,5 % ; à 30, −14,7 % ; à 0, −30 %. Faim et soif se cumulent.
+⚠️ **Sous 10**, tu perds en plus **1 PV** par phase, pour chaque jauge.
 ☠️ **À 0**, tu perds **2 PV** par phase, et tes PA max baissent encore de **15 %** à chaque phase passée à vide.
+🍲 Manger et boire font remonter tes jauges, et donc **tes PA max tout de suite** (voir « Manger et boire » dans ton sac).
 
 ## 🏠 Ta maison
 Tu arrives **sans maison**. Une maison améliorée réduit tes chances d'être blessé pendant les attaques.
@@ -124,7 +126,16 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 🍶 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
 🔦 **Torche** : 1 Bois + 1 Tissu
 🪤 **Piège simple** : 2 Bois + 1 Ferraille
-🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous). Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+
+## 🍲 Manger et boire
+Le bouton **Manger / boire (sac)** consomme ce que tu as sur toi, partout, gratuitement. En ville, **Manger / boire (banque)** puise directement dans la réserve commune.
+🫐 **Baies** : +5 faim
+🍖 **Gibier** : +10 faim
+🍲 **Plat préparé** : +20 faim
+💧 **Eau brute** : +10 soif, mais **1 chance sur 5 de perdre 1 PV** : mieux vaut la purifier
+🍶 **Ration d'eau purifiée** : +30 soif, sans risque
+Une jauge ne dépasse pas **100** : ce qui déborde est perdu. Cuisiner rapporte plus que manger cru.
 
 ## 🤝 Donner
 Le bouton **Donner** ouvre un formulaire : choisis **à qui**, **quel objet** et **combien**. C'est gratuit.
@@ -133,7 +144,7 @@ Tu ne peux donner qu'à un survivant **au même endroit** que toi : un citoyen d
 ## 🏦 La banque
 En ville, le bouton **Banque** montre la réserve commune de ta ville. **Déposer** y range des objets de ton sac, **Retirer** en reprend : c'est gratuit, et tous les citoyens vivants présents en ville y ont accès.
 ⚖️ La banque porte **40** au plus, avec les mêmes poids que le sac.
-📜 Chaque dépôt et chaque retrait est inscrit au journal de la ville.
+📜 Chaque dépôt, chaque retrait et chaque repas pris à la banque est inscrit au journal de la ville.
 
 
 # 💀 La mort et la chute
@@ -151,13 +162,13 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
-🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner ou déposer des objets
+🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
 ⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, ou quitter ta ville si tu es mort)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 En préparation
-⚔️ Combats · 🍲 Manger, boire et se soigner · 🔨 Chantiers et atelier · 🗳️ Élections du maire
+⚔️ Combats · 🩹 Se soigner · 🔨 Chantiers et atelier · 🗳️ Élections du maire
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

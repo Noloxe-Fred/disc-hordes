@@ -25,10 +25,12 @@ export const SEUIL_CRITIQUE_FAIM_SOIF = 10;
 export const PV_PERDUS_JAUGE_CRITIQUE = 1;
 export const PV_PERDUS_JAUGE_VIDE = 2;
 
-// Seuils de faim/soif (equilibrage.md §2) : message d'alerte sous 30 ; sous le seuil critique, -30 % de PA max,
-// puis -15 % de plus par phase supplementaire passee a 0 (cumulable, jauges faim et soif comptees separement)
+// Seuils de faim/soif (equilibrage.md §2) : message d'alerte sous 30. Malus de PA max progressif des que la jauge
+// baisse : 30 % x ((100 - jauge) / 100)^2 par jauge (0 % a 100, -30 % a 0), puis -15 % de plus par phase
+// supplementaire passee a 0 (cumulable, jauges faim et soif comptees separement)
+export const JAUGE_MAX = 100;
 export const SEUIL_ALERTE_FAIM_SOIF = 30;
-export const MALUS_PA_JAUGE_CRITIQUE = 0.3;
+export const MALUS_PA_JAUGE_MAX = 0.3;
 export const MALUS_PA_PAR_PHASE_JAUGE_VIDE = 0.15;
 
 // Maison privee palier 2 : +15 % de PA max (equilibrage.md §1)

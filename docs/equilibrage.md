@@ -40,9 +40,9 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 | Maison privée palier 2 | +15 % du PA max individuel (arrondi à l'inférieur) |
 | Par PV manquant (voir « Points de vie » ci-dessous) | −5 % chacun (10 PV : 0 % ; 7 PV : −15 % ; 1 PV : −45 %) |
 | Infection (progression linéaire continue depuis le déclenchement) | de 0 % à −30 % du PA max, sur toute la durée de l'incubation (96h) — soit environ −0,3125 % par heure écoulée depuis l'infection ; −30 % atteint juste avant la transformation en zombie |
-| Faim ou soif sous le seuil critique (voir section 2) | −30 % par jauge concernée, puis −15 % de plus par phase supplémentaire passée à 0 |
+| Faim ou soif (voir section 2) | Progressif dès que la jauge baisse : **−30 % × ((100 − jauge) / 100)²** par jauge (0 % à 100, −30 % à 0), puis −15 % de plus par phase supplémentaire passée à 0 |
 
-**Cumul** : les modificateurs s'additionnent (en points de % du PA max individuel), puis le total est appliqué une seule fois, arrondi à l'inférieur et jamais sous 0. Exemple : PA max 20, 7 PV (−15 %) et faim critique (−30 %) → 20 × 0,55 = 11 PA max effectif.
+**Cumul** : les modificateurs s'additionnent (en points de % du PA max individuel), puis le total est appliqué une seule fois, arrondi à l'inférieur et jamais sous 0. Exemple : PA max 20, 7 PV (−15 %) et faim à 50 (−7,5 %) → 20 × 0,775 = 15,5 → 15 PA max effectif.
 
 ### Points de vie (PV)
 - Chaque joueur a **10 PV** (maximum, et valeur de départ).
@@ -76,14 +76,38 @@ Deux jauges séparées, 0–100.
 | Décroissance par phase (24h) | **−16** | **−20** |
 | Seuil d'alerte (message dans la mairie) | < 30 | < 30 |
 | Seuil critique (malus actif) | < 10 | < 10 |
-| Effet sous seuil critique | −30 % PA max, craft avancé et contribution aux chantiers bloqués | idem |
+| Malus de PA max | progressif dès que la jauge baisse (voir ci-dessous) | idem |
+| Effet sous seuil critique | craft avancé et contribution aux chantiers bloqués | idem |
 | Perte de PV sous seuil critique | **−1 PV** par phase | idem |
 | Effet à 0 | −15 % PA max par phase supplémentaire écoulée à 0 (cumulable), **−2 PV** par phase | idem |
 
-Le −30 % du seuil critique reste actif à 0 : une jauge vide depuis 2 phases supplémentaires coûte donc −60 % de PA max. Faim et soif se comptent séparément. Le passage à chaque palier plus grave (alerte, critique, vide) est annoncé dans la mairie en mentionnant le joueur.
+**Malus de PA max progressif** (remplace l'ancien −30 % fixe sous le seuil critique) : chaque jauge retire **30 % × ((100 − jauge) / 100)²** du PA max individuel, faible au début et de plus en plus fort en approchant de 0 :
+
+| Jauge | 100 | 84 | 70 | 50 | 30 | 10 | 0 |
+|---|---|---|---|---|---|---|---|
+| Malus de PA max | 0 % | −0,8 % | −2,7 % | −7,5 % | −14,7 % | −24,3 % | −30 % |
+
+Le PA max effectif étant arrondi à l'inférieur, toute baisse coûte au moins 1 PA. À 0, le −30 % reste actif et s'ajoute au −15 % par phase supplémentaire : une jauge vide depuis 2 phases supplémentaires coûte donc −60 % de PA max. Faim et soif se comptent séparément. Exemple (PA max 40) : faim 84 / soif 80 → 39 PA ; faim 52 / soif 40 → 32 PA ; les deux à 10 → 20 PA. Le passage à chaque palier plus grave (alerte, critique, vide) est annoncé dans la mairie en mentionnant le joueur.
 
 → Sans consommer, un joueur atteint la faim critique en **~6 phases (~6 jours réels)** et la soif critique en **~5 phases (~5 jours réels)**.
 *(Décroissance doublée par rapport au premier jet de chiffrage, pour retomber sur l'objectif visé de "critique en 4-5 jours réels" — la faim reste légèrement plus longue que la soif, ce qui est cohérent : on peut tenir plus longtemps sans manger que sans boire.)*
+
+### Consommation
+
+Bouton « Manger / boire (sac) » de `/inventaire`, partout, et « Manger / boire (banque) » en ville, qui puise directement dans la banque de ville. **Gratuit en PA** (aucun coût dans la section 4). Les jauges sont plafonnées à 100 (le surplus est perdu) ; les remonter fait remonter le PA max effectif immédiatement, mais les PA actuels ne se rechargent qu'à la prochaine régénération. Une jauge qui remonte au-dessus de 0 remet à zéro son compteur de phases à vide.
+
+| Objet | Effet |
+|---|---|
+| Baies | +5 faim |
+| Gibier | +10 faim |
+| Eau brute | +10 soif, **20 % de risque de perdre 1 PV** par unité bue (mort possible : cause « eau croupie ») |
+| Plat préparé | +20 faim |
+| Conserve longue durée | +25 faim |
+| Ragoût fortifiant | +40 faim, +2 PA au-delà du PA max à la prochaine régénération en ville (cumulable, conservé tant que le joueur est dehors) |
+| Ration d'eau purifiée | +30 soif |
+| Infusion médicinale | +15 soif (l'atténuation du malus d'infection n'est pas encore appliquée) |
+
+Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gibier crus = 15 faim contre 20 pour le plat préparé ; 2 Gibier = 20 contre 25 pour la conserve ; 2 Eau brute = 20 soif à risque contre 30 sans risque pour la ration. Les autres gibiers du loot (petit, gros, rare) ne se consomment pas (voir section 5, objets sans mécanique définie).
 
 ### Régénération des ressources naturelles
 - Ressources **naturelles** (bois, baies, gibier) : régénèrent de **+40 % du stock max de la zone par cycle** (jour+nuit), plafonnées au stock max.

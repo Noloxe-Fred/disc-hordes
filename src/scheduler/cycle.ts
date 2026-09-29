@@ -39,12 +39,12 @@ function habitantsVivants(villeId: number) {
 const TEXTE_ALERTE: Record<Jauge, Record<Exclude<NiveauJauge, "normal">, string>> = {
   faim: {
     alerte: "commence à avoir faim",
-    critique: "est affamé : PA max réduits, et il perd des PV à chaque phase",
+    critique: "est affamé : PA max très réduits, et il perd des PV à chaque phase",
     vide: "meurt de faim : PA max encore réduits à chaque phase, et il perd des PV",
   },
   soif: {
     alerte: "commence à avoir soif",
-    critique: "est assoiffé : PA max réduits, et il perd des PV à chaque phase",
+    critique: "est assoiffé : PA max très réduits, et il perd des PV à chaque phase",
     vide: "meurt de soif : PA max encore réduits à chaque phase, et il perd des PV",
   },
 };
@@ -84,12 +84,16 @@ async function appliquerFaimSoif(guild: Guild, villeId: number): Promise<boolean
 }
 
 // Regeneration complete des PA a chaque changement de phase pour les habitants vivants qui ont dormi en ville
-// (equilibrage.md §1) : retour au PA max effectif, calcule apres la faim/soif et les blessures de la phase.
-// En territoire externe, pas de regeneration (la sieste partielle viendra avec les deplacements).
+// (equilibrage.md §1) : retour au PA max effectif, calcule apres la faim/soif et les blessures de la phase, plus
+// le bonus de reveil en attente (ragout fortifiant), qui est alors consomme. En territoire externe, pas de
+// regeneration (la sieste partielle viendra avec les deplacements) : le bonus attend le retour en ville.
 async function regenererPa(villeId: number) {
   for (const joueur of await habitantsVivants(villeId)) {
     if (joueur.zoneActuelleId !== null || joueur.paMax === null) continue;
-    await prisma.joueur.update({ where: { id: joueur.id }, data: { paActuel: calculerPaMax(joueur).paMax } });
+    await prisma.joueur.update({
+      where: { id: joueur.id },
+      data: { paActuel: calculerPaMax(joueur).paMax + joueur.bonusPaReveil, bonusPaReveil: 0 },
+    });
   }
 }
 

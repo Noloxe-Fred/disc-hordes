@@ -12,7 +12,12 @@ export interface ObjetPossede {
   objet: { nom: string };
 }
 
-export function champsObjetsPossedes(entrees: ObjetPossede[], libelle = "Quel objet ?"): LabelBuilder[] {
+// description : texte facultatif sous chaque option (ex. effet d'un aliment)
+export function champsObjetsPossedes(
+  entrees: ObjetPossede[],
+  libelle = "Quel objet ?",
+  description?: (nom: string) => string,
+): LabelBuilder[] {
   const champs: LabelBuilder[] = [];
   for (let debut = 0; debut < entrees.length; debut += OPTIONS_MAX) {
     const tranche = entrees.slice(debut, debut + OPTIONS_MAX);
@@ -27,6 +32,7 @@ export function champsObjetsPossedes(entrees: ObjetPossede[], libelle = "Quel ob
               label: `${e.objet.nom} (× ${e.quantite})`.slice(0, 100),
               value: String(e.objetId),
               emoji: emojiObjet(e.objet.nom),
+              ...(description ? { description: description(e.objet.nom).slice(0, 100) } : {}),
             })),
           ),
       );

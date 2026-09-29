@@ -219,7 +219,7 @@ Règles :
 
 ## 6. Survie & ressources
 
-- **Faim et soif** : deux jauges séparées ; alerte sous seuil critique ; malus en PA et restriction de certaines actions (ex. pas de construction) en dessous du seuil ; consommation directement dans les ressources de ville si en ville, dans l'inventaire perso si en sortie
+- **Faim et soif** : deux jauges séparées ; alerte sous seuil critique ; malus en PA progressif dès que la jauge baisse et restriction de certaines actions (ex. pas de construction) sous le seuil critique ; consommation depuis le sac partout, et en ville directement dans la banque de ville (`/inventaire`)
 - **Fatigue en territoire externe** : coût en PA en V1 ; jauge de fatigue séparée envisagée en V2
 - **Régénération des points d'intérêt** : pas de régénération sur les produits transformés (loot fini/fabriqué) ; régénération uniquement sur les ressources naturelles (bois, baies, animaux à chasser), avec un stock max désormais chiffré par palier de zone (proche/moyenne/éloignée) dans le document d'équilibrage
 - **Économie/monnaie** : jugée trop lourde pour la V1, reportée en V2 (avec l'idée d'un commerce avec des villes extérieures)

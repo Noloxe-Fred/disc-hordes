@@ -1,6 +1,7 @@
 import { StatutJoueur, StatutVille } from "@prisma/client";
 import { ButtonStyle, type ButtonInteraction } from "discord.js";
 import { OBJET_RADIO } from "../../config/objets";
+import { JAUGE_MAX } from "../../config/sante";
 import { prisma } from "../../db";
 import { calculerPaMax } from "../../game/pa";
 import { synchroniserAccesJoueur } from "../joueurDiscord";
@@ -24,7 +25,6 @@ import {
 // ajustement de la faim, de la soif et des PA.
 
 const QUANTITE_MAX = 9999;
-const JAUGE_MAX = 100;
 
 // --- Ajouter / retirer un objet (inventaire d'un joueur ou banque de ville) ---
 
