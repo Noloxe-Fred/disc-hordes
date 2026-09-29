@@ -82,12 +82,14 @@ function manque(etat: EtatChantier, nom: string): number {
 function ligneChantier(etat: EtatChantier): string {
   const { chantier: c, palier } = etat;
   const titre = `${c.emoji} **${c.nom}** — palier ${palier} / ${c.paliers.length}`;
+  // Bonus du palier atteint (les bonus de palissade indiquent deja le total cumule)
+  const actif = palier > 0 ? `\n✅ Actif : ${c.paliers[palier - 1].bonus}` : "\n-# Pas encore construit";
   const suivant = prochainPalier(etat);
-  if (!suivant) return `${titre} ✅ terminé`;
+  if (!suivant) return `${titre} — terminé${actif}`;
   const ressources = Object.entries(suivant.ressources)
     .map(([nom, n]) => `${emojiObjet(nom)} ${etat.deposees.get(nom) ?? 0}/${n}`)
     .join(" · ");
-  return `${titre}\n-# Prochain palier : ${suivant.bonus}\n${ressources} · ⚡ ${etat.paInstalles}/${suivant.pa} PA`;
+  return `${titre}${actif}\n⏳ Palier ${palier + 1} : ${suivant.bonus}\n${ressources} · ⚡ ${etat.paInstalles}/${suivant.pa} PA`;
 }
 
 export async function construirePanneauChantiers(villeId: number): Promise<ContainerBuilder> {
@@ -346,7 +348,7 @@ async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatime
     prisma.batimentVille.update({ where: { id: batiment.id }, data: { palierActuel: { increment: 1 }, paInstalles: 0 } }),
   ]);
   const c = chantier(type);
-  const annonce = `🏗️ **${c.emoji} ${c.nom} — palier ${etat.palier + 1}** est construit ! ${suivant.bonus}.`;
+  const annonce = `🏗️ Chantier terminé : **${c.emoji} ${c.nom}** atteint le **palier ${etat.palier + 1}** ! Bonus actif : ${suivant.bonus}.`;
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:chantiers`);
   await salon?.send({ content: `${annonce} Dernière pierre posée par <@${joueur.utilisateur.discordId}>.`, allowedMentions: { parse: [] } }).catch(() => null);
