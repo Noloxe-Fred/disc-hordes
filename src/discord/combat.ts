@@ -21,19 +21,25 @@ export interface RepliFuite {
   ville: boolean;
 }
 
-// Jet de rencontre dans la zone ou se trouve le joueur ; si un zombie surgit, la rencontre est enregistree.
+// Jet de rencontre dans la zone ou se trouve le joueur, plus probable a chaque fouille d'affilee sans zombie ; si un
+// zombie surgit, la rencontre est enregistree et le compteur de fouilles remis a 0, sinon une fouille l'augmente.
 // Renvoie le texte a ajouter au compte rendu de l'action, ou null.
 export async function declencherRencontre(
   joueurId: number,
   palier: PalierZone,
   phase: TypePhase,
   repli: RepliFuite,
+  apresFouille: boolean,
 ): Promise<string | null> {
-  if (!tirerRencontre(palier, phase)) return null;
+  const { fouillesSansRencontre } = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
+  if (!tirerRencontre(palier, phase, fouillesSansRencontre)) {
+    if (apresFouille) await prisma.joueur.update({ where: { id: joueurId }, data: { fouillesSansRencontre: { increment: 1 } } });
+    return null;
+  }
   const pv = PV_ZOMBIE[palier];
   const joueur = await prisma.joueur.update({
     where: { id: joueurId },
-    data: { rencontrePvZombie: pv, rencontreRetourZoneId: repli.zoneId, rencontreRetourVille: repli.ville },
+    data: { rencontrePvZombie: pv, rencontreRetourZoneId: repli.zoneId, rencontreRetourVille: repli.ville, fouillesSansRencontre: 0 },
   });
   await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Rencontre : un zombie surgit", public: false } });
   return `🧟 **Un zombie surgit !** (❤️ ${pv} PV) Vous devez l'affronter ou fuir avant de faire quoi que ce soit d'autre.`;

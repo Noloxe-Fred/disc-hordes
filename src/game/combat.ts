@@ -1,6 +1,7 @@
 import { TypePhase, type PalierZone } from "@prisma/client";
 import {
   ARMES,
+  BONUS_RENCONTRE_PAR_FOUILLE,
   CHANCE_FUITE,
   CHANCE_RENCONTRE,
   CHANCE_RIPOSTE,
@@ -16,9 +17,19 @@ import { coutSelonPhase } from "./deplacement";
 
 // Regles du combat contre un zombie (equilibrage.md §4 et §5), sans acces a la base : tirages et couts.
 
-export function tirerRencontre(palier: PalierZone, phase: TypePhase, alea: () => number = Math.random): boolean {
-  const chance = CHANCE_RENCONTRE[palier] * (phase === TypePhase.NUIT ? MAJORATION_RENCONTRE_NUIT : 1);
-  return alea() < chance;
+// fouillesSansRencontre : fouilles d'affilee sans zombie, +10 points chacune (chance plafonnee a 100 %)
+export function chanceRencontre(palier: PalierZone, phase: TypePhase, fouillesSansRencontre = 0): number {
+  const base = CHANCE_RENCONTRE[palier] * (phase === TypePhase.NUIT ? MAJORATION_RENCONTRE_NUIT : 1);
+  return Math.min(1, base + fouillesSansRencontre * BONUS_RENCONTRE_PAR_FOUILLE);
+}
+
+export function tirerRencontre(
+  palier: PalierZone,
+  phase: TypePhase,
+  fouillesSansRencontre = 0,
+  alea: () => number = Math.random,
+): boolean {
+  return alea() < chanceRencontre(palier, phase, fouillesSansRencontre);
 }
 
 // Meilleure arme du sac (ordre de ARMES), ou null

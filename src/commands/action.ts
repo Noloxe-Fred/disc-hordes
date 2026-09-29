@@ -360,10 +360,8 @@ async function confirmerDeplacement(
     `🧭 Vous êtes arrivé : **${destination.nom}**${salon ? ` — ${salon}` : ""} (${bilan}).\n` +
     "Tant que vous êtes dehors, vous ne pouvez plus écrire dans les salons de la ville.";
   // Zombie a l'arrivee ; en cas de fuite, le joueur rebrousse chemin vers la zone (ou la ville) d'ou il vient
-  const rencontre = await declencherRencontre(joueurId, destination.palier!, ville.phaseActuelle, {
-    zoneId: zoneDepartId,
-    ville: zoneDepartId === null,
-  });
+  const repli = { zoneId: zoneDepartId, ville: zoneDepartId === null };
+  const rencontre = await declencherRencontre(joueurId, destination.palier!, ville.phaseActuelle, repli, false);
   return rencontre ? `${arrivee}\n\n${rencontre}` : arrivee;
 }
 
@@ -474,7 +472,7 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
         : `🔍 Vous fouillez **${zone.nom}** (−${cout} PA, ${paRestants} restants) et trouvez :\n${liste(trouves)}` +
           `\n\n🎒 Rangé dans votre sac (${libelleCharge(sac)}, \`/inventaire\`).${texteLaisses}`;
   // Le bruit attire parfois un zombie ; en cas de fuite, le joueur reste dans la zone
-  const rencontre = await declencherRencontre(joueurId, zone.palier, ville.phaseActuelle, { zoneId: null, ville: false });
+  const rencontre = await declencherRencontre(joueurId, zone.palier, ville.phaseActuelle, { zoneId: null, ville: false }, true);
   return rencontre ? `${compteRendu}\n\n${rencontre}` : compteRendu;
 }
 

@@ -21,6 +21,8 @@ export async function deplacerJoueur(
       rencontrePvZombie: null,
       rencontreRetourZoneId: null,
       rencontreRetourVille: false,
+      // Rentrer en ville remet a zero le risque accumule par les fouilles d'affilee
+      ...(zoneId === null ? { fouillesSansRencontre: 0 } : {}),
       ...(coutPa > 0 ? { paActuel: { decrement: coutPa } } : {}),
     },
   });

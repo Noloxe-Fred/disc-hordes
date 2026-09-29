@@ -264,7 +264,8 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 | Éloignée (palier 3) | 45 % |
 
 - *(Relevées le 2026-09-29, depuis 10 / 20 / 35 %, jugées trop rares en test.)*
-- **La nuit** : probabilité ×1,5 (22,5 / 45 / 67,5 %), cohérent avec le principe "la nuit, rencontres plus dangereuses".
+- **Risque qui monte à chaque fouille** : chaque fouille d'affilée sans zombie ajoute **+10 points** à la chance des jets suivants de ce joueur (fouille comme arrivée dans une zone), plafonnée à 100 %. Le compteur revient à 0 dès qu'un zombie surgit ou que le joueur rentre en ville. Ex. zone éloignée de jour : 45 %, puis 55, 65, 75 %…
+- **La nuit** : probabilité de base ×1,5 (22,5 / 45 / 67,5 %), avant le bonus des fouilles, cohérent avec le principe "la nuit, rencontres plus dangereuses".
 - **Jet** après chaque fouille et à chaque arrivée dans une zone. Tant que la rencontre dure, `/action` ne propose plus que « Attaquer » et « Fuir » : ni fouille, ni déplacement, ni observation, ni retour en ville.
 
 ### Combat contre un zombie

@@ -416,6 +416,9 @@ model Joueur {
   rencontrePvZombie     Int?
   rencontreRetourZoneId Int?
   rencontreRetourVille  Boolean @default(false)
+  // Fouilles d'affilee sans zombie : chacune augmente la chance de rencontre suivante ; remis a 0 a chaque rencontre
+  // et au retour en ville (equilibrage.md §5)
+  fouillesSansRencontre Int     @default(0)
   xp             Int          @default(0)
   dateArrivee    DateTime     @default(now())
   dateSortie     DateTime?
