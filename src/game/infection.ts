@@ -2,7 +2,7 @@
 // 0% a -30% de malus PA sur 96h d'incubation). Calcule a la volee depuis Joueur.infecteDepuis
 // plutot que stocke, pour ne jamais desynchroniser la valeur affichee du temps ecoule reel.
 
-const DUREE_INCUBATION_HEURES = 96;
+export const DUREE_INCUBATION_HEURES = 96;
 const MALUS_PA_MAX_POURCENT = 30;
 const MS_PAR_HEURE = 3_600_000;
 

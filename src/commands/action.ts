@@ -28,6 +28,7 @@ import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
 import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
 import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
 import { formulaireSoin } from "../discord/soin";
+import { zombieErrantALArrivee } from "../discord/zombieErrant";
 import { sortirDeVille } from "../discord/sortie";
 import { posterDansMairie } from "../discord/villeStructure";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
@@ -388,11 +389,17 @@ async function confirmerDeplacement(
   });
 
   const bilan = `−${cout} PA, ${paRestants} restants${torche ? ", une torche consumée 🔥" : ""}`;
-  if (destination.id === null) return `🏠 Vous êtes rentré à **${ville.nom}** (${bilan}).`;
+  // Un citoyen transforme en zombie qui rode sur place se jette aussitot sur l'arrivant (discord/zombieErrant.ts)
+  const transforme = await zombieErrantALArrivee(guild, joueurId, ville.id, destination.id);
+  if (destination.id === null) {
+    const retour = `🏠 Vous êtes rentré à **${ville.nom}** (${bilan}).`;
+    return transforme ? `${retour}\n\n${transforme}` : retour;
+  }
   const salon = await trouverSalonTexte(guild, `salon:zone:${destination.id}`);
   const arrivee =
     `🧭 Vous êtes arrivé : **${destination.nom}**${salon ? ` — ${salon}` : ""} (${bilan}).\n` +
     "Tant que vous êtes dehors, vous ne pouvez plus écrire dans les salons de la ville.";
+  if (transforme) return `${arrivee}\n\n${transforme}`;
   // Zombie a l'arrivee ; en cas de fuite, le joueur rebrousse chemin vers la zone (ou la ville) d'ou il vient
   const repli = { zoneId: zoneDepartId, ville: zoneDepartId === null };
   const rencontre = await declencherRencontre(joueurId, destination.palier!, ville.phaseActuelle, repli, false);

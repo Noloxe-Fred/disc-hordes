@@ -13,9 +13,11 @@ import { NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../../config/
 import { LIBELLE_CAUSE_MORT } from "../../config/mort";
 import { JAUGE_MAX, PV_MAX } from "../../config/sante";
 import { prisma } from "../../db";
+import { DUREE_INCUBATION_HEURES } from "../../game/infection";
 import { calculerPaMax } from "../../game/pa";
 import { infligerDegats } from "../../game/sante";
 import { deplacerJoueur } from "../deplacement";
+import { verifierZombiesErrants } from "../zombieErrant";
 import { appliquerExclusionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
 import {
@@ -124,10 +126,14 @@ async function ressusciter(interaction: ButtonInteraction, guild: Guild) {
   const { soumission, joueur } = cible;
 
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
-  await prisma.joueur.update({
-    where: { id: joueur.id },
-    data: { statut: StatutJoueur.VIVANT, pv: PV_MAX, infecteDepuis: null, dateMort: null, causeMort: null },
-  });
+  await prisma.$transaction([
+    prisma.joueur.update({
+      where: { id: joueur.id },
+      data: { statut: StatutJoueur.VIVANT, pv: PV_MAX, infecteDepuis: null, dateMort: null, causeMort: null },
+    }),
+    // Un joueur transforme ramene a la vie n'erre plus en zombie
+    prisma.zombieErrant.deleteMany({ where: { transformeId: joueur.id } }),
+  ]);
   await retablirJoueurDiscord(guild, joueur.id);
   await journaliser(interaction.user, "Ressusciter un joueur", detailJournal(joueur));
   await soumission.editReply({ content: `${mention(joueur)} est revenu à la vie (${PV_MAX} PV, en ville).`, allowedMentions: { parse: [] } });
@@ -146,6 +152,21 @@ async function guerir(interaction: ButtonInteraction) {
     soumission,
     `${mention(joueur)} est guéri : ${PV_MAX}/${PV_MAX} PV` + (joueur.infecteDepuis ? ", infection soignée." : "."),
   );
+}
+
+// --- Transformer en zombie : l'incubation arrive a terme tout de suite (tests, animation) ---
+
+async function transformer(interaction: ButtonInteraction, guild: Guild) {
+  const cible = await choisirJoueur(interaction, "Transformer en zombie", [StatutJoueur.VIVANT, StatutJoueur.EXCLU], "n'est pas vivant.");
+  if (!cible) return;
+  const { soumission, joueur } = cible;
+
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+  const debutIncubation = new Date(Date.now() - DUREE_INCUBATION_HEURES * 3_600_000);
+  await prisma.joueur.update({ where: { id: joueur.id }, data: { infecteDepuis: debutIncubation } });
+  await verifierZombiesErrants(guild);
+  await journaliser(interaction.user, "Transformer en zombie", detailJournal(joueur));
+  await soumission.editReply({ content: `${mention(joueur)} s'est transformé en zombie.`, allowedMentions: { parse: [] } });
 }
 
 // --- Infecter : declenche l'infection cachee (incubation de 96h) ---
@@ -375,6 +396,13 @@ export const FAMILLE_JOUEUR: FamilleAdmin = {
     },
     { cle: "blesser", libelle: "Blesser", description: "retire des PV à un joueur ; à 0 PV il meurt, avec la cause choisie.", style: ButtonStyle.Danger, executer: blesser },
     { cle: "guerir", libelle: "Guérir", description: "rend tous ses PV à un joueur et soigne son infection.", style: ButtonStyle.Success, executer: guerir },
+    {
+      cle: "transformer",
+      libelle: "Transformer en zombie",
+      description: "fait arriver l'incubation à terme : le joueur meurt et son zombie attaque un survivant présent.",
+      style: ButtonStyle.Danger,
+      executer: transformer,
+    },
     { cle: "infecter", libelle: "Infecter", description: "déclenche une infection cachée (incubation de 96h).", style: ButtonStyle.Danger, executer: infecter },
     {
       cle: "exclure",

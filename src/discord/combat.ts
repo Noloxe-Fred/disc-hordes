@@ -8,6 +8,7 @@ import { coutAttaque, coutFuite, echangerCoups, meilleureArme, tenterFuite, tire
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { deplacerJoueur } from "./deplacement";
 import { trouverSalonTexte } from "./reconcile";
+import { attaquerAvecZombieErrant, libererZombieErrant, zombieAffrontePar } from "./zombieErrant";
 
 // Rencontres de zombies en territoire externe et combat (equilibrage.md §4 et §5). Une rencontre se tire apres chaque
 // fouille et a chaque arrivee dans une zone ; tant qu'elle dure, /action ne propose plus qu'« Attaquer » et « Fuir ».
@@ -61,14 +62,17 @@ export async function ecranCombat(joueurId: number, texte?: string): Promise<Con
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
   const phase = joueur.ville!.phaseActuelle;
   const arme = await armeDuJoueur(joueurId);
-  const pvMax = joueur.zoneActuelle ? PV_ZOMBIE[joueur.zoneActuelle.palier] : (joueur.rencontrePvZombie ?? 0);
+  // Citoyen transforme en zombie (discord/zombieErrant.ts) : il est nomme
+  const errant = await zombieAffrontePar(joueurId);
+  const pvMax = errant?.pvMax ?? (joueur.zoneActuelle ? PV_ZOMBIE[joueur.zoneActuelle.palier] : (joueur.rencontrePvZombie ?? 0));
+  const adversaire = errant ? `🧟 <@${errant.transforme.utilisateur.discordId}>, **citoyen transformé en zombie**` : "🧟 Zombie";
   return new ContainerBuilder()
     .setAccentColor(COULEUR_COMBAT)
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         (texte ? `${texte}\n\n` : "") +
-          `## ⚔️ Combat — ${joueur.zoneActuelle?.nom ?? "?"}\n` +
-          `🧟 Zombie : ❤️ **${joueur.rencontrePvZombie} / ${pvMax}** PV · Vous : ❤️ ${joueur.pv} PV · ⚡ ${joueur.paActuel ?? 0} PA\n` +
+          `## ⚔️ Combat — ${joueur.zoneActuelle?.nom ?? "en ville"}\n` +
+          `${adversaire} : ❤️ **${joueur.rencontrePvZombie} / ${pvMax}** PV · Vous : ❤️ ${joueur.pv} PV · ⚡ ${joueur.paActuel ?? 0} PA\n` +
           (arme ? `${emojiObjet(arme.nom)} Vous vous battez avec : **${arme.nom}**.` : "✊ Vous vous battez à mains nues."),
       ),
     )
@@ -109,16 +113,31 @@ export async function attaquer(guild: Guild, joueurId: number): Promise<Resultat
 
   const echange = echangerCoups(joueur.rencontrePvZombie!, arme);
   const vaincu = echange.pvZombie <= 0;
-  await prisma.joueur.update({
-    where: { id: joueurId },
-    data: { paActuel: { decrement: cout }, ...(vaincu ? FIN_RENCONTRE : { rencontrePvZombie: echange.pvZombie }) },
-  });
+  const errant = await zombieAffrontePar(joueurId);
+  await prisma.$transaction([
+    prisma.joueur.update({
+      where: { id: joueurId },
+      data: { paActuel: { decrement: cout }, ...(vaincu ? FIN_RENCONTRE : { rencontrePvZombie: echange.pvZombie }) },
+    }),
+    // Un citoyen transforme abattu disparait ; sinon il garde ses blessures, meme si le joueur tombe ou s'en va
+    ...(errant
+      ? [
+          vaincu
+            ? prisma.zombieErrant.delete({ where: { id: errant.id } })
+            : prisma.zombieErrant.update({ where: { id: errant.id }, data: { pv: echange.pvZombie } }),
+        ]
+      : []),
+  ]);
   const lignes = [
     echange.touche ? `⚔️ Vous frappez le zombie (−${echange.degats} PV, −${cout} PA).` : `💨 Vous manquez votre coup (−${cout} PA).`,
   ];
   if (vaincu) {
     await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Combat : zombie abattu", public: false } });
-    lignes.push("💀 **Le zombie s'effondre.** Vous pouvez reprendre vos actions.");
+    lignes.push(
+      errant
+        ? `💀 **<@${errant.transforme.utilisateur.discordId}> s'effondre pour de bon.** Vous pouvez reprendre vos actions.`
+        : "💀 **Le zombie s'effondre.** Vous pouvez reprendre vos actions.",
+    );
     return { texte: lignes.join("\n"), enCours: false };
   }
   if (!echange.riposte) {
@@ -126,7 +145,7 @@ export async function attaquer(guild: Guild, joueurId: number): Promise<Resultat
     return { texte: lignes.join("\n"), enCours: true };
   }
 
-  const resultat = await infligerDegats(guild, joueurId, DEGATS_ZOMBIE, CauseMort.COMBAT_EXTERIEUR);
+  const resultat = await infligerDegats(guild, joueurId, DEGATS_ZOMBIE, errant ? CauseMort.ZOMBIE_ERRANT : CauseMort.COMBAT_EXTERIEUR);
   if (resultat.mort) {
     lignes.push("🩸 Le zombie vous frappe… **vous succombez.** 💀");
     return { texte: lignes.join("\n"), enCours: false };
@@ -148,8 +167,9 @@ export async function fuir(guild: Guild, joueurId: number): Promise<ResultatComb
   }
   await prisma.joueur.update({ where: { id: joueurId }, data: { paActuel: { decrement: cout } } });
 
+  const errant = await zombieAffrontePar(joueurId);
   if (!tenterFuite(phase)) {
-    const resultat = await infligerDegats(guild, joueurId, DEGATS_ZOMBIE, CauseMort.COMBAT_EXTERIEUR);
+    const resultat = await infligerDegats(guild, joueurId, DEGATS_ZOMBIE, errant ? CauseMort.ZOMBIE_ERRANT : CauseMort.COMBAT_EXTERIEUR);
     if (resultat.mort) return { texte: `🏃 Vous tentez de fuir (−${cout} PA)… le zombie vous rattrape. **Vous succombez.** 💀`, enCours: false };
     return {
       texte: `🏃 Vous tentez de fuir (−${cout} PA)… le zombie vous rattrape et vous frappe : −${DEGATS_ZOMBIE} PV (${resultat.pvRestants} restants).`,
@@ -160,6 +180,22 @@ export async function fuir(guild: Guild, joueurId: number): Promise<ResultatComb
   const repli = joueur.rencontreRetourVille ? null : joueur.rencontreRetourZoneId;
   const bouge = joueur.rencontreRetourVille || joueur.rencontreRetourZoneId !== null;
   await prisma.joueur.update({ where: { id: joueurId }, data: FIN_RENCONTRE });
+  if (errant) {
+    await libererZombieErrant(joueurId);
+    await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Combat : fuite réussie", public: false } });
+    const nom = `<@${errant.transforme.utilisateur.discordId}>`;
+    if (errant.zoneId !== null) {
+      return { texte: `🏃 Vous prenez la fuite (−${cout} PA). ${nom} rôde toujours dans la zone : éloignez-vous vite.`, enCours: false };
+    }
+    // En ville, il se jette sur un autre citoyen present, ou de nouveau sur vous si vous etes seul
+    const suite = await attaquerAvecZombieErrant(guild, errant.id, { exclureId: joueurId, prevenir: true });
+    const fuite = `🏃 Vous prenez la fuite (−${cout} PA).`;
+    if (suite?.victimeId !== joueurId) return { texte: `${fuite} ${nom} se jette sur un autre citoyen.`, enCours: false };
+    return {
+      texte: `${fuite} Il n'y a personne d'autre en ville : ${nom} revient sur vous.\n${suite.texte}`,
+      enCours: (await zombieAffrontePar(joueurId)) !== null,
+    };
+  }
   if (bouge) await deplacerJoueur(guild, joueur, repli, 0);
   await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Combat : fuite réussie", public: false } });
   const nomRepli = repli === null ? null : (await prisma.zone.findUnique({ where: { id: repli } }))?.nom;

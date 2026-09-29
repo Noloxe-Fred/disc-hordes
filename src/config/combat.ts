@@ -49,6 +49,13 @@ export const DEGATS_HORDE_AUBE: Record<PalierZone, number> = {
 };
 export const PROTECTION_FEU_HORDE = 1;
 
+// Citoyen transforme en zombie au bout de l'incubation : en ville, il a les PV d'un zombie de zone proche, dehors ceux
+// d'un zombie de sa zone ; il frappe par surprise (-1 PV, coup recu) le survivant qu'il attaque, puis combat normal
+export const PV_ZOMBIE_TRANSFORME_EN_VILLE = PV_ZOMBIE[PalierZone.PROCHE];
+export const DEGATS_SURPRISE_TRANSFORME = 1;
+// Verification periodique des incubations arrivees a terme et des zombies errants sans cible
+export const INTERVALLE_ZOMBIES_ERRANTS_MS = 5 * 60_000;
+
 // Armes portees dans le sac : seule la meilleure compte (ordre de la liste), sans cumul
 export interface Arme {
   nom: string;

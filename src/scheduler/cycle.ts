@@ -10,6 +10,8 @@ import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { evenementsTombeeNuit, hordeAube } from "../discord/combat";
 import { posterDansMairie } from "../discord/villeStructure";
+import { verifierZombiesErrants } from "../discord/zombieErrant";
+import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
 import { produireEauPuits } from "../services/puits";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
@@ -286,4 +288,11 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
   };
 
   planifierProchaineAlerte();
+
+  // Incubations arrivees a terme et citoyens transformes en quete d'une victime (discord/zombieErrant.ts)
+  setInterval(async () => {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+    await verifierZombiesErrants(guild).catch((error) => console.error("Verification des zombies errants impossible", error));
+  }, INTERVALLE_ZOMBIES_ERRANTS_MS);
 }

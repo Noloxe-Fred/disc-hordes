@@ -94,6 +94,7 @@ Tu arrives **sans maison**. Une maison améliorée réduit tes chances d'être b
 ## 🦠 L'infection
 Chaque blessure peut t'**infecter** (10 % de chance). L'infection est **secrète** : toi seul le sais, grâce à `/personnage`.
 Elle réduit peu à peu tes PA… et au bout de **96h** sans remède, tu deviens **zombie**. 🧟
+Ton zombie reste là où tu t'es transformé. En ville, il se jette par surprise sur un citoyen au hasard (**−1 PV**), qui doit le combattre ; celui qui le fuit le laisse se jeter sur un autre. Dehors, il attend le premier survivant qui passe dans sa zone.
 
 
 # 🗺️ Les territoires externes

@@ -192,6 +192,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
     prisma.journalEntree.deleteMany({ where: { villeId } }),
     prisma.inventaireVille.deleteMany({ where: { villeId } }),
     prisma.batimentVille.deleteMany({ where: { villeId } }), // contributions supprimees en cascade
+    prisma.zombieErrant.deleteMany({ where: { villeId } }),
     prisma.inventaireJoueur.deleteMany({ where: { joueurId: { in: joueurIds } } }),
     prisma.carteDecouverte.deleteMany({ where: { joueurId: { in: joueurIds } } }),
     // Valeurs de depart d'un personnage (schema Joueur) ; le PA max fige a l'arrivee est conserve

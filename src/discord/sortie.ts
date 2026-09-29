@@ -19,6 +19,7 @@ export async function sortirDeVille(guild: Guild, joueurId: number): Promise<boo
     }),
     ...(ville.maireId === joueurId ? [prisma.ville.update({ where: { id: ville.id }, data: { maireId: null, mandatFinCycle: null } })] : []),
   ]);
+  await prisma.zombieErrant.updateMany({ where: { cibleId: joueurId }, data: { cibleId: null } });
   await changerPositionDiscord(guild, joueur.utilisateur.discordId, joueur.zoneActuelleId, null);
   await retirerJoueurDeVilleDiscord(guild, joueur.utilisateur.discordId, ville.id);
 

@@ -17,10 +17,14 @@ export async function enregistrerMort(guild: Guild, joueurId: number, cause: Cau
       dateMort: new Date(),
       causeMort: cause,
       zoneActuelleId: null,
-      rencontrePvZombie: null, rencontreRetourZoneId: null, rencontreRetourVille: false,
+      rencontrePvZombie: null,
+      rencontreRetourZoneId: null,
+      rencontreRetourVille: false,
     },
     include: { utilisateur: true },
   });
+  // Un citoyen transforme qu'il combattait reste sur place, sans cible (discord/zombieErrant.ts)
+  await prisma.zombieErrant.updateMany({ where: { cibleId: joueurId }, data: { cibleId: null } });
   if (joueur.villeId === null) return false;
 
   await appliquerMortDiscord(guild, joueur.id, avant.zoneActuelleId);

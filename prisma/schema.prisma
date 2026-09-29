@@ -32,6 +32,7 @@ enum CauseMort {
   SOIF
   INFECTION
   EAU_CONTAMINEE // eau brute bue sans la purifier (equilibrage.md §2)
+  ZOMBIE_ERRANT // tue par un citoyen transforme en zombie (equilibrage.md §1)
 }
 
 enum StatutJoueur {
@@ -177,16 +178,17 @@ model Ville {
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
   projet                String?     @db.Text
 
-  createur   Utilisateur          @relation("CreateurVille", fields: [createurUtilisateurId], references: [id])
-  groupe     Groupe?              @relation(fields: [groupeId], references: [id])
-  maire      Joueur?              @relation("MaireVille", fields: [maireId], references: [id])
-  habitants  Joueur[]             @relation("HabitantsVille")
-  demandes   DemandeInscription[]
-  inventaire InventaireVille[]
-  batiments  BatimentVille[]
-  attaques   CycleAttaque[]
-  elections  Election[]
-  journal    JournalEntree[]
+  createur       Utilisateur          @relation("CreateurVille", fields: [createurUtilisateurId], references: [id])
+  groupe         Groupe?              @relation(fields: [groupeId], references: [id])
+  maire          Joueur?              @relation("MaireVille", fields: [maireId], references: [id])
+  habitants      Joueur[]             @relation("HabitantsVille")
+  demandes       DemandeInscription[]
+  inventaire     InventaireVille[]
+  batiments      BatimentVille[]
+  attaques       CycleAttaque[]
+  zombiesErrants ZombieErrant[]
+  elections      Election[]
+  journal        JournalEntree[]
 }
 
 enum StatutDemande {
@@ -221,10 +223,10 @@ model DemandeInscription {
 // =========================================================================
 
 model Zone {
-  id       Int        @id @default(autoincrement())
-  nom      String
-  palier   PalierZone
-  groupeId Int
+  id          Int        @id @default(autoincrement())
+  nom         String
+  palier      PalierZone
+  groupeId    Int
   // Dernier feu allume dans la zone : il la securise jusqu'au changement de phase suivant (sieste possible, rencontres
   // deux fois moins probables, equilibrage.md §1 et §5)
   feuAllumeLe DateTime?
@@ -235,6 +237,7 @@ model Zone {
   joueursPresents  Joueur[]
   decouvertesPar   CarteDecouverte[]
   stocksRessources ZoneRessourceStock[]
+  zombiesErrants   ZombieErrant[]
 
   @@unique([groupeId, nom])
 }
@@ -388,48 +391,48 @@ model ContributionBatiment {
 // =========================================================================
 
 model Joueur {
-  id             Int          @id @default(autoincrement())
-  utilisateurId  Int
-  villeId        Int?
-  zoneActuelleId Int?
-  metier         Metier?
-  statut         StatutJoueur @default(VIVANT)
+  id                    Int          @id @default(autoincrement())
+  utilisateurId         Int
+  villeId               Int?
+  zoneActuelleId        Int?
+  metier                Metier?
+  statut                StatutJoueur @default(VIVANT)
   // Fige a l'arrivee du joueur dans sa toute premiere ville (floor(180/N), plafond 40) et ne
   // change plus jamais ensuite, meme en cas de demenagement vers une autre ville (equilibrage.md §1).
-  paMax          Int?
-  paActuel       Int?
-  faim           Int          @default(100)
-  soif           Int          @default(100)
+  paMax                 Int?
+  paActuel              Int?
+  faim                  Int          @default(100)
+  soif                  Int          @default(100)
   // Phases consecutives ecoulees avec la jauge a 0 apres celle qui l'a videe : -15 % de PA max chacune
   // (equilibrage.md §2). Remis a 0 des que la jauge remonte.
-  phasesFaimVide Int          @default(0)
-  phasesSoifVide Int          @default(0)
+  phasesFaimVide        Int          @default(0)
+  phasesSoifVide        Int          @default(0)
   // Points de vie (equilibrage.md §1) : 0 ou moins = mort. Chaque PV manquant retire 5 % du PA max.
-  pv             Int          @default(10)
+  pv                    Int          @default(10)
   // Date de declenchement de l'infection ; cachee aux autres joueurs. Le malus PA (0% a -30%
   // lineaire sur 96h) et la transformation en zombie a 96h se calculent a la volee depuis cette
   // date plutot que d'etre stockes (equilibrage.md §1).
-  infecteDepuis  DateTime?
+  infecteDepuis         DateTime?
   // 0 = pas encore de maison ; la maison privee se construit (palier 1) puis s'ameliore (palier 2), equilibrage.md §7
-  maisonPalier   Int          @default(0)
+  maisonPalier          Int          @default(0)
   // PA ajoutes au-dela du PA max a la prochaine regeneration en ville (ragout fortifiant, equilibrage.md §8)
-  bonusPaReveil  Int          @default(0)
+  bonusPaReveil         Int          @default(0)
   // Rencontre de zombie en cours en territoire externe (equilibrage.md §5) : PV restants du zombie, null = aucune.
   // En cas de fuite reussie, le joueur repart vers la zone d'ou il venait (ou la ville) ; aucune = il reste sur place.
   rencontrePvZombie     Int?
   rencontreRetourZoneId Int?
-  rencontreRetourVille  Boolean @default(false)
+  rencontreRetourVille  Boolean      @default(false)
   // Fouilles d'affilee sans zombie : chacune augmente la chance de rencontre suivante ; remis a 0 a chaque rencontre
   // et au retour en ville (equilibrage.md §5)
-  fouillesSansRencontre Int     @default(0)
+  fouillesSansRencontre Int          @default(0)
   // Derniere sieste en territoire externe : une seule par phase (equilibrage.md §1)
   derniereSieste        DateTime?
-  xp             Int          @default(0)
-  dateArrivee    DateTime     @default(now())
-  dateSortie     DateTime?
+  xp                    Int          @default(0)
+  dateArrivee           DateTime     @default(now())
+  dateSortie            DateTime?
   // Renseignes a la mort (MORT ou ZOMBIFIE) ; servent au recapitulatif de chute de la ville.
-  dateMort       DateTime?
-  causeMort      CauseMort?
+  dateMort              DateTime?
+  causeMort             CauseMort?
 
   utilisateur       Utilisateur        @relation(fields: [utilisateurId], references: [id])
   ville             Ville?             @relation("HabitantsVille", fields: [villeId], references: [id])
@@ -443,6 +446,8 @@ model Joueur {
   signalementsEmis  Signalement[]      @relation("Signalant")
   signalementsRecus Signalement[]      @relation("Cible")
   journal           JournalEntree[]
+  zombieDevenu      ZombieErrant?      @relation("ZombieTransforme")
+  zombieAffronte    ZombieErrant?      @relation("ZombieCible")
 }
 
 // =========================================================================
@@ -581,4 +586,21 @@ model JournalAdmin {
   date           DateTime @default(now())
 
   @@index([date])
+}
+
+// Citoyen transforme en zombie au bout de l'incubation (equilibrage.md §1) : il rode en ville (zoneId null) ou dans la
+// zone ou il s'est transforme, et attaque un survivant present ; cibleId = joueur qui le combat en ce moment.
+model ZombieErrant {
+  id           Int  @id @default(autoincrement())
+  transformeId Int  @unique
+  villeId      Int
+  zoneId       Int?
+  pv           Int
+  pvMax        Int
+  cibleId      Int? @unique
+
+  transforme Joueur  @relation("ZombieTransforme", fields: [transformeId], references: [id], onDelete: Cascade)
+  cible      Joueur? @relation("ZombieCible", fields: [cibleId], references: [id], onDelete: SetNull)
+  ville      Ville   @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  zone       Zone?   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 }

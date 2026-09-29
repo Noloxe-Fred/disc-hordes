@@ -26,6 +26,8 @@ export async function deplacerJoueur(
       ...(coutPa > 0 ? { paActuel: { decrement: coutPa } } : {}),
     },
   });
+  // Un citoyen transforme qu'il combattait reste sur place, sans cible (discord/zombieErrant.ts)
+  await prisma.zombieErrant.updateMany({ where: { cibleId: joueur.id }, data: { cibleId: null } });
   if (zoneId !== null) await ajouterACarte(joueur.id, [zoneId]);
 
   await changerPositionDiscord(guild, joueur.utilisateur.discordId, joueur.zoneActuelleId, zoneId);

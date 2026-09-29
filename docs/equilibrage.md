@@ -59,6 +59,13 @@ Une infection se déclenche via un **"coup reçu"**, avec **10 % de chance** à 
 
 Une fois déclenchée, l'infection est cachée (seul le joueur le sait) et suit l'incubation de 2 cycles jour/nuit (96h) avec le malus PA linéaire ci-dessus.
 
+### Transformation en zombie (fin de l'incubation)
+Vérifiée toutes les 5 minutes. Le joueur **meurt** (statut Zombifié, cause « transformé en zombie », rôle Mort ; la mairie l'annonce) et son **zombie reste là où il s'est transformé** :
+- **En ville** : zombie de **2 PV** (comme en zone proche). Il se jette **par surprise sur un citoyen présent en ville, tiré au hasard** : **−1 PV immédiat** (coup reçu, 10 % d'infection), puis combat normal (section 5). L'écran de combat précise qu'il s'agit du citoyen transformé. Si la victime **fuit**, il se jette sur un **autre citoyen présent en ville** (le même s'il est seul). **Aucune influence sur l'attaque de nuit.**
+- **Dehors** : zombie aux **PV de la zone**, qui reste dans la zone (le lieu n'est pas annoncé). Il se jette de la même façon (−1 PV de surprise) sur un survivant présent, ou sur **le premier qui arrive**. Si sa victime fuit, il reste dans la zone.
+- Il garde ses blessures d'un combat à l'autre ; abattu, il disparaît. S'il n'a personne à attaquer, il attend (en ville, le premier citoyen présent à la vérification suivante ou qui rentre).
+- Mort face à lui : cause « dévoré par un citoyen transformé en zombie ».
+
 ### Régénération
 - **Complète** (retour à PA max) : au réveil de chaque phase (jour→nuit ou nuit→jour), condition = avoir dormi **en ville**.
 - **Partielle** : **sieste** en territoire externe (bouton « Sieste » de `/action`), uniquement dans une zone où **brûle un feu** (section 6), gratuite, **une fois par phase et par joueur** : **+25 % du PA max effectif** (arrondi à l'inférieur, sans dépasser le PA max ; refusée si déjà au max). Un jet de rencontre a lieu d'abord (taux de la zone, divisé par deux par le feu, section 5) : si un zombie surgit, la sieste est interrompue — aucun PA gagné, le combat commence.
