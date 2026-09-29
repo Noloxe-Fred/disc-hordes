@@ -153,6 +153,9 @@ En ville, le bouton **Banque** montre la réserve commune de ta ville. **Dépose
 Mort, tu **vois toujours ta ville** mais tu ne peux plus y écrire ni y parler.
 Avec `/action`, tu peux **quitter ta ville** pour redevenir Nomade et tenter ta chance ailleurs.
 
+## 🚪 Partir
+Vivant, tu peux aussi **quitter ta ville pour toujours** avec le bouton **Quitter la ville** de `/action`, après confirmation. Ton départ est annoncé dans la mairie ; tu abandonnes ton personnage et ton sac, et tu redeviens **Nomade**, libre de rejoindre ou créer une autre ville, mais **jamais de revenir** dans celle-ci. Si tu étais le dernier vivant, la ville tombe.
+
 ## 🕯️ La chute d'une ville
 Quand le **dernier habitant vivant** meurt, la ville **tombe**.
 Son histoire est gravée dans #commémoration : durée de survie, dernier maire, pire attaque, dernier survivant, et le destin de chaque habitant.
@@ -163,7 +166,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, ou quitter ta ville si tu es mort)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone, voir et partager ta carte, quitter ta ville)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 

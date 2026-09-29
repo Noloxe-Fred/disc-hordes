@@ -20,9 +20,11 @@ import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
 import { deplacerJoueur } from "../discord/deplacement";
-import { retirerJoueurDeVilleDiscord, synchroniserAccesJoueur } from "../discord/joueurDiscord";
+import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
+import { sortirDeVille } from "../discord/sortie";
+import { posterDansMairie } from "../discord/villeStructure";
 import { coutDeplacement, coutFouille, coutObservation } from "../game/deplacement";
 import { tirerLoot } from "../game/loot";
 import { calculerPaMax } from "../game/pa";
@@ -34,7 +36,8 @@ import { destinationsDepuis } from "../services/zones";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
-// « Carte », « Partager la carte ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en rejoindre une autre.
+// « Carte », « Partager la carte », « Quitter la ville ») ; le combat s'y ajoutera. Mort : quitter sa ville pour en
+// rejoindre une autre.
 
 const DELAI_CHOIX_MS = 120_000;
 const COULEUR_VIVANT = 0x2ecc71;
@@ -97,6 +100,23 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       ...(empechementPartage(joueur) === null
         ? [new ButtonBuilder().setCustomId("partager").setLabel("Partager la carte").setEmoji("🤝").setStyle(ButtonStyle.Secondary)]
         : []),
+    ),
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setEmoji("🚪").setStyle(ButtonStyle.Danger),
+    ),
+  );
+
+  // Quitter la ville : depart definitif, apres confirmation
+  const ecranQuitter = encadre(
+    `${entete}
+
+⚠️ **Quitter ${ville.nom} pour toujours ?** Vous abandonnez ce personnage et son sac, perdez l'accès aux salons ` +
+      "de la ville et redevenez **Nomade**, sans retour possible dans cette ville." +
+      (joueur.statut === StatutJoueur.VIVANT ? " Si vous êtes le dernier habitant vivant, la ville tombe." : ""),
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("confirmer-quitter").setLabel("Quitter définitivement").setStyle(ButtonStyle.Danger),
+      boutonRetour(),
     ),
   );
 
@@ -192,6 +212,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       return;
     } else if (clic.customId === "fouiller") {
       await clic.update({ components: [ecranFouille] });
+    } else if (clic.customId === "quitter-ville") {
+      await clic.update({ components: [ecranQuitter] });
+    } else if (clic.customId === "confirmer-quitter") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await quitterVilleVivant(guild, joueurId))] });
+      return;
     } else if (clic.customId === "confirmer-fouille") {
       await clic.deferUpdate();
       await clic.editReply({ components: [encadre(await confirmerFouille(guild, joueurId, joueur.zoneActuelleId))] });
@@ -396,6 +422,21 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
   );
 }
 
+// Sortie volontaire d'un vivant ou d'un exclu (conception.md §3) : annoncee dans la mairie, puis depart definitif
+async function quitterVilleVivant(guild: Guild, joueurId: number): Promise<string> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
+  const ville = joueur.ville!;
+  if (joueur.dateSortie !== null) return "Vous avez déjà quitté cette ville.";
+  await prisma.journalEntree.create({ data: { villeId: ville.id, joueurId, message: "A quitté la ville" } });
+  await posterDansMairie(guild, ville.id, `🚪 <@${joueur.utilisateur.discordId}> a quitté **${ville.nom}** pour toujours.`);
+  const villeTombee = await sortirDeVille(guild, joueurId);
+  return (
+    `🚪 Vous avez quitté **${ville.nom}**.` +
+    (villeTombee ? " Vous en étiez le dernier habitant vivant : la ville est tombée." : "") +
+    "\nVous pouvez rejoindre une ville depuis #fonder-une-colonie ou en créer une avec `/creer-ville`."
+  );
+}
+
 // --- Mort : quitter sa ville pour en rejoindre une autre ---
 
 async function actionsMort(interaction: ChatInputCommandInteraction, guild: Guild, joueurId: number) {
@@ -447,8 +488,7 @@ async function actionsMort(interaction: ChatInputCommandInteraction, guild: Guil
     return;
   }
 
-  await prisma.joueur.update({ where: { id: joueur.id }, data: { dateSortie: new Date() } });
-  await retirerJoueurDeVilleDiscord(guild, interaction.user.id, ville.id);
+  await sortirDeVille(guild, joueur.id);
 
   await choix.update({
     content: `Vous avez quitté **${ville.nom}**. Vous pouvez rejoindre une ville depuis #fonder-une-colonie ou en créer une avec \`/creer-ville\`.`,

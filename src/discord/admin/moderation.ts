@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille } from "@prisma/client";
+import { StatutVille } from "@prisma/client";
 import {
   ButtonStyle,
   ContainerBuilder,
@@ -8,9 +8,8 @@ import {
   type Guild,
 } from "discord.js";
 import { prisma } from "../../db";
-import { declarerChuteVille } from "../chute";
-import { changerPositionDiscord, retirerJoueurDeVilleDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
+import { sortirDeVille } from "../sortie";
 import {
   champChoix,
   champMembre,
@@ -96,17 +95,7 @@ async function kick(interaction: ButtonInteraction, guild: Guild) {
     await prisma.joueur.delete({ where: { id: joueur.id } });
     await rafraichirMessageVille(guild, ville.id);
   } else {
-    await prisma.$transaction([
-      prisma.joueur.update({ where: { id: joueur.id }, data: { dateSortie: new Date(), zoneActuelleId: null } }),
-      ...(ville.maireId === joueur.id
-        ? [prisma.ville.update({ where: { id: ville.id }, data: { maireId: null, mandatFinCycle: null } })]
-        : []),
-    ]);
-    await changerPositionDiscord(guild, joueur.utilisateur.discordId, joueur.zoneActuelleId, null);
-    await retirerJoueurDeVilleDiscord(guild, joueur.utilisateur.discordId, ville.id);
-
-    const survivants = await prisma.joueur.count({ where: { villeId: ville.id, statut: StatutJoueur.VIVANT, dateSortie: null } });
-    if (joueur.statut === StatutJoueur.VIVANT && survivants === 0) await declarerChuteVille(guild, ville.id);
+    await sortirDeVille(guild, joueur.id);
   }
 
   await journaliser(interaction.user, "Kick (jeu)", `${joueur.utilisateur.pseudoCache ?? joueur.utilisateur.discordId} (${ville.nom})`);

@@ -121,7 +121,7 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 - **Objets à la mort** : les objets d'inventaire du joueur (dont une radio s'il en avait) deviennent **lootables sur place** par les autres joueurs présents dans la zone/ville
 
 ### Cycle de vie du joueur (hors mort)
-- `/quitter-ville` : sortie volontaire — libère le rôle Position/Citoyen et la place de métier ; le joueur ne peut plus rejoindre cette ville
+- **Sortie volontaire d'un vivant** (bouton « Quitter la ville » de `/action`, confirmation obligatoire, en ville comme dehors, exclus compris) : annoncée dans la mairie, libère le rôle Position/Citoyen et la place de métier, un maire perd son mandat, le sac reste avec le personnage abandonné ; retour au rôle Nomade, sans retour possible dans cette ville. Si c'était le dernier habitant vivant, la ville tombe
 - Joueur qui quitte le serveur Discord (pas le jeu) : traité comme une exclusion technique automatique (nettoyage des rôles), pas compté comme une mort dans les stats
 - Inactivité prolongée : rien d'automatisé en V1, gérée manuellement par les admins (via les commandes admin existantes)
 - Nouveaux arrivants une fois une ville lancée : aucune option sauf attendre une ville en cours de recrutement ailleurs (pas de recrutement continu en V1)
@@ -139,11 +139,10 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 Principe directeur : maximiser les interactions via **components Discord V2** (boutons, menus déroulants) plutôt que des commandes à taper/retenir.
 
 ### Commandes de jeu
-- `/action` : menu des actions possibles (Components V2) ; pour un joueur mort, bouton « Quitter la ville » — pour un joueur vivant, actions selon la zone courante (à venir) : inclut les boutons "aller" (avec confirmation avant de dépenser des PA), "observer", "carte" (image de sa carte des zones découvertes) et "partager la carte" (en ville uniquement) ; en cas de rencontre, inclut aussi les boutons de combat/interaction (attaquer/fuir/parler-troquer)
+- `/action` : menu des actions possibles (Components V2) ; bouton « Quitter la ville » (mort ou vivant, voir section 3) — pour un joueur vivant, actions selon la zone courante (à venir) : inclut les boutons "aller" (avec confirmation avant de dépenser des PA), "observer", "carte" (image de sa carte des zones découvertes) et "partager la carte" (en ville uniquement) ; en cas de rencontre, inclut aussi les boutons de combat/interaction (attaquer/fuir/parler-troquer)
 - `/inventaire` : affichage + troc (bouton "donner à" → sélection joueur → sélection objet) + craft simple avec ce qu'on a sur soi
 - `/personnage` : stats du perso (PV, PA restant et PA max effectif, métier, etc.), temps restant avant jour/nuit, historique des dernières actions
 - `/aide` : liste contextuelle des commandes disponibles selon le salon/l'état du joueur
-- `/quitter-ville` : sortie volontaire de la ville (voir section 3)
 - `/signaler` : signale un comportement problématique, envoie un message dans le salon Admin-MJ dédié aux signalements
 - **Initialiser le serveur** (bouton du panneau `/admin`, avec confirmation) : **efface puis recrée à neuf** la structure fixe du Discord (rôles, catégories, salons, permissions), pour repartir sans reste d'anciennes versions. **Refusé tant qu'une ville est en création ou en jeu** (lancer d'abord « Réinitialiser la base »). Les salons à historique (`général`, `annonces`, `commémoration`, `discussion-mj`, `signalements`) sont conservés mais leurs permissions entièrement réécrites ; les autres salons fixes et les deux catégories sont supprimés et recréés. Les rôles fixes sont supprimés et recréés, et les rôles du staff (Admin, MJ actif, MJ inactif) rendus à leurs membres, même si la recréation échoue en route. Supprime aussi les restes d'anciennes parties inconnus de la base (voir « Réinitialiser la base »), synchronise le rôle Nomade et republie les règles ; prévoit notamment la création de la catégorie "Disc'Hordes" (salons, dans cet ordre : `général`, `annonces`, `règles`, `fonder-une-colonie`, `nouvel-arrivant` et `commémoration`), du salon de signalements, du salon `discussion-mj` et du salon `gestion`
 
