@@ -98,6 +98,8 @@ export async function formulaireSoin(
     .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
     .catch(() => null);
   if (!soumission) return null;
+  // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
+  if (soumission.isFromMessage()) await soumission.deferUpdate();
 
   const soin = SOINS.find((s) => s.id === soumission.fields.getStringSelectValues("soin")[0]);
   const cible = soumission.fields.getStringSelectValues("cible")[0];

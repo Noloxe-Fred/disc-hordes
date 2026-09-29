@@ -180,7 +180,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       const { conteneur, fichiers } = await ecranBanque(joueurId, boutonRetour(), resultat.texte);
       const ecran = { components: [conteneur], attachments: [], files: fichiers };
       if (!resultat.soumission) await clic.update(ecran);
-      else if (resultat.soumission.isFromMessage()) await resultat.soumission.update(ecran);
+      else if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply(ecran);
     } else if (clic.customId === "craft-avance") {
       const { recettes: liste, ecran } = await ecranCraftAvance(joueurId, entete, boutonRetour());
       recettesAvancees = liste;
@@ -248,7 +248,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       const resultat = await formulaireDon(clic, joueurId, sac);
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (resultat.soumission.isFromMessage()) {
-        await resultat.soumission.update({ components: [encadre(resultat.texte)], attachments: [] });
+        await resultat.soumission.editReply({ components: [encadre(resultat.texte)], attachments: [] });
       }
       return;
     } else if (clic.isButton() && (clic.customId === "poser" || clic.customId === "consommer-sac" || clic.customId === "consommer-banque")) {
@@ -263,7 +263,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       const menu = construireMenu();
       menu.components.unshift(encadre(resultat.texte));
       if (!resultat.soumission) await clic.update({ ...menu, attachments: [] });
-      else if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ ...menu, attachments: [] });
+      else if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ ...menu, attachments: [] });
     }
   }
 }
@@ -289,6 +289,8 @@ async function formulairePoser(
     .awaitModalSubmit({ time: DELAI_CHOIX_MS, filter: (i) => i.customId === idFormulaire })
     .catch(() => null);
   if (!soumission) return null;
+  // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
+  if (soumission.isFromMessage()) await soumission.deferUpdate();
 
   const objetId = lireObjetPossede(soumission, champs.length);
   const quantite = lireQuantite(soumission);
@@ -412,6 +414,8 @@ async function formulaireDon(
     .awaitModalSubmit({ time: DELAI_CHOIX_MS, filter: (i) => i.customId === idFormulaire })
     .catch(() => null);
   if (!soumission) return null;
+  // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
+  if (soumission.isFromMessage()) await soumission.deferUpdate();
 
   const destinataireId = Number(soumission.fields.getStringSelectValues("destinataire")[0]);
   const objetId = lireObjetPossede(soumission, champsObjets.length);

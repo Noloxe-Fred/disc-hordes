@@ -58,6 +58,7 @@ async function mute(interaction: ButtonInteraction, guild: Guild) {
     await repondre(soumission, `Impossible de rendre muet ${membre} : son rôle est au-dessus de celui du bot, ou c'est un administrateur.`);
     return;
   }
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   await membre.timeout(duree > 0 ? duree : null, `Panneau /admin (${interaction.user.username})`);
 
   await journaliser(interaction.user, duree > 0 ? "Rendre muet" : "Lever le mute", `${membre.user.username}${duree > 0 ? ` (${libelleDuree})` : ""}`);

@@ -191,7 +191,8 @@ export async function gererBoutonChantier(interaction: ButtonInteraction, action
     return;
   }
   if (action === "structure") {
-    await interaction.reply({ content: await poserStructure(interaction.guild, joueur.id, villeId), flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.editReply(await poserStructure(interaction.guild, joueur.id, villeId));
     return;
   }
   const etats = (await etatsChantiers(villeId)).filter((e) => prochainPalier(e) !== null);
@@ -230,6 +231,8 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
     .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
     .catch(() => null);
   if (!soumission) return;
+  // Accuse reception tout de suite : terminer un palier (salon, acces des habitants) peut depasser les 3 s de Discord
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   const type = soumission.fields.getStringSelectValues("batiment")[0] as TypeBatiment;
   const objetId = lireObjetPossede(soumission, champsObjets.length);
   const quantite = lireQuantite(soumission);
@@ -239,7 +242,7 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
       : quantite === null
         ? "La quantité doit être un nombre entier positif."
         : await deposer(interaction.guild!, joueurId, villeId, source, type, objetId, quantite);
-  await soumission.reply({ content: texte, flags: MessageFlags.Ephemeral });
+  await soumission.editReply(texte);
 }
 
 // Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque
@@ -322,10 +325,11 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
     .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
     .catch(() => null);
   if (!soumission) return;
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   const type = soumission.fields.getStringSelectValues("batiment")[0] as TypeBatiment;
   const pa = lireQuantite(soumission);
   const texte = pa === null ? "Le nombre de PA doit être un entier positif." : await verserPa(interaction.guild!, joueurId, villeId, type, pa);
-  await soumission.reply({ content: texte, flags: MessageFlags.Ephemeral });
+  await soumission.editReply(texte);
 }
 
 // Installation : au plus les PA installables (ressources deposees) et ceux du joueur

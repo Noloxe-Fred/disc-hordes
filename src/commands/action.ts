@@ -290,12 +290,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
         });
         continue;
       }
-      if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
+      if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ components: [encadre(resultat.texte)] });
       return;
     } else if (clic.isButton() && clic.customId === "annonce") {
       const resultat = await formulaireAnnonce(clic, joueurId);
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
-      if (resultat.soumission.isFromMessage()) await resultat.soumission.update({ components: [encadre(resultat.texte)] });
+      if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ components: [encadre(resultat.texte)] });
       return;
     } else if (clic.customId === "garde") {
       await clic.update({ components: [ecranGarde] });

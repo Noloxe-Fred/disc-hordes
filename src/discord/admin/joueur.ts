@@ -251,6 +251,7 @@ async function changerMetier(interaction: ButtonInteraction, guild: Guild) {
   });
   const places = metier ? PLACES_PAR_METIER[metier] : PLACES_SANS_METIER;
 
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   await prisma.joueur.update({ where: { id: joueur.id }, data: { metier } });
   if (joueur.ville?.statut === StatutVille.EN_CREATION) await rafraichirMessageVille(guild, joueur.villeId!);
 

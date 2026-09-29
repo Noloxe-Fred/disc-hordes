@@ -49,7 +49,12 @@ export const DELAI_SELECTION_MS = 120_000;
 // Une liste deroulante Discord propose au plus 25 options
 const OPTIONS_MAX = 25;
 
+// Reponse ephemere ; si l'interaction a deja ete accusee (traitement long), la reponse differee est completee
 export async function repondre(interaction: RepliableInteraction, content: string): Promise<void> {
+  if (interaction.deferred || interaction.replied) {
+    await interaction.editReply({ content, allowedMentions: { parse: [] } });
+    return;
+  }
   await interaction.reply({ content, flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
 }
 

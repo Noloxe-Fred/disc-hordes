@@ -63,6 +63,8 @@ export async function formulaireAnnonce(
     .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
     .catch(() => null);
   if (!soumission) return null;
+  // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
+  if (soumission.isFromMessage()) await soumission.deferUpdate();
 
   const texte = soumission.fields.getTextInputValue("texte").trim();
   const notifier = soumission.fields.getStringSelectValues("notifier")[0] === "oui";
