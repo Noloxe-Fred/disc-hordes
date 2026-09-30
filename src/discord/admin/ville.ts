@@ -1,4 +1,4 @@
-import { MeteoType, StatutJoueur, StatutVille, TypePhase } from "@prisma/client";
+import { MeteoType, StatutJoueur, StatutVille, TypeBatiment, TypePhase } from "@prisma/client";
 import { ButtonStyle, MessageFlags, type ButtonInteraction, type Guild } from "discord.js";
 import { CYCLES_PAR_MANDAT_MAIRE } from "../../config/metiers";
 import { PV_MAX } from "../../config/sante";
@@ -6,7 +6,8 @@ import { prisma } from "../../db";
 import { fonderVille } from "../boutonsVille";
 import { declarerChuteVille, nettoyerGroupeSiTombe } from "../chute";
 import { changerPositionDiscord, retablirJoueurDiscord, retirerJoueurDeVilleDiscord } from "../joueurDiscord";
-import { rafraichirPanneauChantiers } from "../chantiers";
+import { construirePalier, rafraichirPanneauChantiers } from "../chantiers";
+import { CHANTIERS, chantier } from "../../config/batiments";
 import { rafraichirPanneauMaisons } from "../maisons";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "../messageVille";
 import { renommerRessource, supprimerRessources } from "../reconcile";
@@ -187,6 +188,44 @@ async function renommer(interaction: ButtonInteraction, guild: Guild) {
   await soumission.editReply(`**${ville.nom}** s'appelle désormais **${nom}**.`);
 }
 
+// --- Construire un batiment : le batiment choisi gagne un palier, sans ressources ni PA (avancement en cours perdu) ---
+
+async function construireBatiment(interaction: ButtonInteraction, guild: Guild) {
+  const champ = await champVille([StatutVille.ACTIVE]);
+  if (!champ) {
+    await repondre(interaction, "Aucune ville en jeu.");
+    return;
+  }
+  const soumission = await ouvrirFormulaire(interaction, "Construire un bâtiment", [
+    champ,
+    champChoix(
+      "batiment",
+      "Bâtiment",
+      CHANTIERS.map((c) => ({ label: `${c.emoji} ${c.nom}`, value: c.type, description: `${c.paliers.length} palier(s)` })),
+    ),
+  ]);
+  if (!soumission) return;
+  const ville = await prisma.ville.findUnique({ where: { id: Number(lireChoix(soumission, "ville")) } });
+  if (ville?.statut !== StatutVille.ACTIVE) {
+    await repondre(soumission, "Cette ville n'est plus en jeu.");
+    return;
+  }
+  const c = chantier(lireChoix(soumission, "batiment") as TypeBatiment);
+
+  // Accuse reception tout de suite : ouvrir l'atelier ou la radio (salons, acces des habitants) peut depasser les 3 s
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+  const annonce = await construirePalier(guild, ville.id, c.type, "Construit par l'équipe du jeu.");
+  if (!annonce) {
+    await soumission.editReply(`${c.emoji} **${c.nom}** est déjà au dernier palier à **${ville.nom}**.`);
+    return;
+  }
+  await rafraichirPanneauChantiers(guild, ville.id);
+  const palier = (await prisma.batimentVille.findUniqueOrThrow({ where: { villeId_type: { villeId: ville.id, type: c.type } } })).palierActuel;
+  await journaliser(interaction.user, "Construire un bâtiment", `${c.nom} palier ${palier}, ${ville.nom} (#${ville.id})`);
+  await soumission.editReply(`${annonce}
+-# À **${ville.nom}**, les ressources et PA déjà versés sur ce palier sont perdus.`);
+}
+
 // --- Forcer la fondation : sans minimum d'habitants ---
 
 async function forcerFondation(interaction: ButtonInteraction, guild: Guild) {
@@ -332,7 +371,7 @@ export const FAMILLE_VILLE: FamilleAdmin = {
   cle: "ville",
   titre: "Ville",
   emoji: "🏘️",
-  resume: "effacer, renommer, forcer la fondation ou la chute, reset",
+  resume: "effacer, renommer, recharger des territoires, construire un bâtiment, forcer la fondation ou la chute, reset",
   actions: [
     {
       cle: "effacer",
@@ -353,6 +392,13 @@ export const FAMILLE_VILLE: FamilleAdmin = {
       description: "remet au maximum les stocks de butin des zones du groupe d'une ville (par type, distance et stock).",
       style: ButtonStyle.Success,
       executer: recharger,
+    },
+    {
+      cle: "construire",
+      libelle: "Construire un bâtiment",
+      description: "fait progresser d'un palier un bâtiment d'une ville en jeu, sans ressources ni PA (l'avancement en cours est perdu).",
+      style: ButtonStyle.Success,
+      executer: construireBatiment,
     },
     {
       cle: "fonder",

@@ -367,16 +367,30 @@ async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatime
   const ressourcesOk = Object.keys(suivant.ressources).every((nom) => manque(etat, nom) === 0);
   if (!ressourcesOk || etat.paInstalles < suivant.pa) return null;
 
-  const batiment = await prisma.batimentVille.findUniqueOrThrow({ where: { villeId_type: { villeId, type } } });
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
+  return construirePalier(guild, villeId, type, `Dernière pierre posée par <@${joueur.utilisateur.discordId}>.`);
+}
+
+// Palier suivant construit (chantier complet, ou forcé depuis /admin) : avancement remis a zero, annonce dans #chantiers
+// (suivie de la signature) et la mairie, effets immediats du batiment. Null si le batiment est deja au dernier palier.
+export async function construirePalier(guild: Guild, villeId: number, type: TypeBatiment, signature: string): Promise<string | null> {
+  const etat = (await etatsChantiers(villeId)).find((e) => e.chantier.type === type)!;
+  const suivant = prochainPalier(etat);
+  if (!suivant) return null;
+
+  const batiment = await prisma.batimentVille.upsert({
+    where: { villeId_type: { villeId, type } },
+    create: { villeId, type },
+    update: {},
+  });
   await prisma.$transaction([
     prisma.contributionBatiment.deleteMany({ where: { batimentVilleId: batiment.id } }),
     prisma.batimentVille.update({ where: { id: batiment.id }, data: { palierActuel: { increment: 1 }, paInstalles: 0 } }),
   ]);
   const c = chantier(type);
   const annonce = `🏗️ Chantier terminé : **${c.emoji} ${c.nom}** atteint le **palier ${etat.palier + 1}** ! Bonus actif : ${suivant.bonus}.`;
-  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:chantiers`);
-  await salon?.send({ content: `${annonce} Dernière pierre posée par <@${joueur.utilisateur.discordId}>.`, allowedMentions: { parse: [] } }).catch(() => null);
+  await salon?.send({ content: `${annonce} ${signature}`, allowedMentions: { parse: [] } }).catch(() => null);
   await posterDansMairie(guild, villeId, annonce);
   // L'atelier construit ouvre son salon, ou se fait le craft avance
   if (type === TypeBatiment.ATELIER) await synchroniserSalonAtelier(guild, villeId);

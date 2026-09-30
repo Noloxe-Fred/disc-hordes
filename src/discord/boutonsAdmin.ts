@@ -42,7 +42,7 @@ const FAMILLES: readonly FamilleAdmin[] = [
 
 // Actions du panneau /admin ouvertes aux MJ actifs, par famille ; les autres restent reservees aux Admins
 const ACTIONS_MJ: Record<string, readonly string[]> = {
-  ville: ["renommer", "fonder", "recharger"],
+  ville: ["renommer", "fonder", "recharger", "construire"],
   joueur: ["teleporter", "ressusciter", "guerir", "exclure", "reintegrer", "metier", "jauges"],
   ressources: ["ajout-joueur", "retrait-joueur", "ajout-ville", "retrait-ville"],
   politique: ["election", "destituer", "maire"],
