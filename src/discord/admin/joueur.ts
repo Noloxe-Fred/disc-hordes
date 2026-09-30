@@ -17,6 +17,7 @@ import { DUREE_INCUBATION_HEURES } from "../../game/infection";
 import { calculerPaMax } from "../../game/pa";
 import { infligerDegats } from "../../game/sante";
 import { deplacerJoueur } from "../deplacement";
+import { pourvoirMairieVacante } from "../election";
 import { verifierZombiesErrants } from "../zombieErrant";
 import { appliquerExclusionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
@@ -201,11 +202,12 @@ async function exclure(interaction: ButtonInteraction, guild: Guild) {
       : []),
   ]);
   await appliquerExclusionDiscord(guild, joueur.id);
+  if (etaitMaire) await pourvoirMairieVacante(guild, joueur.villeId!);
   await journaliser(interaction.user, "Exclure un joueur", detailJournal(joueur));
   await soumission.editReply({
     content:
       `${mention(joueur)} est exclu de **${joueur.ville?.nom}** : il n'a plus accès à ses salons mais reste en territoire externe.` +
-      (etaitMaire ? " Il était maire : la ville n'a plus de maire." : ""),
+      (etaitMaire ? " Il était maire : la mairie est vacante et une élection s'ouvre (sauf s'il y en a déjà une)." : ""),
     allowedMentions: { parse: [] },
   });
 }

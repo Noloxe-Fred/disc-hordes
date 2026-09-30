@@ -15,7 +15,7 @@ import { prochaineBascule } from "../scheduler/cycle";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { estMaireEnExercice } from "./annonce";
-import { horodatage } from "./election";
+import { horodatage, pourvoirMairieVacante } from "./election";
 import { deplacerJoueur } from "./deplacement";
 import { appliquerExclusionDiscord } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
@@ -216,7 +216,9 @@ async function cloreSanction(guild: Guild, election: Election): Promise<boolean>
   }
 
   if (election.type === TypeElection.BANNISSEMENT) {
+    const etaitMaire = (await prisma.ville.findUnique({ where: { id: election.villeId } }))?.maireId === cible.id;
     await conclure(await bannir(guild, cible.id));
+    if (etaitMaire) await pourvoirMairieVacante(guild, election.villeId);
     return false;
   }
   if (cible.zoneActuelleId !== null) {

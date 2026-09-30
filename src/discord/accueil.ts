@@ -19,6 +19,7 @@ import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { estMaireEnExercice } from "./annonce";
 import { declarerChuteVille } from "./chute";
+import { pourvoirMairieVacante } from "./election";
 import { changerDeVilleDiscord, retablirJoueurDiscord } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
@@ -240,6 +241,7 @@ async function accueillir(guild: Guild, demandeId: number): Promise<string> {
     await posterDansMairie(guild, ancienne.id, `🚪 ${mention} a quitté **${ancienne.nom}** pour rejoindre **${demande.ville.nom}**.`);
     const survivants = await prisma.joueur.count({ where: { villeId: ancienne.id, statut: StatutJoueur.VIVANT, dateSortie: null } });
     if (survivants === 0) await declarerChuteVille(guild, ancienne.id);
+    else if (ancienne.maireId === joueur.id) await pourvoirMairieVacante(guild, ancienne.id);
   }
   return `✅ Le maire accueille ${mention} dans **${demande.ville.nom}**.`;
 }

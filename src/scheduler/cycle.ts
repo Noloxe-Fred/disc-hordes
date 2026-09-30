@@ -15,7 +15,7 @@ import { posterDansMairie } from "../discord/villeStructure";
 import { verifierZombiesErrants } from "../discord/zombieErrant";
 import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
 import { INTERVALLE_VERIFICATION_ELECTIONS_MS } from "../config/politique";
-import { verifierElections } from "../discord/election";
+import { verifierElections, verifierFinMandat } from "../discord/election";
 import { cloreSanctions } from "../discord/sanction";
 import { produireEauPuits } from "../services/puits";
 import { regenererRessourcesNaturelles } from "../services/stocks";
@@ -215,7 +215,8 @@ export async function resoudreAttaque(
 
 // L'attaque de zombies se resout a l'aube, en cloture de la nuit qui s'acheve (pas a la
 // tombee de la nuit) : le minuit qui cloture une journee n'a donc jamais d'attaque, a chaque
-// cycle et pour toutes les villes (conception.md §2). Puis le puits verse sa production du nouveau cycle dans la banque.
+// cycle et pour toutes les villes (conception.md §2). Puis le puits verse sa production du nouveau cycle dans la banque,
+// et un mandat de maire echu ouvre une election.
 async function basculerVersJour(guild: Guild, ville: Ville) {
   const attaque = await resoudreAttaque(guild, ville, true);
   // En meme temps, la horde balaie les territoires : tout survivant dehors est attaque (discord/combat.ts)
@@ -243,6 +244,8 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
     { mentionnerVille: true },
   );
   await appliquerEffetsPhase(guild, ville.id);
+  // Mandat du maire echu : interim et election (discord/election.ts)
+  await verifierFinMandat(guild, ville.id);
 }
 
 // Changement de phase d'une ville : a minuit (horloge commune) ou force depuis le panneau /admin

@@ -147,6 +147,8 @@ Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gib
 - Déclenchable **à tout moment** par un citoyen vivant, une élection à la fois par ville, **sans mairie construite requise**.
 - **24 h réelles de candidatures**, puis **24 h réelles de vote** (revote entre ex aequo : 24 h de vote directement).
 - Mandat de l'élu : **4 cycles** à partir du cycle courant (comme le premier maire à la fondation).
+- Fin de mandat (validé le 2026-09-30) : à l'aube du cycle qui suit le mandat, intérim du sortant et élection automatique (ou celle déjà en cours) ; sans élu, la ville reste sans maire.
+- Mairie vacante (mort, départ, bannissement, exclusion, destitution) : élection automatique immédiate, sauf élection déjà en cours.
 - Égalité : le plus d'XP l'emporte (tous à 0 tant que l'XP est reportée en V2), sinon revote. Candidat unique élu d'office ; aucun candidat ou aucune voix : sans effet.
 
 ---

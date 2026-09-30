@@ -2,7 +2,7 @@ import { StatutJoueur, StatutVille } from "@prisma/client";
 import { ButtonStyle, MessageFlags, type ButtonInteraction, type Guild } from "discord.js";
 import { CYCLES_PAR_MANDAT_MAIRE } from "../../config/metiers";
 import { prisma } from "../../db";
-import { avancerElection, electionEnCours, ouvrirElection } from "../election";
+import { avancerElection, electionEnCours, ouvrirElection, pourvoirMairieVacante } from "../election";
 import { posterDansMairie } from "../villeStructure";
 import { champMembre, champVille, journaliser, lireChoix, lireJoueur, ouvrirFormulaire, repondre, type FamilleAdmin } from "./outils";
 
@@ -39,7 +39,7 @@ async function forcerElection(interaction: ButtonInteraction, guild: Guild) {
   await soumission.editReply({ content: resultat, allowedMentions: { parse: [] } });
 }
 
-// --- Destituer le maire de force : la ville reste sans maire ---
+// --- Destituer le maire de force : la mairie est vacante, une election s'ouvre (sauf s'il y en a deja une) ---
 
 async function destituer(interaction: ButtonInteraction, guild: Guild) {
   const champ = await champVille([StatutVille.ACTIVE]);
@@ -67,6 +67,7 @@ async function destituer(interaction: ButtonInteraction, guild: Guild) {
   await prisma.ville.update({ where: { id: ville.id }, data: { maireId: null, mandatFinCycle: null } });
   const maire = `<@${ville.maire.utilisateur.discordId}>`;
   await posterDansMairie(guild, ville.id, `🏛️ ${maire} n'est plus maire de **${ville.nom}**.`);
+  await pourvoirMairieVacante(guild, ville.id);
   await journaliser(
     interaction.user,
     "Destituer le maire",
@@ -135,7 +136,7 @@ export const FAMILLE_POLITIQUE: FamilleAdmin = {
     {
       cle: "destituer",
       libelle: "Destituer le maire",
-      description: "retire son maire à une ville en jeu, qui reste sans maire.",
+      description: "retire son maire à une ville en jeu : une élection s'ouvre aussitôt, sauf s'il y en a déjà une.",
       style: ButtonStyle.Danger,
       executer: destituer,
     },

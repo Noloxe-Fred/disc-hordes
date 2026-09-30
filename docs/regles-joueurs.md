@@ -193,6 +193,8 @@ En ville, le bouton **Banque** montre la réserve commune de ta ville. **Dépose
 # 🗳️ Le maire et les élections
 
 🏛️ Le **maire** publie ses annonces dans la mairie. Son mandat dure **4 cycles**.
+⌛ À la fin du mandat, une élection s'ouvre toute seule à l'aube, et le maire sortant assure l'**intérim** jusqu'au résultat. Personne n'est élu ? L'intérim s'arrête et la ville reste sans maire.
+🪦 Le maire meurt, part, est banni ou exclu ? La mairie est vacante : une élection s'ouvre aussitôt.
 🗳️ À tout moment, un citoyen vivant peut **déclencher une élection** avec le bouton **Élection** de `/action` (une seule à la fois). Un panneau apparaît dans la mairie :
 🙋 **24 h de candidatures** : tout citoyen vivant peut se porter candidat (ou retirer sa candidature), même dehors. Le maire en place peut se représenter.
 ✅ Puis **24 h de vote**, réservé aux citoyens vivants **présents en ville**. Le vote est secret et tu peux changer d'avis jusqu'à la clôture.

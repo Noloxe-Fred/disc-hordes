@@ -28,6 +28,9 @@ import { posterDansMairie } from "./villeStructure";
 // d'XP l'emporte, sinon revote de 24 h entre les ex aequo. L'elu recoit un mandat de 4 cycles a partir du cycle
 // courant ; le maire en place garde sa fonction jusqu'au resultat. Echeances verifiees par verifierElections
 // (scheduler/cycle.ts), avancables depuis /admin (« Forcer une élection »).
+// Fin de mandat (T46) : a l'aube qui depasse mandatFinCycle, le maire passe en interim (mandatFinCycle a null) et
+// une election s'ouvre, sauf s'il y en a deja une ; sans elu, l'interim prend fin et la ville reste sans maire.
+// Mairie liberee en cours de mandat (mort, depart, bannissement, exclusion, destitution) : election ouverte aussitot.
 
 const COULEUR = 0x8e44ad;
 const COULEUR_TERMINEE = 0x7f8c8d;
@@ -158,6 +161,32 @@ export async function ouvrirElection(guild: Guild, villeId: number, annonce: str
     { mentionnerVille: true },
   );
   await rafraichirPanneau(guild, election.id);
+}
+
+// Mairie liberee en cours de partie : election ouverte aussitot, sauf si une election est deja en cours (elle
+// designera le successeur) ou si la ville n'est plus en jeu
+export async function pourvoirMairieVacante(guild: Guild, villeId: number): Promise<void> {
+  const ville = await prisma.ville.findUnique({ where: { id: villeId } });
+  if (ville?.statut !== StatutVille.ACTIVE || ville.maireId !== null) return;
+  if (await electionEnCours(villeId)) return;
+  await ouvrirElection(guild, villeId, "La mairie est vacante : une élection du maire s'ouvre automatiquement.");
+}
+
+// Fin de mandat, verifiee a l'aube : le maire assure l'interim jusqu'au resultat de l'election (ouverte ici, ou
+// deja en cours). mandatFinCycle a null avec un maire marque l'interim, pour n'annoncer la fin qu'une fois.
+export async function verifierFinMandat(guild: Guild, villeId: number): Promise<void> {
+  const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId }, include: { maire: { include: { utilisateur: true } } } });
+  if (!ville.maire || ville.mandatFinCycle === null || ville.cycleActuel <= ville.mandatFinCycle) return;
+  await prisma.$transaction([
+    prisma.ville.update({ where: { id: villeId }, data: { mandatFinCycle: null } }),
+    prisma.journalEntree.create({ data: { villeId, joueurId: ville.maire.id, message: "Fin du mandat de maire, intérim jusqu'à l'élection" } }),
+  ]);
+  const texte = `Le mandat de <@${ville.maire.utilisateur.discordId}> s'achève : il assure l'intérim jusqu'au résultat de l'élection`;
+  if (await electionEnCours(villeId)) {
+    await posterDansMairie(guild, villeId, `🏛️ ${texte} en cours.`, { mentionnerVille: true });
+    return;
+  }
+  await ouvrirElection(guild, villeId, `${texte}.`);
 }
 
 // --- Boutons du panneau : "election:<candidater|retirer|voter>:<electionId>" ---
@@ -325,12 +354,7 @@ async function cloreCandidatures(guild: Guild, election: Election): Promise<stri
   }
 
   if (!(await terminer(election.id, false))) return "L'élection a déjà avancé entre-temps.";
-  if (candidats.length === 0) {
-    const texte = "Aucun candidat ne s'est présenté : l'élection est sans effet.";
-    await posterDansMairie(guild, election.villeId, `🗳️ ${texte}`);
-    await rafraichirPanneau(guild, election.id, texte);
-    return texte;
-  }
+  if (candidats.length === 0) return sansEffet(guild, election, "Aucun candidat ne s'est présenté : l'élection est sans effet.");
   const elu = candidats[0].joueur;
   return elire(guild, election, elu.id, `<@${elu.utilisateur.discordId}>, seul candidat, est élu d'office.`);
 }
@@ -343,12 +367,7 @@ async function depouiller(guild: Guild, election: Election): Promise<string> {
   for (const c of decompte) await prisma.candidature.update({ where: { id: c.id }, data: { votes: c.votes } });
 
   const meilleur = Math.max(0, ...decompte.map((c) => c.votes));
-  if (meilleur === 0) {
-    const texte = "Aucune voix exprimée pour un candidat en lice : l'élection est sans effet.";
-    await posterDansMairie(guild, election.villeId, `🗳️ ${texte}`);
-    await rafraichirPanneau(guild, election.id, texte);
-    return texte;
-  }
+  if (meilleur === 0) return sansEffet(guild, election, "Aucune voix exprimée pour un candidat en lice : l'élection est sans effet.");
   const exAequo = decompte.filter((c) => c.votes === meilleur);
   const voix = `${meilleur} voix`;
   if (exAequo.length === 1) {
@@ -384,6 +403,25 @@ async function depouiller(guild: Guild, election: Election): Promise<string> {
   );
   await rafraichirPanneau(guild, revote.id);
   return texte;
+}
+
+// Election sans elu : le maire en place le reste, sauf un maire en interim (mandat echu), qui quitte la mairie. Pas de
+// nouvelle election automatique : un citoyen peut en declencher une.
+async function sansEffet(guild: Guild, election: Election, texte: string): Promise<string> {
+  const ville = await prisma.ville.findUniqueOrThrow({ where: { id: election.villeId }, include: { maire: { include: { utilisateur: true } } } });
+  let resultat = texte;
+  if (ville.maire && ville.mandatFinCycle === null) {
+    await prisma.$transaction([
+      prisma.ville.update({ where: { id: ville.id }, data: { maireId: null } }),
+      prisma.journalEntree.create({ data: { villeId: ville.id, joueurId: ville.maire.id, message: "Fin de l'intérim de maire, sans successeur" } }),
+    ]);
+    resultat +=
+      ` Faute de successeur, l'intérim de <@${ville.maire.utilisateur.discordId}> prend fin : la ville est sans maire. ` +
+      "Tout citoyen vivant peut déclencher une nouvelle élection.";
+  }
+  await posterDansMairie(guild, ville.id, `🗳️ ${resultat}`);
+  await rafraichirPanneau(guild, election.id, resultat);
+  return resultat;
 }
 
 // Passe l'election a TERMINEE si elle en est bien a l'etape attendue ; false si une autre cloture l'a devancee
