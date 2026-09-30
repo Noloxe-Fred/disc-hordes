@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille, TypeRessourceDiscord } from "@prisma/client";
+import { StatutJoueur, StatutVille, TypeBatiment, TypeRessourceDiscord } from "@prisma/client";
 import { ChannelType, PermissionFlagsBits, type Guild, type GuildMember, type TextChannel, type VoiceChannel } from "discord.js";
 import { OBJET_RADIO } from "../config/objets";
 import { prisma } from "../db";
@@ -10,13 +10,14 @@ import { ensureSalonRadio } from "./territoires";
 // par synchroniserAccesJoueur a chaque changement de situation (deplacement, mort, exclusion, retour a la vie,
 // radio gagnee ou perdue) : une permission propre au membre sur chaque salon de la ville, prioritaire sur les roles.
 // - Vivant en ville : aucune restriction.
-// - Vivant dehors, radio ou non : salons de la ville masques, sauf la mairie, lisible sans y ecrire (annonces). La
-//   Tour Radio (a venir) rendra la ville accessible depuis dehors aux seuls porteurs de radio.
+// - Vivant dehors : salons de la ville masques, sauf la mairie, lisible sans y ecrire (annonces). Une fois la Tour
+//   Radio construite, les porteurs de radio gardent dehors le meme acces qu'en ville.
 // - Mort ou zombifie : voit toujours sa ville (l'ame reste liee a sa partie) mais ne peut plus y interagir.
 // - Exclu : plus aucun salon de la ville.
 // - MJ actif : aucune restriction propre, son role lui ouvre tout le jeu (il ne peut pas jouer tant qu'il est actif).
 // Salon « ondes-radio » du groupe : ouvert aux porteurs de radio (vivants ou exclus), en ville comme dehors : un porteur
-// en ville relaie les nouvelles des ondes a ses concitoyens.
+// en ville relaie les nouvelles des ondes a ses concitoyens. La Tour Radio construite l'ouvre a tous les habitants
+// vivants de la ville, avec ou sans radio.
 
 const ECRITURE = ["SendMessages", "SendMessagesInThreads", "CreatePublicThreads", "AddReactions", "Connect", "Speak"] as const;
 type Permission = "ViewChannel" | (typeof ECRITURE)[number];
@@ -94,6 +95,8 @@ export async function synchroniserAccesJoueur(guild: Guild, joueurId: number): P
   const radio =
     enJeu &&
     (await prisma.inventaireJoueur.count({ where: { joueurId, quantite: { gt: 0 }, objet: { nom: OBJET_RADIO } } })) > 0;
+  const tourRadio = await tourRadioConstruite(joueur.villeId);
+  const ondes = radio || (tourRadio && joueur.statut === StatutJoueur.VIVANT);
 
   if (radio) await ajouterRole(membre, ROLE_RADIO.cle);
   else await retirerRole(membre, ROLE_RADIO.cle);
@@ -108,7 +111,7 @@ export async function synchroniserAccesJoueur(guild: Guild, joueurId: number): P
         ? MASQUE
         : !enJeu
           ? LECTURE_SEULE
-          : dehors
+          : dehors && !(radio && tourRadio)
             ? mairie
               ? LECTURE_SEULE
               : MASQUE
@@ -118,8 +121,19 @@ export async function synchroniserAccesJoueur(guild: Guild, joueurId: number): P
 
   const groupeId = joueur.ville?.groupeId;
   if (groupeId == null) return;
-  const salonRadio = radio ? await ensureSalonRadio(guild, groupeId) : await trouverSalonTexte(guild, `salon:groupe:${groupeId}:radio`);
-  if (salonRadio) await appliquerAcces(salonRadio, membre, radio ? { ViewChannel: true, SendMessages: true } : LIBRE);
+  const salonRadio = ondes ? await ensureSalonRadio(guild, groupeId) : await trouverSalonTexte(guild, `salon:groupe:${groupeId}:radio`);
+  if (salonRadio) await appliquerAcces(salonRadio, membre, ondes ? { ViewChannel: true, SendMessages: true } : LIBRE);
+}
+
+async function tourRadioConstruite(villeId: number): Promise<boolean> {
+  const tour = await prisma.batimentVille.findUnique({ where: { villeId_type: { villeId, type: TypeBatiment.TOUR_RADIO } } });
+  return (tour?.palierActuel ?? 0) >= 1;
+}
+
+// Tour Radio terminee : acces recalcules pour tous les habitants de la ville (ondes-radio, ville vue de dehors)
+export async function synchroniserAccesVille(guild: Guild, villeId: number): Promise<void> {
+  const habitants = await prisma.joueur.findMany({ where: { villeId, dateSortie: null }, select: { id: true } });
+  for (const { id } of habitants) await synchroniserAccesJoueur(guild, id);
 }
 
 // Mort d'un joueur : role Mort a la place de Citoyen, plus de position en territoire externe, et

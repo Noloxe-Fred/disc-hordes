@@ -76,6 +76,7 @@ enum TypeBatiment {
   ATELIER
   PUITS
   PLACE_PUBLIQUE
+  TOUR_RADIO
   MAIRIE
 }
 

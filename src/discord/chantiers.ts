@@ -22,6 +22,7 @@ import { prisma } from "../db";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
+import { synchroniserAccesVille } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { rafraichirPanneauMaisons } from "./maisons";
@@ -379,6 +380,8 @@ async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatime
   await posterDansMairie(guild, villeId, annonce);
   // L'atelier construit ouvre son salon, ou se fait le craft avance
   if (type === TypeBatiment.ATELIER) await synchroniserSalonAtelier(guild, villeId);
+  // La Tour Radio ouvre les ondes a tous les habitants et la ville aux porteurs de radio dehors
+  if (type === TypeBatiment.TOUR_RADIO) await synchroniserAccesVille(guild, villeId);
   return annonce;
 }
 

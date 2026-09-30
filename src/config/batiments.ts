@@ -71,6 +71,19 @@ export const CHANTIERS: readonly Chantier[] = [
     ],
   },
   {
+    // Effets appliques dans synchroniserAccesJoueur (discord/joueurDiscord.ts)
+    type: TypeBatiment.TOUR_RADIO,
+    nom: "Tour Radio",
+    emoji: "📡",
+    paliers: [
+      {
+        ressources: { Bois: 20, Ferraille: 40, "Pièces mécaniques": 20 },
+        pa: 16,
+        bonus: "Ondes radio ouvertes à tous les habitants, ville visible de dehors pour les porteurs de radio",
+      },
+    ],
+  },
+  {
     type: TypeBatiment.MAIRIE,
     nom: "Mairie",
     emoji: "🏢",

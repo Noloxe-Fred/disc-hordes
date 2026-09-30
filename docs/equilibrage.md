@@ -347,6 +347,7 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 | | 2 | 90 Bois + 60 Tissu | 30 | Banque de ville : capacité ×2, soit 160 en poids |
 | **Maison privée** (perso) | 1 | 30 Bois + 15 Tissu | 9 | (fonctionnel) — chaque joueur arrive sans maison (palier 0) et la construit |
 | | 2 | 50 Bois + 30 Tissu | 16 | +15 % du PA max personnel |
+| **Tour Radio** | unique | 20 Bois + 40 Ferraille + 20 Pièces mécaniques | 16 | Tous les habitants vivants de la ville accèdent au salon `ondes-radio` du groupe, radio ou non ; dehors, les **porteurs de radio** gardent l'accès complet aux salons de la ville (sans tour, seule la mairie reste lisible dehors). Chiffrée le 2026-09-30 |
 | **Mairie** | unique | 80 Bois + 40 Pierre | 24 | Fonctionnel uniquement (élections, décisions, rationnement) |
 
 ---
@@ -405,7 +406,5 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 - **Table complète des rencontres en territoire externe** : dangerosité différenciée par zone, rencontres humaines/bandits, capture de bandit. Le stub zombie uniquement (15/30/45 % par palier, ×1,5 la nuit — section 5) suffit pour lancer le développement V1 ; l'extension complète est prévue pendant la phase de bêta, avec de vrais retours joueurs pour la calibrer.
 
 ## 12. Points ouverts restants
-
-- **Tour Radio (nouveau bâtiment)** : une fois terminée, elle donne à tous les habitants de la ville l'accès au salon `ondes-radio` du groupe (aujourd'hui réservé aux porteurs de radio, en ville comme dehors), et rend les salons de la ville visibles depuis le territoire externe **aux seuls porteurs de radio** (aujourd'hui masqués dehors, sauf la mairie, radio ou non). Restent à chiffrer : coût en ressources, installation, paliers éventuels (section 7).
 
 - **Effet mécanique des objets de loot sans recette** (section 5) : Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.
