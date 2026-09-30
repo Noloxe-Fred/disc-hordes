@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import { gererBoutonPanneau } from "./boutonsAdmin";
 import { gererBoutonChantier } from "./chantiers";
 import { gererBoutonOutilMj } from "./boutonsMj";
+import { gererBoutonMaison } from "./maisons";
 import { gererBoutonVille } from "./boutonsVille";
 import { rafraichirMessageVille } from "./messageVille";
 
@@ -103,5 +104,7 @@ export async function gererBouton(interaction: ButtonInteraction) {
     await gererBoutonVille(interaction, action, id);
   } else if (prefixe === "chantier") {
     await gererBoutonChantier(interaction, action, id);
+  } else if (prefixe === "maison") {
+    await gererBoutonMaison(interaction, action, id);
   }
 }

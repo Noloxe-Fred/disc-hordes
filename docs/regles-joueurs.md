@@ -91,7 +91,10 @@ Le bouton **Soigner** de `/action` soigne **toi-même** ou un survivant **au mê
 On ne dépasse jamais **10 PV**, et chaque PV rendu redonne des PA max. Soigner quelqu'un est annoncé dans le salon du lieu.
 
 ## 🏠 Ta maison
-Tu arrives **sans maison**. Une maison améliorée réduit tes chances d'être blessé pendant les attaques.
+Tu arrives **sans maison** : à toi de la bâtir, dans le salon **maisons-privées** de ta ville. Même principe que les chantiers : 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** pour déposer les ressources, puis 🔨 **Installer** pour y verser tes PA (**2 PA par tranche de 10 ressources**). 🏠 **Ma maison** te montre où tu en es.
+🏠 **Palier 1** : 30 Bois + 15 Tissu, 9 PA — un toit à toi.
+🏡 **Palier 2** : 50 Bois + 30 Tissu, 16 PA — **+15 % de PA max** et **25 % de chances en moins d'être blessé** pendant les attaques.
+Tout ce que tu prends à la banque pour ta maison est noté au journal de la ville. 👀
 
 ## 🦠 L'infection
 Chaque blessure peut t'**infecter** (10 % de chance). L'infection est **secrète** : toi seul le sais, grâce à `/personnage`.
@@ -213,8 +216,18 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
-# 🚧 En préparation
-🏠 Maisons · 🗳️ Élections du maire
+# 🚧 Feuille de route
+
+## 🔨 En préparation
+🗳️ Élections du maire
+
+## 🔭 Plus tard (V2)
+👻 **L'âme** : une fois mort, garder une petite influence sur la partie de ta ville
+🚗 **La voiture** : réparée par l'ingénieur, pour partir en expédition à plusieurs à moindre coût
+🌦️ **La météo dynamique** : le mauvais temps pèse sur les déplacements et abîme les chantiers
+⭐ **XP et talents** : ton personnage progresse et améliore ses compétences
+🏆 **Succès et titres** : des récompenses qui te suivent d'une partie à l'autre
+🧳 **Le déménagement** : demander à rejoindre une autre ville croisée dans les territoires, sur vote de ses habitants
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

@@ -181,6 +181,8 @@ model Ville {
   messageChantiersId    String?
   // Structures de defense avancees posees (ingenieur) : +3 defense chacune, definitivement (equilibrage.md §8)
   structuresDefense     Int         @default(0)
+  // Panneau permanent des maisons privees poste dans #maisons-privees (discord/maisons.ts)
+  messageMaisonsId      String?
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
   projet                String?     @db.Text
 
@@ -312,6 +314,7 @@ model Objet {
   inventairesVille       InventaireVille[]
   stocksZone             ZoneRessourceStock[]
   contributions          ContributionBatiment[]
+  contributionsMaison    ContributionMaison[]
 }
 
 model Recette {
@@ -398,6 +401,20 @@ model ContributionBatiment {
   @@unique([batimentVilleId, objetId])
 }
 
+// Ressources deposees sur le prochain palier de la maison privee d'un joueur (discord/maisons.ts), remises a zero a
+// chaque palier construit
+model ContributionMaison {
+  id              Int @id @default(autoincrement())
+  joueurId        Int
+  objetId         Int
+  quantiteDeposee Int @default(0)
+
+  joueur Joueur @relation(fields: [joueurId], references: [id], onDelete: Cascade)
+  objet  Objet  @relation(fields: [objetId], references: [id])
+
+  @@unique([joueurId, objetId])
+}
+
 // =========================================================================
 // Joueurs
 // =========================================================================
@@ -427,6 +444,8 @@ model Joueur {
   infecteDepuis         DateTime?
   // 0 = pas encore de maison ; la maison privee se construit (palier 1) puis s'ameliore (palier 2), equilibrage.md §7
   maisonPalier          Int          @default(0)
+  // PA d'installation deja verses sur le prochain palier de la maison (ressources deposees : ContributionMaison)
+  maisonPaInstalles     Int          @default(0)
   // PA ajoutes au-dela du PA max a la prochaine regeneration en ville (ragout fortifiant, equilibrage.md §8)
   bonusPaReveil         Int          @default(0)
   // Rencontre de zombie en cours en territoire externe (equilibrage.md §5) : PV restants du zombie, null = aucune.
@@ -464,6 +483,7 @@ model Joueur {
   journal           JournalEntree[]
   zombieDevenu      ZombieErrant?      @relation("ZombieTransforme")
   zombieAffronte    ZombieErrant?      @relation("ZombieCible")
+  contributionsMaison ContributionMaison[]
 }
 
 // =========================================================================

@@ -81,3 +81,11 @@ export const CHANTIERS: readonly Chantier[] = [
 export function chantier(type: TypeBatiment): Chantier {
   return CHANTIERS.find((c) => c.type === type)!;
 }
+
+// Maison privee (equilibrage.md §7) : personnelle, chaque joueur arrive sans maison (palier 0) et la construit avec la
+// meme mecanique que les chantiers (depots depuis le sac ou la banque, puis PA d'installation). Ses effets sont
+// appliques ailleurs : chance d'etre touche a l'attaque (game/blessuresNuit.ts), +15 % de PA max au palier 2 (game/pa.ts).
+export const PALIERS_MAISON: readonly PalierBatiment[] = [
+  { ressources: { Bois: 30, Tissu: 15 }, pa: 9, bonus: "Un toit à soi" },
+  { ressources: { Bois: 50, Tissu: 30 }, pa: 16, bonus: "+15 % de PA max, chance d'être blessé à l'attaque −25 %" },
+];

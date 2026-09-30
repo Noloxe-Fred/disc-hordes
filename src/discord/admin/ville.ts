@@ -7,6 +7,7 @@ import { fonderVille } from "../boutonsVille";
 import { declarerChuteVille, nettoyerGroupeSiTombe } from "../chute";
 import { changerPositionDiscord, retablirJoueurDiscord, retirerJoueurDeVilleDiscord } from "../joueurDiscord";
 import { rafraichirPanneauChantiers } from "../chantiers";
+import { rafraichirPanneauMaisons } from "../maisons";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "../messageVille";
 import { renommerRessource, supprimerRessources } from "../reconcile";
 import { LONGUEUR_MAX_NOM_VILLE } from "../texteLibre";
@@ -250,6 +251,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
     // Sacs des habitants, et des corps laisses par ceux qui sont partis (discord/depouilles.ts)
     prisma.inventaireJoueur.deleteMany({ where: { joueur: { villeId } } }),
     prisma.carteDecouverte.deleteMany({ where: { joueurId: { in: joueurIds } } }),
+    prisma.contributionMaison.deleteMany({ where: { joueurId: { in: joueurIds } } }),
     // Valeurs de depart d'un personnage (schema Joueur) ; le PA max fige a l'arrivee est conserve
     ...habitants.map((h) =>
       prisma.joueur.update({
@@ -264,6 +266,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
           pv: PV_MAX,
           infecteDepuis: null,
           maisonPalier: 0,
+          maisonPaInstalles: 0,
           bonusPaReveil: 0,
           fouillesSansRencontre: 0,
           infusionJusqua: null,
@@ -319,6 +322,7 @@ async function reset(interaction: ButtonInteraction, guild: Guild) {
   await resetVille(guild, ville.id);
   await posterDansMairie(guild, ville.id, `🔄 **${ville.nom}** repart de zéro : cycle 1, le jour se lève.`);
   await rafraichirPanneauChantiers(guild, ville.id);
+  await rafraichirPanneauMaisons(guild, ville.id);
   await synchroniserSalonAtelier(guild, ville.id);
   await journaliser(interaction.user, "Reset d'une ville", `${ville.nom} (#${ville.id}), était au cycle ${ville.cycleActuel}`);
   await choix.editReply(`**${ville.nom}** a été réinitialisée (cycle 1).`);
