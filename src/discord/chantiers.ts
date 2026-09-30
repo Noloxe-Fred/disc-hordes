@@ -27,7 +27,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { texteRationnement } from "./maire";
 import { rafraichirPanneauMaisons } from "./maisons";
-import { posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
+import { ensureSalonJournal, posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
 
 // Chantiers communautaires (conception.md §5, equilibrage.md §7) : un panneau permanent dans #chantiers de chaque ville,
 // mis a jour a chaque avancee. « Contribuer (sac) » / « Contribuer (banque) » deposent des ressources sur le prochain
@@ -152,12 +152,13 @@ export async function rafraichirPanneauChantiers(guild: Guild, villeId: number):
   if (message) await prisma.ville.update({ where: { id: villeId }, data: { messageChantiersId: message.id } });
 }
 
-// Panneaux (chantiers, maisons) de chaque ville en jeu (au demarrage du bot : villes fondees avant les chantiers, message supprime...)
+// Panneaux (chantiers, maisons) et salons (atelier, journal) de chaque ville en jeu (au demarrage du bot : villes fondees avant les chantiers, message supprime...)
 export async function rafraichirTousLesPanneaux(guild: Guild): Promise<void> {
   for (const { id } of await prisma.ville.findMany({ where: { statut: StatutVille.ACTIVE }, select: { id: true } })) {
     await rafraichirPanneauChantiers(guild, id).catch((error) => console.error(`Panneau des chantiers de la ville ${id}`, error));
     await rafraichirPanneauMaisons(guild, id).catch((error) => console.error(`Panneau des maisons de la ville ${id}`, error));
     await synchroniserSalonAtelier(guild, id).catch((error) => console.error(`Salon atelier de la ville ${id}`, error));
+    await ensureSalonJournal(guild, id).catch((error) => console.error(`Salon journal de la ville ${id}`, error));
   }
 }
 

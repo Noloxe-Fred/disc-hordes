@@ -622,17 +622,21 @@ model Signalement {
 }
 
 // Flux du journal de bord (conception.md §7) : public pour les actions en ville, prive/absent
-// pour le territoire externe (les joueurs racontent eux-memes ce qui s'y passe).
+// pour le territoire externe (les joueurs racontent eux-memes ce qui s'y passe). Les entrees publiques sont
+// reprises dans le salon #journal de la ville (discord/journal.ts) ; "publiee" marque celles deja postees.
 model JournalEntree {
   id           Int      @id @default(autoincrement())
   villeId      Int
   joueurId     Int?
   message      String
   public       Boolean  @default(true)
+  publiee      Boolean  @default(false)
   dateCreation DateTime @default(now())
 
   ville  Ville   @relation(fields: [villeId], references: [id], onDelete: Cascade)
   joueur Joueur? @relation(fields: [joueurId], references: [id])
+
+  @@index([public, publiee])
 }
 
 // =========================================================================

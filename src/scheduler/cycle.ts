@@ -17,6 +17,7 @@ import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
 import { INTERVALLE_VERIFICATION_ELECTIONS_MS } from "../config/politique";
 import { verifierDefiances } from "../discord/defiance";
 import { verifierElections, verifierFinMandat } from "../discord/election";
+import { INTERVALLE_JOURNAL_MS, publierJournaux } from "../discord/journal";
 import { cloreSanctions } from "../discord/sanction";
 import { produireEauPuits } from "../services/puits";
 import { regenererRessourcesNaturelles } from "../services/stocks";
@@ -328,4 +329,11 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
     await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
     await verifierDefiances(guild).catch((error) => console.error("Vérification des votes de défiance impossible", error));
   }, INTERVALLE_VERIFICATION_ELECTIONS_MS);
+
+  // Journal de bord : entrees publiques recentes postees dans le salon #journal de chaque ville (discord/journal.ts)
+  setInterval(async () => {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+    await publierJournaux(guild).catch((error) => console.error("Publication des journaux impossible", error));
+  }, INTERVALLE_JOURNAL_MS);
 }
