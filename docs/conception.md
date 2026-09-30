@@ -258,12 +258,12 @@ Règles :
 ## 7. Narration & IA locale
 
 - IA gérée en local, en surcouche du jeu
-- Génère des événements aléatoires en ville (incendie, tempête, attaque de bandits, nourriture contaminée, etc.)
+- Génère des événements aléatoires en ville (incendie, tempête, attaque de bandits, nourriture contaminée, etc.) — **reporté en V2** (décidé le 2026-09-30)
 - Gère les rencontres en territoire externe : monstres à combattre, mais aussi humains avec qui parler, échanger, commercer ou se battre via des discussions en temps réel
   - **V0.1** : stub simplifié, zombie uniquement, probabilité liée au palier de zone (15/30/45 % proche/moyenne/éloignée, ×1,5 la nuit) — rencontres humaines/bandits et table complète de dangerosité reportées à la bêta, confirmé hors scope V1 ; valeurs stub détaillées dans le document d'équilibrage
 - Journal de bord automatique posté par le bot ; réflexion sur un appui IA pour raconter de petits événements narrés du point de vue des gardes ou des joueurs bloqués dehors
-- Flux public dans le journal de bord pour les actions en ville ; rien de public pour le territoire externe — les joueurs doivent raconter eux-mêmes ; un joueur doit prévenir de sa zone s'il pourrait avoir besoin d'être rapatrié ; prévoir une fusée de détresse pour indiquer sa zone sinon
-- Scénarios narratifs : événements aléatoires en V1, avec possibilité d'un petit arbre de mini-quête proposé par un PNJ extérieur ; scénarios complexes reportés en V2
+- Flux public dans le journal de bord pour les actions en ville ; rien de public pour le territoire externe — les joueurs doivent raconter eux-mêmes ; un joueur doit prévenir de sa zone s'il pourrait avoir besoin d'être rapatrié ; prévoir une fusée de détresse pour indiquer sa zone sinon (fusée **reportée en V2**, décidé le 2026-09-30)
+- Scénarios narratifs : événements aléatoires (reportés en V2), avec possibilité d'un petit arbre de mini-quête proposé par un PNJ extérieur ; scénarios complexes reportés en V2
 
 ### Trahison
 - Un joueur peut troquer avec des bandits (considéré comme du vol), visible seulement par les joueurs présents dans la zone
@@ -278,7 +278,7 @@ Règles :
 - Format infini/survie : pas de durée fixe, l'objectif est de tenir le plus longtemps possible
 - La ville tombe à la mort de son dernier habitant vivant — en pratique surtout quand les attaques de zombies deviennent trop fortes chaque nuit (augmentation progressive) ; reset possible, utile en V1 pendant l'équilibrage
 - Stats de fin de partie postées dans le salon `commémoration` (catégorie "Disc'Hordes") : dates de fondation et de chute, nuits survécues, dernier maire, plus forte attaque subie, dernier survivant, et liste des habitants avec métier et cause de mort ; si c'était la dernière ville de son groupe, déclenche aussi la suppression des rôles et salons du groupe (voir section 1)
-- Classement entre villes (nommées par les joueurs), classées par nombre de cycles tenus ; historique des joueurs ayant fait partie des villes visitées
+- Classement entre villes (nommées par les joueurs), classées par nombre de cycles tenus ; historique des joueurs ayant fait partie des villes visitées — **reporté en V2** (décidé le 2026-09-30)
 - Scénarios avec objectifs et gestion narrative par IA envisagés en V2, le temps de tester les fonctionnalités de base
 
 ---

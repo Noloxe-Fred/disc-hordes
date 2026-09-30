@@ -248,6 +248,9 @@ Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 🌦️ **La météo dynamique** : le mauvais temps pèse sur les déplacements et abîme les chantiers
 ⭐ **XP et talents** : ton personnage progresse et améliore ses compétences
 🏆 **Succès et titres** : des récompenses qui te suivent d'une partie à l'autre
+🎆 **La fusée de détresse** : signaler ta zone à ta ville quand tu es coincé dehors
+🔥 **Les événements en ville** : incendies, tempêtes, nourriture contaminée… racontés du point de vue des gardes
+📊 **Le classement des villes** : les villes classées selon le nombre de cycles tenus, avec l'historique de leurs habitants
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 
