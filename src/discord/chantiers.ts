@@ -101,7 +101,7 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
   const structures =
     `🛡️ **Structures de défense avancées** — ${structuresDefense} / ${STRUCTURES_DEFENSE_MAX} posées` +
     ` (+${structuresDefense * BONUS_STRUCTURE_DEFENSE} défense)\n-# Fabriquées par un ingénieur à l'atelier, posées avec le bouton ` +
-    `ci-dessous : +${BONUS_STRUCTURE_DEFENSE} défense chacune, pour toujours.`;
+    `ci-dessous : +${BONUS_STRUCTURE_DEFENSE} défense chacune, jusqu'à ce qu'une attaque mal contenue la détruise.`;
   return new ContainerBuilder()
     .setAccentColor(COULEUR)
     .addTextDisplayComponents(
@@ -385,7 +385,7 @@ async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatime
   return annonce;
 }
 
-// Structure de defense avancee posee (sac, puis banque) : +3 defense definitive pour la ville, 5 au plus
+// Structure de defense avancee posee (sac, puis banque) : +3 defense pour la ville (jusqu'a sa destruction par une attaque, discord/degatsChantiers.ts), 5 au plus
 async function poserStructure(guild: Guild, joueurId: number, villeId: number): Promise<string> {
   const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
   if (ville.structuresDefense >= STRUCTURES_DEFENSE_MAX) return `La ville a déjà ${STRUCTURES_DEFENSE_MAX} structures de défense : c'est le maximum.`;

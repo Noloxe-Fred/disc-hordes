@@ -63,7 +63,7 @@ Les **Territoires externes** de la région (forêt, marécages, montagnes, ville
 Chaque ville vit au rythme d'une **horloge commune** : le jour et la nuit durent **24h réelles** chacun, et basculent à **minuit**.
 
 🌙 **À la tombée de la nuit**, les zombies se rassemblent… La mairie prévient toute la ville à chaque changement de phase, puis **une heure avant l'attaque**.
-☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, les citoyens présents en ville risquent d'être **blessés**. Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
+☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, les citoyens présents en ville risquent d'être **blessés**, et les **chantiers** d'être abîmés (voir « Les chantiers »). Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
 
 🛡️ **La nuit, en ville**, le bouton **Monter la garde** de `/action` renforce la défense de l'aube : **+3** pour un citoyen, **+6** pour un **Garde**, pour **6 PA**. Il faut être encore en ville au moment de l'attaque pour que ça compte.
 📈 Les attaques deviennent **plus fortes à chaque nuit**. Une ville qui ne se défend pas finira par tomber.
@@ -141,13 +141,14 @@ Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (
 Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâtiment : la **palissade** (défense contre l'attaque de l'aube), la **place publique** (plus de place dans la banque), le **puits** (de l'eau chaque matin), l'**atelier**, la **tour radio** et la **mairie**.
 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** : dépose des ressources sur le prochain palier d'un bâtiment, depuis ton sac ou directement depuis la banque. C'est gratuit.
 🔨 **Installer** : verse tes PA pour bâtir, **2 PA par tranche de 10 ressources déposées**. Pas besoin d'attendre que tout soit réuni : on installe au fur et à mesure.
-🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense pour toujours** (5 au plus).
+🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense** tant qu'elle tient (5 au plus).
 
 ## 🛠️ L'atelier
 Une fois l'atelier construit, son salon s'ouvre. Lance `/inventaire` **dans ce salon** : le bouton **Craft avancé** te propose les recettes de ton métier. Les ingrédients viennent de ton sac, puis de la banque.
 💉 **Médecin** : remède contre l'infection · 🛡️ **Ingénieur** : structures de défense (et réparation de voiture, bientôt utile) · 🥘 **Cuisinier** : ragoût fortifiant (+40 faim, +2 PA au réveil), conserve (+25 faim), infusion (+15 soif, soulage l'infection) · 🪤 **Chasseur** : pièges avancés (bientôt utiles) · 🛠️ **Artisan** : armes/outils avancés (−2 PA et 2 dégâts par coup en combat)
 ✅ Quand toutes les ressources et tous les PA sont là, le palier est construit et son effet s'applique tout de suite. La mairie l'annonce.
 Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim et soif d'au moins 10).
+🧟 **Quand la défense ne suffit pas**, les zombies saccagent aussi les constructions, d'autant plus que l'écart est grand : d'abord les **structures de défense**, puis **un palier de palissade**, puis les **ressources et PA déjà versés** sur les chantiers et les maisons en cours, et enfin **un palier d'un bâtiment au hasard** (maisons comprises). Un palier perdu perd son effet, et il faut le reconstruire.
 
 
 # 🎒 Ton sac

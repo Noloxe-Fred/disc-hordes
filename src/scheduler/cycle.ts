@@ -9,6 +9,7 @@ import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/fa
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { evenementsTombeeNuit, hordeAube } from "../discord/combat";
+import { infligerDegatsChantiers } from "../discord/degatsChantiers";
 import { gardesDeLaNuit } from "../discord/garde";
 import { posterDansMairie } from "../discord/villeStructure";
 import { verifierZombiesErrants } from "../discord/zombieErrant";
@@ -160,8 +161,8 @@ async function resoudreBlessuresNuit(
   return { lignes, villeTombee: false };
 }
 
-// Resout une attaque de zombies sur la ville a la force de son cycle courant : jets de blessures et compte
-// rendu public. "enregistrer" conserve l'attaque dans l'historique de la ville (attaque de l'aube) ; il est
+// Resout une attaque de zombies sur la ville a la force de son cycle courant : jets de blessures, degats sur les
+// chantiers (discord/degatsChantiers.ts) et compte rendu public. "enregistrer" conserve l'attaque dans l'historique de la ville (attaque de l'aube) ; il est
 // fait avant les blessures, pour que le recapitulatif d'une chute eventuelle en tienne compte.
 export async function resoudreAttaque(
   guild: Guild,
@@ -193,13 +194,17 @@ export async function resoudreAttaque(
   const { lignes, villeTombee } = await resoudreBlessuresNuit(guild, ville, forceAttaque, defenseTotale);
 
   const deficit = Math.max(0, forceAttaque - defenseTotale);
+  // Puis les zombies s'en prennent aux constructions (structures, palissade, chantiers en cours, maisons)
+  const degats = deficit > 0 && !villeTombee ? await infligerDegatsChantiers(guild, ville.id, deficit) : [];
   const compteRendu =
     `🧟 Attaque de zombies sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
     ` (base ${DEFENSE_BASE}, palissade +${BONUS_PALISSADE_CUMULE[Math.min(palierPalissade, BONUS_PALISSADE_CUMULE.length - 1)]}` +
     (ville.structuresDefense > 0 ? `, structures +${ville.structuresDefense * BONUS_STRUCTURE_DEFENSE}` : "") +
     `, ${gardes.length} garde${gardes.length > 1 ? "s" : ""} +${bonusGardes})` +
     (deficit > 0
-      ? ` — déficit de ${deficit.toFixed(1)}.` + (lignes.length > 0 ? `\n${lignes.join("\n")}` : "\nPersonne n'a été touché.")
+      ? ` — déficit de ${deficit.toFixed(1)}.` +
+        (lignes.length > 0 ? `\n${lignes.join("\n")}` : "\nPersonne n'a été touché.") +
+        (degats.length > 0 ? `\n${degats.join("\n")}` : "")
       : " — repoussée sans difficulté.");
 
   return { compteRendu, villeTombee };

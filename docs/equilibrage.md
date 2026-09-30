@@ -172,7 +172,7 @@ Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gib
 
 ### Défense insuffisante
 - Déficit = Attaque − Défense (si positif)
-- **Dégâts sur chantiers** : proportionnels au déficit
+- **Dégâts sur chantiers** : voir ci-dessous (cascade validée le 2026-09-30)
 - **Risque par citoyen présent en ville** ("touché" ou non) : `min(50%, déficit / attaque)` par citoyen présent, jet indépendant.
 
 ### Blessures en défense insuffisante (PV perdus)
@@ -186,6 +186,20 @@ Pour chaque citoyen présent en ville (pas en territoire externe), jet indépend
 **Exemples** :
 - Attaque 20 contre défense 18 → ratio 10 % → 10 % de chance d'être touché (7,5 % avec une maison P2), 1 PV perdu.
 - Déficit au plafond (ratio 50 %) → 50 % de chance d'être touché (37,5 % en maison P2), 5 PV perdus : deux nuits de ce type suffisent à tuer un joueur en pleine santé.
+
+### Dégâts sur les chantiers (validé le 2026-09-30)
+Après les blessures, le **déficit devient un budget de dégâts**, consommé dans cet ordre. Chaque élément détruit absorbe sa valeur de défense, donc un petit déficit ne touche que les premières cibles :
+1. **Structures de défense avancées** : une détruite par tranche de **3 points** (entamée), jusqu'à ce qu'il n'en reste plus.
+2. **Palissade** : s'il reste du budget, elle perd **1 palier** (jamais plus d'un par attaque), ce qui absorbe le bonus de ce palier (5 à 8 points).
+3. **Avancement en cours** (ressources déposées et PA installés sur le prochain palier de **tous** les chantiers et de **toutes** les maisons privées des habitants vivants) : chaque point restant en détruit **10 %** (arrondi en faveur des zombies), **10 points au plus** (100 %).
+4. S'il reste encore **5 points ou plus** : **−1 palier** sur un bâtiment construit tiré au hasard (place publique, puits, atelier, tour radio, mairie ou maison privée d'un habitant vivant ; pas la palissade). Un seul par attaque.
+
+Un palier perdu fait perdre son bonus aussitôt (atelier sous le palier 1 : salon fermé ; tour radio : ondes réservées aux porteurs de radio). L'avancement déjà déposé au-delà du coût du palier à reconstruire est perdu. Les dégâts sont détaillés dans le compte rendu de l'aube en mairie.
+
+**Exemples** :
+- Déficit 10, 2 structures, palissade P3 → 2 structures détruites (6 points), palissade P3 → P2 (absorbe les 4 restants).
+- Déficit 3, pas de structure, palissade P3 → palissade P3 → P2.
+- Déficit 20, pas de structure, palissade P1 → palissade P1 → P0 (5), avancement en cours entièrement perdu (10), puis −1 palier au hasard (5 restants).
 
 *Pour la sieste en territoire externe (section 1), le jet de risque déclenche simplement une rencontre — c'est alors la table de rencontre (section 5) et le combat qui déterminent l'issue, pas cette formule.*
 
@@ -368,7 +382,7 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 **Fonctionnement (validé le 2026-09-29)** :
 - Le salon **`atelier`** de la ville n'existe qu'une fois l'atelier construit (palier 1). Le bouton **« Craft avancé »** de `/inventaire` n'apparaît que si la commande est lancée **dans ce salon**, par un citoyen vivant en ville, faim et soif ≥ 10. Il propose les recettes du métier du joueur ; les ingrédients sont pris **dans le sac, puis complétés par la banque de ville** ; coût en PA de la recette, identique la nuit. Aucune recette n'est encore réservée au palier 2 de l'atelier.
 - **Remède contre l'infection** : administré par le **médecin** (option du bouton « Soigner » de `/action`, sur soi ou un survivant au même endroit, gratuit en PA). L'infection étant cachée, le joueur doit dire au médecin qu'il est infecté : si la cible ne l'était pas, le remède est **consommé** et un message d'erreur le signale.
-- **Structures de défense avancées** : posées avec le bouton « Poser une structure » du panneau `#chantiers` (sac, puis banque) : **+3 défense définitive** chacune, **5 au plus (+15)**, comptées dans la défense de l'aube (section 3).
+- **Structures de défense avancées** : posées avec le bouton « Poser une structure » du panneau `#chantiers` (sac, puis banque) : **+3 défense** chacune (jusqu'à leur destruction par une attaque mal contenue, section 3), **5 au plus (+15)**, comptées dans la défense de l'aube (section 3).
 - **Infusion médicinale** : le malus PA de l'infection est réduit de **10 points** (ex. −25 % → −15 %, sans passer sous 0) jusqu'au prochain changement de phase ; l'incubation n'est pas ralentie.
 - **Réparation voiture** et **Pièges avancés** : fabricables, effet à venir (voiture T39, pièges non chiffrés).
 
