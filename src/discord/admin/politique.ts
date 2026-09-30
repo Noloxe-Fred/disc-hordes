@@ -2,11 +2,13 @@ import { StatutJoueur, StatutVille } from "@prisma/client";
 import { ButtonStyle, MessageFlags, type ButtonInteraction, type Guild } from "discord.js";
 import { CYCLES_PAR_MANDAT_MAIRE } from "../../config/metiers";
 import { prisma } from "../../db";
+import { cloreDefiance, defianceEnCours } from "../defiance";
 import { avancerElection, electionEnCours, ouvrirElection, pourvoirMairieVacante } from "../election";
 import { posterDansMairie } from "../villeStructure";
 import { champMembre, champVille, journaliser, lireChoix, lireJoueur, ouvrirFormulaire, repondre, type FamilleAdmin } from "./outils";
 
-// Famille "Politique" du panneau /admin (conception.md §4-5) : forcer une election, destituer le maire, changer le maire.
+// Famille "Politique" du panneau /admin (conception.md §4-5) : forcer une election, clore un vote de defiance, destituer
+// le maire, changer le maire.
 
 // --- Forcer une election : l'ouvre, ou fait passer celle en cours a l'etape suivante sans attendre l'echeance ---
 
@@ -36,6 +38,34 @@ async function forcerElection(interaction: ButtonInteraction, guild: Guild) {
     resultat = `Élection ouverte à **${ville.nom}**.`;
   }
   await journaliser(interaction.user, "Forcer une élection", resultat);
+  await soumission.editReply({ content: resultat, allowedMentions: { parse: [] } });
+}
+
+// --- Clore la defiance : depouille sans attendre l'echeance le vote de defiance en cours dans une ville ---
+
+async function forcerDefiance(interaction: ButtonInteraction, guild: Guild) {
+  const champ = await champVille([StatutVille.ACTIVE]);
+  if (!champ) {
+    await repondre(interaction, "Aucune ville en jeu.");
+    return;
+  }
+  const soumission = await ouvrirFormulaire(interaction, "Clore la défiance", [champ]);
+  if (!soumission) return;
+
+  const ville = await prisma.ville.findUnique({ where: { id: Number(lireChoix(soumission, "ville")) } });
+  if (ville?.statut !== StatutVille.ACTIVE) {
+    await repondre(soumission, "Cette ville n'est plus en jeu.");
+    return;
+  }
+  const defiance = await defianceEnCours(ville.id);
+  if (!defiance) {
+    await repondre(soumission, `Aucun vote de défiance en cours à **${ville.nom}**.`);
+    return;
+  }
+
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+  const resultat = `**${ville.nom}** : ${await cloreDefiance(guild, defiance)}`;
+  await journaliser(interaction.user, "Clore la défiance", resultat);
   await soumission.editReply({ content: resultat, allowedMentions: { parse: [] } });
 }
 
@@ -132,6 +162,13 @@ export const FAMILLE_POLITIQUE: FamilleAdmin = {
         "sans attendre (clôture des candidatures, puis dépouillement).",
       style: ButtonStyle.Primary,
       executer: forcerElection,
+    },
+    {
+      cle: "defiance",
+      libelle: "Clore la défiance",
+      description: "dépouille sans attendre la fin des 24 h le vote de défiance en cours dans une ville en jeu.",
+      style: ButtonStyle.Primary,
+      executer: forcerDefiance,
     },
     {
       cle: "destituer",

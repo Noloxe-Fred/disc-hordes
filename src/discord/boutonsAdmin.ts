@@ -45,7 +45,7 @@ const ACTIONS_MJ: Record<string, readonly string[]> = {
   ville: ["renommer", "fonder", "recharger", "construire"],
   joueur: ["teleporter", "ressusciter", "guerir", "exclure", "reintegrer", "metier", "jauges"],
   ressources: ["ajout-joueur", "retrait-joueur", "ajout-ville", "retrait-ville"],
-  politique: ["election", "destituer", "maire"],
+  politique: ["election", "defiance", "destituer", "maire"],
   moderation: ["mute", "kick", "journal"],
 };
 

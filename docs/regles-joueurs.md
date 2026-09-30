@@ -194,13 +194,18 @@ En ville, le bouton **Banque** montre la réserve commune de ta ville. **Dépose
 
 🏛️ Le **maire** publie ses annonces dans la mairie. Son mandat dure **4 cycles**.
 ⌛ À la fin du mandat, une élection s'ouvre toute seule à l'aube, et le maire sortant assure l'**intérim** jusqu'au résultat. Personne n'est élu ? L'intérim s'arrête et la ville reste sans maire.
-🪦 Le maire meurt, part, est banni ou exclu ? La mairie est vacante : une élection s'ouvre aussitôt.
+🪦 Le maire meurt, part, est banni, exclu ou destitué ? La mairie est vacante : une élection s'ouvre aussitôt.
 🗳️ À tout moment, un citoyen vivant peut **déclencher une élection** avec le bouton **Élection** de `/action` (une seule à la fois). Un panneau apparaît dans la mairie :
 🙋 **24 h de candidatures** : tout citoyen vivant peut se porter candidat (ou retirer sa candidature), même dehors. Le maire en place peut se représenter.
 ✅ Puis **24 h de vote**, réservé aux citoyens vivants **présents en ville**. Le vote est secret et tu peux changer d'avis jusqu'à la clôture.
 🏆 Le candidat qui a le plus de voix devient maire pour 4 cycles. Seul candidat ? Il est élu d'office. Personne ne se présente ou personne ne vote ? Rien ne change.
 ⚖️ En cas d'égalité, un **revote de 24 h** départage les ex aequo.
 Jusqu'au résultat, le maire en place garde sa fonction.
+
+## ⚖️ Le vote de défiance
+Le maire ne fait plus l'affaire ? Tout citoyen vivant (sauf le maire) peut lancer un **vote de défiance** avec le bouton **Défiance** de `/action` (un seul à la fois). Un panneau apparaît dans la mairie :
+🗳️ **24 h de vote**, réservé aux citoyens vivants **présents en ville** (le maire aussi). Tu choisis **Destituer** ou **Maintenir**, en secret, et tu peux changer d'avis jusqu'à la clôture.
+👢 Plus de « Destituer » que de « Maintenir » : le maire est **destitué**, la mairie est vacante et une élection s'ouvre. Il peut s'y représenter. Égalité ou personne ne vote : il reste en place.
 
 ## 🏛️ Les pouvoirs du maire
 Le bouton **Maire** de `/action` ouvre son panneau :
@@ -238,7 +243,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, déclencher une élection, demander l'accueil d'une ville, agir en maire, quitter ta ville)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 

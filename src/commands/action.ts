@@ -15,7 +15,7 @@ import {
 } from "discord.js";
 import type { Command } from "../client";
 import { COUT_GARDE } from "../config/defense";
-import { DUREE_CANDIDATURES_HEURES, DUREE_VOTE_HEURES } from "../config/politique";
+import { DUREE_CANDIDATURES_HEURES, DUREE_DEFIANCE_HEURES, DUREE_VOTE_HEURES } from "../config/politique";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
@@ -28,6 +28,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions
 import { trouverSalonTexte } from "../discord/reconcile";
 import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
 import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
+import { declencherDefiance, empechementDefiance } from "../discord/defiance";
 import { declencherElectionJoueur, electionEnCours } from "../discord/election";
 import { demandeEnAttente, formulaireAccueil, villesAccueillantes } from "../discord/accueil";
 import { formulairePriorite, formulaireRationnement, formulaireSanction } from "../discord/maire";
@@ -115,6 +116,8 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     (exclu ? "\nVous êtes **exclu** de votre ville : vous ne pouvez pas y rentrer." : "");
   // Election du maire : un citoyen vivant la declenche quand aucune n'est en cours (discord/election.ts)
   const electionPossible = joueur.statut === StatutJoueur.VIVANT && (await electionEnCours(ville.id)) === null;
+  // Vote de defiance : un citoyen vivant autre que le maire, quand aucun n'est en cours (discord/defiance.ts)
+  const defiancePossible = (await empechementDefiance(joueurId)) === null;
   // Dehors, un survivant peut demander a rejoindre une autre ville du groupe (un exclu, a revenir dans la sienne)
   const accueilPossible = (await villesAccueillantes(joueur)).length > 0;
   const maire = estMaireEnExercice(joueur);
@@ -156,6 +159,18 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ),
   );
 
+  // Declencher un vote de defiance contre le maire : confirmation
+  const ecranDefiance = encadre(
+    `${entete}\n\n**Déclencher un vote de défiance contre le maire ?** Pendant ${DUREE_DEFIANCE_HEURES} h, les citoyens vivants ` +
+      "présents en ville votent « Destituer » ou « Maintenir » depuis le panneau posté dans la mairie. S'il y a plus de " +
+      "« Destituer », le maire perd sa fonction et une élection s'ouvre ; il peut s'y représenter.",
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("confirmer-defiance").setLabel("Déclencher la défiance").setEmoji("⚖️").setStyle(ButtonStyle.Danger),
+      boutonRetour(),
+    ),
+  );
+
   const menu = encadre(`${entete}\nQue voulez-vous faire ?`).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("deplacer").setLabel("Se déplacer").setEmoji("🧭").setStyle(ButtonStyle.Primary),
@@ -189,11 +204,14 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setEmoji("🚪").setStyle(ButtonStyle.Danger),
     ),
   );
-  // Vie politique : panneau du maire, election, demande d'accueil dans une ville
+  // Vie politique : panneau du maire, election, defiance, demande d'accueil dans une ville
   const boutonsPolitique = [
     ...(maire ? [new ButtonBuilder().setCustomId("maire").setLabel("Maire").setEmoji("🏛️").setStyle(ButtonStyle.Primary)] : []),
     ...(electionPossible
       ? [new ButtonBuilder().setCustomId("election").setLabel("Élection").setEmoji("🗳️").setStyle(ButtonStyle.Secondary)]
+      : []),
+    ...(defiancePossible
+      ? [new ButtonBuilder().setCustomId("defiance").setLabel("Défiance").setEmoji("⚖️").setStyle(ButtonStyle.Secondary)]
       : []),
     ...(accueilPossible
       ? [new ButtonBuilder().setCustomId("accueil").setLabel("Demander l'accueil").setEmoji("🏘️").setStyle(ButtonStyle.Secondary)]
@@ -385,6 +403,12 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     } else if (clic.customId === "confirmer-election") {
       await clic.deferUpdate();
       await clic.editReply({ components: [encadre(await declencherElectionJoueur(guild, joueurId))] });
+      return;
+    } else if (clic.customId === "defiance") {
+      await clic.update({ components: [ecranDefiance] });
+    } else if (clic.customId === "confirmer-defiance") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await declencherDefiance(guild, joueurId))] });
       return;
     } else if (clic.customId === "garde") {
       await clic.update({ components: [ecranGarde] });

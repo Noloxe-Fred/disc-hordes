@@ -15,6 +15,7 @@ import { posterDansMairie } from "../discord/villeStructure";
 import { verifierZombiesErrants } from "../discord/zombieErrant";
 import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
 import { INTERVALLE_VERIFICATION_ELECTIONS_MS } from "../config/politique";
+import { verifierDefiances } from "../discord/defiance";
 import { verifierElections, verifierFinMandat } from "../discord/election";
 import { cloreSanctions } from "../discord/sanction";
 import { produireEauPuits } from "../services/puits";
@@ -319,10 +320,12 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
     await verifierZombiesErrants(guild).catch((error) => console.error("Verification des zombies errants impossible", error));
   }, INTERVALLE_ZOMBIES_ERRANTS_MS);
 
-  // Elections du maire arrivees a une echeance : fin des candidatures, fin du vote (discord/election.ts)
+  // Elections du maire arrivees a une echeance : fin des candidatures, fin du vote (discord/election.ts) ; votes de
+  // defiance arrives a terme (discord/defiance.ts)
   setInterval(async () => {
     const guild = client.guilds.cache.first();
     if (!guild) return;
     await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
+    await verifierDefiances(guild).catch((error) => console.error("Vérification des votes de défiance impossible", error));
   }, INTERVALLE_VERIFICATION_ELECTIONS_MS);
 }
