@@ -196,7 +196,9 @@ export async function fuir(guild: Guild, joueurId: number): Promise<ResultatComb
       enCours: (await zombieAffrontePar(joueurId)) !== null,
     };
   }
-  if (bouge) await deplacerJoueur(guild, joueur, repli, 0);
+  const pendaison = bouge ? await deplacerJoueur(guild, joueur, repli, 0) : null;
+  if (pendaison) return { texte: `🏃 Vous prenez la fuite (−${cout} PA) et vous réfugiez en ville.
+${pendaison}`, enCours: false };
   await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Combat : fuite réussie", public: false } });
   const nomRepli = repli === null ? null : (await prisma.zone.findUnique({ where: { id: repli } }))?.nom;
   const destination = !bouge

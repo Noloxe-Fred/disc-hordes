@@ -32,7 +32,7 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 
 **Lecture** : le PA max individuel dépend uniquement de la taille de la ville **au moment où elle a été fondée**. Une ville lancée à 15 aura des citoyens à 12 PA pour toute la partie, même si elle retombe ensuite à 5 survivants (elle perd alors de la capacité collective réelle, sans que les survivants en soient individuellement compensés). Inversement, une ville lancée petite conserve des individus puissants même si elle grossit ensuite par déménagement. C'est ce budget de 180 (au format plein, N≥5) qui a servi de base à tous les coûts de chantiers de la section 7.
 
-**Déménagement (rejoindre une ville en cours de recrutement, ou changement de ville en cours de partie)** : le joueur garde le PA max qu'il avait déjà — jamais recalculé sur la base de la nouvelle ville. Un fondateur venu d'une ville de 15 (12 PA) qui rejoint ensuite une ville de 5 (36 PA) reste à 12 PA, et inversement. Ça crée volontairement une hétérogénéité durable entre citoyens d'une même ville selon leur ville d'origine.
+**Déménagement (rejoindre une ville en cours de recrutement, ou changement de ville en cours de partie, accepté par le maire de la ville d'accueil)** : le joueur garde le PA max qu'il avait déjà — jamais recalculé sur la base de la nouvelle ville. Un fondateur venu d'une ville de 15 (12 PA) qui rejoint ensuite une ville de 5 (36 PA) reste à 12 PA, et inversement. Ça crée volontairement une hétérogénéité durable entre citoyens d'une même ville selon leur ville d'origine.
 
 ### Modificateurs (exprimés en % du PA max individuel calculé ci-dessus, pas en valeur fixe — pour rester cohérents quel que soit le PA de base du joueur)
 | État | Effet |
@@ -137,7 +137,17 @@ Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gib
 - **Indices** après une fouille, sans chiffres : sous 25 % « se font rares » / « bien pillée », à 0 « épuisées » / « plus rien à récupérer ».
 
 ### Rationnement (maire)
-- Réduit la consommation individuelle prélevée sur le stock de ville de **−30 %**, mais si le stock de ville est insuffisant, le déficit est reporté tel quel sur la jauge du joueur.
+- **Informatif uniquement** (décidé le 2026-09-30, remplace l'ancien −30 % de consommation) : le maire fixe des portions max de nourriture et d'eau par citoyen et par jour et une consigne ; aucune mécanique ne les impose.
+
+### Bannissement et exécution (validé le 2026-09-30)
+- Vote de la ville ouvert **jusqu'au prochain changement de phase** (durée variable selon l'heure du lancement), citoyens vivants présents en ville ; adopté si Pour > Contre.
+- Exécution d'une cible dehors : pendue dès son retour en ville.
+
+### Élection du maire (validé le 2026-09-30)
+- Déclenchable **à tout moment** par un citoyen vivant, une élection à la fois par ville, **sans mairie construite requise**.
+- **24 h réelles de candidatures**, puis **24 h réelles de vote** (revote entre ex aequo : 24 h de vote directement).
+- Mandat de l'élu : **4 cycles** à partir du cycle courant (comme le premier maire à la fondation).
+- Égalité : le plus d'XP l'emporte (tous à 0 tant que l'XP est reportée en V2), sinon revote. Candidat unique élu d'office ; aucun candidat ou aucune voix : sans effet.
 
 ---
 

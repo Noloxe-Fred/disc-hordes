@@ -190,6 +190,28 @@ En ville, le bouton **Banque** montre la réserve commune de ta ville. **Dépose
 📜 Chaque dépôt, chaque retrait et chaque repas pris à la banque est inscrit au journal de la ville.
 
 
+# 🗳️ Le maire et les élections
+
+🏛️ Le **maire** publie ses annonces dans la mairie. Son mandat dure **4 cycles**.
+🗳️ À tout moment, un citoyen vivant peut **déclencher une élection** avec le bouton **Élection** de `/action` (une seule à la fois). Un panneau apparaît dans la mairie :
+🙋 **24 h de candidatures** : tout citoyen vivant peut se porter candidat (ou retirer sa candidature), même dehors. Le maire en place peut se représenter.
+✅ Puis **24 h de vote**, réservé aux citoyens vivants **présents en ville**. Le vote est secret et tu peux changer d'avis jusqu'à la clôture.
+🏆 Le candidat qui a le plus de voix devient maire pour 4 cycles. Seul candidat ? Il est élu d'office. Personne ne se présente ou personne ne vote ? Rien ne change.
+⚖️ En cas d'égalité, un **revote de 24 h** départage les ex aequo.
+Jusqu'au résultat, le maire en place garde sa fonction.
+
+## 🏛️ Les pouvoirs du maire
+Le bouton **Maire** de `/action` ouvre son panneau :
+📢 **Annonce** : publier dans la mairie.
+🔨 **Bannir** un citoyen ou 🪢 l'**exécuter** : la ville vote **jusqu'au prochain changement de phase**, avec le panneau posté dans la mairie. Seuls les citoyens vivants **présents en ville** votent, et tu peux changer d'avis jusqu'à la clôture. Il faut plus de voix pour que contre.
+• Banni : tu es **exclu**, tu ne peux plus entrer dans la ville ni voir ses salons, et si tu étais en ville, tu es jeté dehors.
+• Exécuté : tu es **pendu**. Si tu es dehors au moment du verdict, la corde t'attend à ton retour…
+🍽️ **Rationner** : portions de nourriture et d'eau par jour et par citoyen. ⭐ **Prioriser un chantier**. Ces consignes sont rappelées en tête du panneau des chantiers. Rien ne t'oblige à les suivre… mais la ville peut te bannir.
+
+## 🏘️ Changer de ville
+Dehors, le bouton **Demander l'accueil** de `/action` envoie une demande à une autre ville de ta région (ou à la tienne si tu en as été exclu). Elle s'affiche dans sa mairie et **seul son maire** l'accepte ou la refuse ; la réponse t'arrive dans le salon de ta zone.
+Accueilli, tu gardes ton sac, ta carte, ton métier et tes PA, mais tu laisses ta maison derrière toi.
+
 # 💀 La mort et la chute
 
 ## ⚰️ Mourir
@@ -214,14 +236,11 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, quitter ta ville)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, déclencher une élection, demander l'accueil d'une ville, agir en maire, quitter ta ville)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
 # 🚧 Feuille de route
-
-## 🔨 En préparation
-🗳️ Élections du maire
 
 ## 🔭 Plus tard (V2)
 👻 **L'âme** : une fois mort, garder une petite influence sur la partie de ta ville
@@ -229,7 +248,6 @@ Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 🌦️ **La météo dynamique** : le mauvais temps pèse sur les déplacements et abîme les chantiers
 ⭐ **XP et talents** : ton personnage progresse et améliore ses compétences
 🏆 **Succès et titres** : des récompenses qui te suivent d'une partie à l'autre
-🧳 **Le déménagement** : demander à rejoindre une autre ville croisée dans les territoires, sur vote de ses habitants
 
 > 🤝 Respecte les autres joueurs. Un souci ? Contacte un **MJ** ou un **Admin**.
 

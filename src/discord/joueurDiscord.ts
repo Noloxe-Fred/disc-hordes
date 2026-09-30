@@ -168,6 +168,20 @@ export async function retirerJoueurDeVilleDiscord(guild: Guild, discordId: strin
   if (salonRadio) await appliquerAcces(salonRadio, membre, LIBRE);
 }
 
+// Changement de ville d'un survivant accueilli par le maire d'une autre ville du groupe (discord/accueil.ts) :
+// role-ville echange, permissions propres sur les salons de l'ancienne ville retirees, puis acces recalcules.
+// La ville est deja changee en base.
+export async function changerDeVilleDiscord(guild: Guild, joueurId: number, ancienneVilleId: number): Promise<void> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
+  const membre = await guild.members.fetch(joueur.utilisateur.discordId).catch(() => null);
+  if (!membre) return;
+  await retirerRole(membre, `role:ville:${ancienneVilleId}`);
+  await ajouterRole(membre, `role:ville:${joueur.villeId}`);
+  await ajouterRole(membre, ROLE_CITOYEN.cle);
+  for (const { salon } of await salonsDeVille(guild, ancienneVilleId)) await appliquerAcces(salon, membre, LIBRE);
+  await synchroniserAccesJoueur(guild, joueurId);
+}
+
 // Exclusion d'un joueur (conception.md §5) : il perd l'acces aux salons de sa ville mais garde son role-ville,
 // qui lui laisse la vue des territoires externes ou il continue d'exister.
 export async function appliquerExclusionDiscord(guild: Guild, joueurId: number): Promise<void> {

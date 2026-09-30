@@ -25,6 +25,7 @@ import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } f
 import { synchroniserAccesVille } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
+import { texteRationnement } from "./maire";
 import { rafraichirPanneauMaisons } from "./maisons";
 import { posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
 
@@ -82,9 +83,9 @@ function manque(etat: EtatChantier, nom: string): number {
   return Math.max(0, besoin - (etat.deposees.get(nom) ?? 0));
 }
 
-function ligneChantier(etat: EtatChantier): string {
+function ligneChantier(etat: EtatChantier, prioritaire: boolean): string {
   const { chantier: c, palier } = etat;
-  const titre = `${c.emoji} **${c.nom}** — palier ${palier} / ${c.paliers.length}`;
+  const titre = `${c.emoji} **${c.nom}** — palier ${palier} / ${c.paliers.length}` + (prioritaire ? " · ⭐ **prioritaire**" : "");
   // Bonus du palier atteint (les bonus de palissade indiquent deja le total cumule)
   const actif = palier > 0 ? `\n✅ Actif : ${c.paliers[palier - 1].bonus}` : "\n-# Pas encore construit";
   const suivant = prochainPalier(etat);
@@ -97,7 +98,13 @@ function ligneChantier(etat: EtatChantier): string {
 
 export async function construirePanneauChantiers(villeId: number): Promise<ContainerBuilder> {
   const etats = await etatsChantiers(villeId);
-  const { structuresDefense } = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
+  const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
+  const { structuresDefense } = ville;
+  // Decisions du maire (informatives, discord/maire.ts)
+  const decisions = [
+    ...(ville.chantierPrioritaire ? [`⭐ Chantier prioritaire : ${chantier(ville.chantierPrioritaire).emoji} **${chantier(ville.chantierPrioritaire).nom}**`] : []),
+    ...(ville.rationnementActif ? [`🍽️ Rationnement : ${texteRationnement(ville)}`] : []),
+  ];
   const structures =
     `🛡️ **Structures de défense avancées** — ${structuresDefense} / ${STRUCTURES_DEFENSE_MAX} posées` +
     ` (+${structuresDefense * BONUS_STRUCTURE_DEFENSE} défense)\n-# Fabriquées par un ingénieur à l'atelier, posées avec le bouton ` +
@@ -109,7 +116,8 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
         "## 🏗️ Chantiers de la ville\n" +
           "Déposez des ressources (depuis votre sac ou la banque, gratuit), puis installez-les avec vos PA : " +
           "2 PA par tranche de 10 ressources déposées. Un palier est construit quand tout est réuni.\n\n" +
-          etats.map(ligneChantier).join("\n\n") +
+          (decisions.length > 0 ? `📋 **Décisions du maire**\n${decisions.join("\n")}\n\n` : "") +
+          etats.map((e) => ligneChantier(e, e.chantier.type === ville.chantierPrioritaire)).join("\n\n") +
           `\n\n${structures}`,
       ),
     )

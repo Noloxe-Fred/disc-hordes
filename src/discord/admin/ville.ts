@@ -287,6 +287,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
     prisma.inventaireVille.deleteMany({ where: { villeId } }),
     prisma.batimentVille.deleteMany({ where: { villeId } }), // contributions supprimees en cascade
     prisma.zombieErrant.deleteMany({ where: { villeId } }),
+    prisma.demandeAccueil.deleteMany({ where: { OR: [{ villeId }, { joueurId: { in: joueurIds } }] } }),
     // Sacs des habitants, et des corps laisses par ceux qui sont partis (discord/depouilles.ts)
     prisma.inventaireJoueur.deleteMany({ where: { joueur: { villeId } } }),
     prisma.carteDecouverte.deleteMany({ where: { joueurId: { in: joueurIds } } }),
@@ -309,6 +310,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
           bonusPaReveil: 0,
           fouillesSansRencontre: 0,
           infusionJusqua: null,
+          executionEnAttente: false,
           rencontrePvZombie: null, rencontreRetourZoneId: null, rencontreRetourVille: false,
           xp: 0,
           dateMort: null,
@@ -326,6 +328,10 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
         phaseDepuis: new Date(),
         meteoActuelle: MeteoType.NORMALE,
         rationnementActif: false,
+        rationNourriture: null,
+        rationEau: null,
+        rationNote: null,
+        chantierPrioritaire: null,
         structuresDefense: 0,
         mandatFinCycle: ville.maireId !== null ? CYCLES_PAR_MANDAT_MAIRE : null,
       },

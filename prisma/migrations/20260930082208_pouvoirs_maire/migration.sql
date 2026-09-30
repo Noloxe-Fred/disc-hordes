@@ -1,0 +1,33 @@
+-- AlterTable
+ALTER TABLE `Election` ADD COLUMN `cibleId` INTEGER NULL,
+    MODIFY `type` ENUM('MAIRE', 'DEFIANCE', 'BANNISSEMENT', 'EXECUTION') NOT NULL;
+
+-- AlterTable
+ALTER TABLE `Joueur` ADD COLUMN `executionEnAttente` BOOLEAN NOT NULL DEFAULT false,
+    MODIFY `causeMort` ENUM('ATTAQUE_NOCTURNE', 'COMBAT_EXTERIEUR', 'FAIM', 'SOIF', 'INFECTION', 'EAU_CONTAMINEE', 'ZOMBIE_ERRANT', 'EXECUTION') NULL;
+
+-- AlterTable
+ALTER TABLE `Ville` ADD COLUMN `chantierPrioritaire` ENUM('PALISSADE', 'ATELIER', 'PUITS', 'PLACE_PUBLIQUE', 'TOUR_RADIO', 'MAIRIE') NULL,
+    ADD COLUMN `rationEau` INTEGER NULL,
+    ADD COLUMN `rationNote` TEXT NULL,
+    ADD COLUMN `rationNourriture` INTEGER NULL;
+
+-- CreateTable
+CREATE TABLE `DemandeAccueil` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `villeId` INTEGER NOT NULL,
+    `joueurId` INTEGER NOT NULL,
+    `motivation` TEXT NULL,
+    `statut` ENUM('EN_ATTENTE', 'ACCEPTEE', 'REFUSEE', 'ANNULEE') NOT NULL DEFAULT 'EN_ATTENTE',
+    `messageId` VARCHAR(191) NULL,
+    `dateCreation` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `dateReponse` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `DemandeAccueil` ADD CONSTRAINT `DemandeAccueil_villeId_fkey` FOREIGN KEY (`villeId`) REFERENCES `Ville`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DemandeAccueil` ADD CONSTRAINT `DemandeAccueil_joueurId_fkey` FOREIGN KEY (`joueurId`) REFERENCES `Joueur`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

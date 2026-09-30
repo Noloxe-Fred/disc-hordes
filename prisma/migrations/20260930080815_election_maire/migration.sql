@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `Election` ADD COLUMN `messageId` VARCHAR(191) NULL,
+    ADD COLUMN `tour` INTEGER NOT NULL DEFAULT 1,
+    ADD COLUMN `voteOuvert` BOOLEAN NOT NULL DEFAULT false;

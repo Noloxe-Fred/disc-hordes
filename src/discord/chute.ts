@@ -47,6 +47,7 @@ export async function purgerEtatVilleTombee(villeId: number): Promise<void> {
     prisma.batimentVille.deleteMany({ where: { villeId } }),
     prisma.inventaireVille.deleteMany({ where: { villeId } }),
     prisma.demandeInscription.deleteMany({ where: { villeId } }),
+    prisma.demandeAccueil.deleteMany({ where: { OR: [{ villeId }, { joueurId: { in: joueurIds } }] } }),
     prisma.zombieErrant.deleteMany({ where: { villeId } }),
     prisma.inventaireJoueur.deleteMany({ where: { joueurId: { in: joueurIds } } }),
     prisma.carteDecouverte.deleteMany({ where: { joueurId: { in: joueurIds } } }),

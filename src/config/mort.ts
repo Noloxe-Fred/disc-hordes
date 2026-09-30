@@ -8,4 +8,5 @@ export const LIBELLE_CAUSE_MORT: Record<CauseMort, string> = {
   [CauseMort.INFECTION]: "transformé en zombie",
   [CauseMort.ZOMBIE_ERRANT]: "dévoré par un citoyen transformé en zombie",
   [CauseMort.EAU_CONTAMINEE]: "mort d'avoir bu de l'eau croupie",
+  [CauseMort.EXECUTION]: "pendu sur décision de la ville",
 };

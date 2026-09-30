@@ -33,6 +33,7 @@ enum CauseMort {
   INFECTION
   EAU_CONTAMINEE // eau brute bue sans la purifier (equilibrage.md §2)
   ZOMBIE_ERRANT // tue par un citoyen transforme en zombie (equilibrage.md §1)
+  EXECUTION // pendu apres un vote d'execution lance par le maire (conception.md §5)
 }
 
 enum StatutJoueur {
@@ -83,6 +84,8 @@ enum TypeBatiment {
 enum TypeElection {
   MAIRE
   DEFIANCE
+  BANNISSEMENT // vote Pour/Contre lance par le maire contre un citoyen (Election.cibleId)
+  EXECUTION // idem, le condamne est pendu
 }
 
 enum StatutElection {
@@ -172,7 +175,14 @@ model Ville {
   // l'horloge commune de minuit (src/scheduler/cycle.ts).
   phaseDepuis           DateTime?
   meteoActuelle         MeteoType   @default(NORMALE)
+  // Rationnement decide par le maire (informatif, conception.md §5) : portions max par citoyen et par jour
+  // (null = sans limite) et consigne libre, rappeles sur le panneau des chantiers
   rationnementActif     Boolean     @default(false)
+  rationNourriture      Int?
+  rationEau             Int?
+  rationNote            String?     @db.Text
+  // Chantier prioritaire designe par le maire (informatif), rappele sur le panneau des chantiers
+  chantierPrioritaire   TypeBatiment?
   maireId               Int?        @unique
   mandatFinCycle        Int?
   // Message d'annonce poste dans #fonder-une-colonie a /creer-ville ; supprime avec les
@@ -192,6 +202,7 @@ model Ville {
   maire          Joueur?              @relation("MaireVille", fields: [maireId], references: [id])
   habitants      Joueur[]             @relation("HabitantsVille")
   demandes       DemandeInscription[]
+  demandesAccueil DemandeAccueil[]
   inventaire     InventaireVille[]
   batiments      BatimentVille[]
   attaques       CycleAttaque[]
@@ -225,6 +236,23 @@ model DemandeInscription {
 
   ville       Ville       @relation(fields: [villeId], references: [id], onDelete: Cascade)
   utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+}
+
+// Demande d'un survivant dehors (vivant ou exclu) a rejoindre une ville en jeu de son groupe, ou a revenir dans la
+// sienne apres une exclusion (conception.md §5) : postee dans la mairie, acceptee ou refusee par le maire seul.
+model DemandeAccueil {
+  id           Int           @id @default(autoincrement())
+  villeId      Int
+  joueurId     Int
+  motivation   String?       @db.Text
+  statut       StatutDemande @default(EN_ATTENTE)
+  // Message de la demande dans la mairie de la ville visee
+  messageId    String?
+  dateCreation DateTime      @default(now())
+  dateReponse  DateTime?
+
+  ville  Ville  @relation(fields: [villeId], references: [id], onDelete: Cascade)
+  joueur Joueur @relation(fields: [joueurId], references: [id], onDelete: Cascade)
 }
 
 // =========================================================================
@@ -462,6 +490,8 @@ model Joueur {
   // Infusion medicinale bue : malus PA de l'infection attenue jusqu'a cette date (prochain changement de phase)
   infusionJusqua        DateTime?
   xp                    Int          @default(0)
+  // Execution votee alors qu'il etait dehors : pendu des qu'il rentre dans sa ville (conception.md §5)
+  executionEnAttente    Boolean      @default(false)
   dateArrivee           DateTime     @default(now())
   dateSortie            DateTime?
   // Renseignes a la mort (MORT ou ZOMBIFIE) ; servent au recapitulatif de chute de la ville.
@@ -485,6 +515,7 @@ model Joueur {
   zombieDevenu      ZombieErrant?      @relation("ZombieTransforme")
   zombieAffronte    ZombieErrant?      @relation("ZombieCible")
   contributionsMaison ContributionMaison[]
+  demandesAccueil   DemandeAccueil[]
 }
 
 // =========================================================================
@@ -527,10 +558,19 @@ model Election {
   villeId           Int
   type              TypeElection
   dateDeclenchement DateTime       @default(now())
+  // Ouverture du vote (fin des candidatures) ; le vote dure ensuite DUREE_VOTE_HEURES (config/politique.ts)
   dateVote          DateTime
   statut            StatutElection @default(EN_COURS)
+  // Faux pendant les candidatures, vrai une fois le vote ouvert (un revote s'ouvre directement au vote)
+  voteOuvert        Boolean        @default(false)
+  // 1 pour l'election, 2 et plus pour les revotes entre ex aequo
+  tour              Int            @default(1)
+  // Panneau de l'election dans la mairie (candidatures, vote, resultat)
+  messageId         String?
   // Utilise uniquement pour un vote de defiance (le maire vise, conception.md §5).
   maireCibleId      Int?
+  // Vote de bannissement ou d'execution : le citoyen vise (Vote.choixDestitution porte alors Pour/Contre)
+  cibleId           Int?
 
   ville        Ville         @relation(fields: [villeId], references: [id], onDelete: Cascade)
   candidatures Candidature[]

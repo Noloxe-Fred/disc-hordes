@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille, TypePhase, type PalierZone } from "@prisma/client";
+import { StatutJoueur, StatutVille, TypeElection, TypePhase, type PalierZone } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -15,6 +15,7 @@ import {
 } from "discord.js";
 import type { Command } from "../client";
 import { COUT_GARDE } from "../config/defense";
+import { DUREE_CANDIDATURES_HEURES, DUREE_VOTE_HEURES } from "../config/politique";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
@@ -27,6 +28,9 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions
 import { trouverSalonTexte } from "../discord/reconcile";
 import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
 import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
+import { declencherElectionJoueur, electionEnCours } from "../discord/election";
+import { demandeEnAttente, formulaireAccueil, villesAccueillantes } from "../discord/accueil";
+import { formulairePriorite, formulaireRationnement, formulaireSanction } from "../discord/maire";
 import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
 import { bonusGarde, estDeGarde, monterLaGarde } from "../discord/garde";
 import { formulaireSoin } from "../discord/soin";
@@ -48,7 +52,8 @@ import { destinationsDepuis } from "../services/zones";
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
 // « Fouiller un corps » quand un corps est sur place (discord/depouilles.ts), « Carte », « Partager la carte », « Soigner », la nuit en ville « Monter la garde », dehors « Allumer un feu » puis
-// « Sieste », « Annonce » pour le maire,
+// « Sieste », « Maire » pour le maire (discord/maire.ts), « Élection » tant qu'aucune n'est en cours, dehors
+// « Demander l'accueil » (discord/accueil.ts),
 // « Quitter la ville »). Face a un zombie
 // (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
 // rejoindre une autre.
@@ -108,6 +113,11 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     (feuIci ? "\n🔥 Un feu brûle ici : zombies deux fois moins nombreux, sieste possible." : "") +
     (deGarde && ville.phaseActuelle === TypePhase.NUIT ? "\n🛡️ Vous montez la garde cette nuit : restez en ville jusqu'à l'aube." : "") +
     (exclu ? "\nVous êtes **exclu** de votre ville : vous ne pouvez pas y rentrer." : "");
+  // Election du maire : un citoyen vivant la declenche quand aucune n'est en cours (discord/election.ts)
+  const electionPossible = joueur.statut === StatutJoueur.VIVANT && (await electionEnCours(ville.id)) === null;
+  // Dehors, un survivant peut demander a rejoindre une autre ville du groupe (un exclu, a revenir dans la sienne)
+  const accueilPossible = (await villesAccueillantes(joueur)).length > 0;
+  const maire = estMaireEnExercice(joueur);
   // Corps dont le sac n'est pas vide, au meme endroit
   const corpsIci = (await corpsAuMemeEndroit(joueur)).length > 0;
 
@@ -130,6 +140,18 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   ).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("confirmer-garde").setLabel(`Monter la garde (${COUT_GARDE} PA)`).setEmoji("🛡️").setStyle(ButtonStyle.Primary),
+      boutonRetour(),
+    ),
+  );
+
+  // Declencher une election : confirmation
+  const ecranElection = encadre(
+    `${entete}\n\n**Déclencher une élection du maire ?** Pendant ${DUREE_CANDIDATURES_HEURES} h, tout citoyen vivant peut se porter ` +
+      `candidat depuis le panneau posté dans la mairie ; puis ${DUREE_VOTE_HEURES} h de vote, réservé aux citoyens présents en ville. ` +
+      "Le maire actuel reste en place jusqu'au résultat et peut se représenter.",
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("confirmer-election").setLabel("Déclencher l'élection").setEmoji("🗳️").setStyle(ButtonStyle.Primary),
       boutonRetour(),
     ),
   );
@@ -164,11 +186,37 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
               : new ButtonBuilder().setCustomId("feu").setLabel("Allumer un feu").setEmoji("🔥").setStyle(ButtonStyle.Secondary),
           ]
         : []),
-      // Annonce dans la mairie, fermee aux joueurs : reservee au maire
-      ...(estMaireEnExercice(joueur)
-        ? [new ButtonBuilder().setCustomId("annonce").setLabel("Annonce").setEmoji("📢").setStyle(ButtonStyle.Primary)]
-        : []),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setEmoji("🚪").setStyle(ButtonStyle.Danger),
+    ),
+  );
+  // Vie politique : panneau du maire, election, demande d'accueil dans une ville
+  const boutonsPolitique = [
+    ...(maire ? [new ButtonBuilder().setCustomId("maire").setLabel("Maire").setEmoji("🏛️").setStyle(ButtonStyle.Primary)] : []),
+    ...(electionPossible
+      ? [new ButtonBuilder().setCustomId("election").setLabel("Élection").setEmoji("🗳️").setStyle(ButtonStyle.Secondary)]
+      : []),
+    ...(accueilPossible
+      ? [new ButtonBuilder().setCustomId("accueil").setLabel("Demander l'accueil").setEmoji("🏘️").setStyle(ButtonStyle.Secondary)]
+      : []),
+  ];
+  if (boutonsPolitique.length > 0) menu.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(boutonsPolitique));
+
+  // Panneau du maire : annonce, votes de sanction, decisions informatives
+  const ecranMaire = encadre(
+    `${entete}\n\n## 🏛️ Maire\n` +
+      "📢 **Annonce** : publier dans la mairie.\n" +
+      "🔨 **Bannir** / 🪢 **Exécuter** : la ville vote jusqu'au changement de phase.\n" +
+      "🍽️ **Rationner** / ⭐ **Prioriser un chantier** : consignes annoncées dans la mairie et rappelées sur le panneau des chantiers.",
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("annonce").setLabel("Annonce").setEmoji("📢").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId("bannir").setLabel("Bannir").setEmoji("🔨").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId("executer").setLabel("Exécuter").setEmoji("🪢").setStyle(ButtonStyle.Danger),
+    ),
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId("rationner").setLabel("Rationner").setEmoji("🍽️").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId("prioriser").setLabel("Prioriser un chantier").setEmoji("⭐").setStyle(ButtonStyle.Secondary),
+      boutonRetour(),
     ),
   );
 
@@ -299,10 +347,44 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       }
       if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ components: [encadre(resultat.texte)] });
       return;
+    } else if (clic.customId === "maire") {
+      await clic.update({ components: [ecranMaire] });
+    } else if (clic.isButton() && (clic.customId === "bannir" || clic.customId === "executer" || clic.customId === "accueil")) {
+      const enAttente = clic.customId === "accueil" ? await demandeEnAttente(joueurId) : null;
+      const resultat = enAttente
+        ? { soumission: null, texte: `🏘️ Votre demande auprès de **${enAttente.ville.nom}** attend encore la réponse de son maire.` }
+        : clic.customId === "accueil"
+          ? await formulaireAccueil(clic, joueurId)
+          : await formulaireSanction(clic, joueurId, clic.customId === "bannir" ? TypeElection.BANNISSEMENT : TypeElection.EXECUTION);
+      if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
+      if (!resultat.soumission) {
+        await clic.update({
+          components: [
+            encadre(`${entete}\n\n${resultat.texte}`).addActionRowComponents(
+              new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()),
+            ),
+          ],
+        });
+        continue;
+      }
+      if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ components: [encadre(resultat.texte)] });
+      return;
+    } else if (clic.isButton() && (clic.customId === "rationner" || clic.customId === "prioriser")) {
+      const resultat =
+        clic.customId === "rationner" ? await formulaireRationnement(clic, joueurId) : await formulairePriorite(clic, joueurId);
+      if (resultat === null) continue;
+      if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ components: [encadre(resultat.texte)] });
+      return;
     } else if (clic.isButton() && clic.customId === "annonce") {
       const resultat = await formulaireAnnonce(clic, joueurId);
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ components: [encadre(resultat.texte)] });
+      return;
+    } else if (clic.customId === "election") {
+      await clic.update({ components: [ecranElection] });
+    } else if (clic.customId === "confirmer-election") {
+      await clic.deferUpdate();
+      await clic.editReply({ components: [encadre(await declencherElectionJoueur(guild, joueurId))] });
       return;
     } else if (clic.customId === "garde") {
       await clic.update({ components: [ecranGarde] });
@@ -414,7 +496,8 @@ async function confirmerDeplacement(
   if (paRestants < 0) return `Il vous faut **${cout} PA** pour ce déplacement.`;
 
   if (torche) await prisma.inventaireJoueur.update({ where: { id: torche.id }, data: { quantite: { decrement: 1 } } });
-  await deplacerJoueur(guild, actuel, destination.id, cout);
+  const pendaison = await deplacerJoueur(guild, actuel, destination.id, cout);
+  if (pendaison) return pendaison;
   await prisma.journalEntree.create({
     data: {
       villeId: ville.id,

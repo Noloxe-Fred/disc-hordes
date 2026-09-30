@@ -2,11 +2,42 @@ import { StatutJoueur, StatutVille } from "@prisma/client";
 import { ButtonStyle, MessageFlags, type ButtonInteraction, type Guild } from "discord.js";
 import { CYCLES_PAR_MANDAT_MAIRE } from "../../config/metiers";
 import { prisma } from "../../db";
+import { avancerElection, electionEnCours, ouvrirElection } from "../election";
 import { posterDansMairie } from "../villeStructure";
 import { champMembre, champVille, journaliser, lireChoix, lireJoueur, ouvrirFormulaire, repondre, type FamilleAdmin } from "./outils";
 
-// Famille "Politique" du panneau /admin (conception.md §4-5) : destituer le maire, changer le maire.
-// « Forcer une élection » attend le systeme d'election (bouton grise en attendant).
+// Famille "Politique" du panneau /admin (conception.md §4-5) : forcer une election, destituer le maire, changer le maire.
+
+// --- Forcer une election : l'ouvre, ou fait passer celle en cours a l'etape suivante sans attendre l'echeance ---
+
+async function forcerElection(interaction: ButtonInteraction, guild: Guild) {
+  const champ = await champVille([StatutVille.ACTIVE]);
+  if (!champ) {
+    await repondre(interaction, "Aucune ville en jeu.");
+    return;
+  }
+  const soumission = await ouvrirFormulaire(interaction, "Forcer une élection", [champ]);
+  if (!soumission) return;
+
+  const ville = await prisma.ville.findUnique({ where: { id: Number(lireChoix(soumission, "ville")) } });
+  if (ville?.statut !== StatutVille.ACTIVE) {
+    await repondre(soumission, "Cette ville n'est plus en jeu.");
+    return;
+  }
+
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+  const election = await electionEnCours(ville.id);
+  let resultat: string;
+  if (election) {
+    const etape = election.voteOuvert ? "vote dépouillé" : "candidatures closes";
+    resultat = `**${ville.nom}** : ${etape}. ${await avancerElection(guild, election)}`;
+  } else {
+    await ouvrirElection(guild, ville.id, "L'administration organise une élection du maire.");
+    resultat = `Élection ouverte à **${ville.nom}**.`;
+  }
+  await journaliser(interaction.user, "Forcer une élection", resultat);
+  await soumission.editReply({ content: resultat, allowedMentions: { parse: [] } });
+}
 
 // --- Destituer le maire de force : la ville reste sans maire ---
 
@@ -95,7 +126,11 @@ export const FAMILLE_POLITIQUE: FamilleAdmin = {
     {
       cle: "election",
       libelle: "Forcer une élection",
-      description: "disponible quand les élections seront en jeu.",
+      description:
+        "ouvre une élection du maire dans une ville en jeu ; si une élection y est en cours, la fait passer à l'étape suivante " +
+        "sans attendre (clôture des candidatures, puis dépouillement).",
+      style: ButtonStyle.Primary,
+      executer: forcerElection,
     },
     {
       cle: "destituer",

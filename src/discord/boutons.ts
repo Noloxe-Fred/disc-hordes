@@ -4,6 +4,9 @@ import { JOUEURS_MAX_PAR_VILLE, NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIE
 import { prisma } from "../db";
 import { gererBoutonPanneau } from "./boutonsAdmin";
 import { gererBoutonChantier } from "./chantiers";
+import { gererBoutonAccueil } from "./accueil";
+import { gererBoutonElection } from "./election";
+import { gererBoutonSanction } from "./sanction";
 import { gererBoutonOutilMj } from "./boutonsMj";
 import { gererBoutonMaison } from "./maisons";
 import { gererBoutonVille } from "./boutonsVille";
@@ -106,5 +109,11 @@ export async function gererBouton(interaction: ButtonInteraction) {
     await gererBoutonChantier(interaction, action, id);
   } else if (prefixe === "maison") {
     await gererBoutonMaison(interaction, action, id);
+  } else if (prefixe === "election") {
+    await gererBoutonElection(interaction, action, id);
+  } else if (prefixe === "sanction") {
+    await gererBoutonSanction(interaction, action, id);
+  } else if (prefixe === "accueil") {
+    await gererBoutonAccueil(interaction, action, id);
   }
 }

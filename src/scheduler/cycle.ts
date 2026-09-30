@@ -14,6 +14,9 @@ import { gardesDeLaNuit } from "../discord/garde";
 import { posterDansMairie } from "../discord/villeStructure";
 import { verifierZombiesErrants } from "../discord/zombieErrant";
 import { INTERVALLE_ZOMBIES_ERRANTS_MS } from "../config/combat";
+import { INTERVALLE_VERIFICATION_ELECTIONS_MS } from "../config/politique";
+import { verifierElections } from "../discord/election";
+import { cloreSanctions } from "../discord/sanction";
 import { produireEauPuits } from "../services/puits";
 import { regenererRessourcesNaturelles } from "../services/stocks";
 
@@ -243,7 +246,9 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
 }
 
 // Changement de phase d'une ville : a minuit (horloge commune) ou force depuis le panneau /admin
+// Les votes de bannissement et d'execution se closent d'abord (une pendaison peut faire tomber la ville).
 export async function basculerPhase(guild: Guild, ville: Ville): Promise<void> {
+  if (await cloreSanctions(guild, ville.id)) return;
   if (ville.phaseActuelle === TypePhase.JOUR) await basculerVersNuit(guild, ville);
   else await basculerVersJour(guild, ville);
 }
@@ -310,4 +315,11 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
     if (!guild) return;
     await verifierZombiesErrants(guild).catch((error) => console.error("Verification des zombies errants impossible", error));
   }, INTERVALLE_ZOMBIES_ERRANTS_MS);
+
+  // Elections du maire arrivees a une echeance : fin des candidatures, fin du vote (discord/election.ts)
+  setInterval(async () => {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+    await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
+  }, INTERVALLE_VERIFICATION_ELECTIONS_MS);
 }
