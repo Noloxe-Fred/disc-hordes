@@ -127,7 +127,7 @@ const command: Command = {
 
     await soumission.editReply(
       salon
-        ? `Ville **${nom}** créée : ${salon}. Les demandes d'inscription arriveront dans #nouvel-arrivant ; ` +
+        ? `Ville **${nom}** créée : ${salon}. Les demandes d'inscription arriveront dans #un-etranger-aux-portes ; ` +
             "utilisez le bouton « Fonder la ville » quand vous êtes prêt à lancer la partie."
         : `Ville **${nom}** créée, mais le salon #fonder-une-colonie est introuvable : un Admin doit initialiser le serveur (panneau /admin).`,
     );

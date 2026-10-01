@@ -9,6 +9,7 @@ import { synchroniserNomade } from "./discord/joueurDiscord";
 import { ensureAdjacencesGroupe } from "./services/zones";
 import { demarrerHorlogeCycle } from "./scheduler/cycle";
 import { rafraichirTousLesPanneaux } from "./discord/chantiers";
+import { posterBienvenue } from "./discord/bienvenue";
 
 const client = createClient();
 
@@ -44,9 +45,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   demarrerHorlogeCycle(client);
 });
 
-// Nouvel arrivant sur le serveur : role Nomade (pas encore de ville)
+// Nouvel arrivant sur le serveur : role Nomade (pas encore de ville) et message de bienvenue dans #general
 client.on(Events.GuildMemberAdd, async (membre) => {
   await synchroniserNomade(membre).catch((error) => console.error("Attribution du role Nomade impossible", error));
+  await posterBienvenue(membre).catch((error) => console.error("Message de bienvenue impossible", error));
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

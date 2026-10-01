@@ -4,7 +4,7 @@ Règles affichées aux joueurs dans le salon #règles, publiées par le bouton �
   section, et un fil sous le sommaire contient le texte brut de toutes les règles.
 - Markdown compris par le rendu image : « ## » sous-titre, « > » encadré, **gras**, *italique*, `code`, emojis ;
   une ligne du fichier = une ligne affichée.
-- Les noms de salons (#général, #annonces, #règles, #fonder-une-colonie, #nouvel-arrivant, #commémoration)
+- Les noms de salons (#général, #annonces, #règles, #nouvel-habitant, #fonder-une-colonie, #un-etranger-aux-portes, #commémoration)
   sont rappelés en liens cliquables sous l'image et dans le fil.
 - À tenir à jour à chaque nouvelle mécanique : ce texte ne doit décrire que ce qui fonctionne en jeu.
 -->
@@ -28,8 +28,9 @@ Ton seul espoir : **rejoindre une ville**, la faire tenir, et survivre le plus l
 💬 #général : discussion libre
 📢 #annonces : les nouvelles du serveur
 📜 #règles : tu es ici
+👋 #nouvel-habitant : le mot d'accueil de chaque nouvel arrivant
 🏗️ #fonder-une-colonie : les villes en recrutement
-🚪 #nouvel-arrivant : les demandes pour rejoindre une ville
+🚪 #un-etranger-aux-portes : les demandes pour rejoindre une ville
 🕯️ #commémoration : l'hommage aux villes tombées
 
 
@@ -39,7 +40,7 @@ Ton seul espoir : **rejoindre une ville**, la faire tenir, et survivre le plus l
 Tape `/creer-ville` : un formulaire s'ouvre pour donner le **nom** de ta ville, choisir ton **métier** et présenter ton **projet de ville** (facultatif).
 Ta ville apparaît dans #fonder-une-colonie avec quatre boutons :
 
-🔵 **Rejoindre la ville** : choisis ton métier parmi les places libres et explique tes motivations. Ta demande part dans #nouvel-arrivant.
+🔵 **Rejoindre la ville** : choisis ton métier parmi les places libres et explique tes motivations. Ta demande part dans #un-etranger-aux-portes.
 ⚪ **Quitter la ville** : retire ton inscription (ou ta demande en attente).
 🟢 **Fonder la ville** : *(créateur)* lance la partie !
 🔴 **Annuler la ville** : *(créateur)* abandonne le projet.

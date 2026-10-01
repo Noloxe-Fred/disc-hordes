@@ -12,7 +12,7 @@ import {
 import { JOUEURS_MAX_PAR_VILLE, NOM_METIER } from "../config/metiers";
 import { prisma } from "../db";
 import { trouverRole, trouverSalonTexte } from "./reconcile";
-import { ROLE_NOMADE, SALON_FONDER_COLONIE, SALON_NOUVEL_ARRIVANT } from "./structure";
+import { ROLE_NOMADE, SALON_FONDER_COLONIE, SALON_ETRANGER_PORTES } from "./structure";
 import { enCitation } from "./texteLibre";
 
 // Message de recrutement d'une ville en creation (Components V2), poste dans #fonder-une-colonie :
@@ -96,7 +96,7 @@ async function supprimerMessages(guild: Guild, cleSalon: string, ids: string[]) 
 }
 
 // A la fondation ou a l'annulation : message de la ville dans #fonder-une-colonie et messages
-// des demandes d'inscription dans #nouvel-arrivant (conception.md §4 : "supprimes/archives")
+// des demandes d'inscription dans #un-etranger-aux-portes (conception.md §4 : "supprimes/archives")
 export async function supprimerMessagesRecrutement(guild: Guild, villeId: number): Promise<void> {
   const ville = await prisma.ville.findUnique({ where: { id: villeId }, select: { messageAnnonceId: true } });
   if (ville?.messageAnnonceId) await supprimerMessages(guild, SALON_FONDER_COLONIE.cle, [ville.messageAnnonceId]);
@@ -107,7 +107,7 @@ export async function supprimerMessagesRecrutement(guild: Guild, villeId: number
   });
   await supprimerMessages(
     guild,
-    SALON_NOUVEL_ARRIVANT.cle,
+    SALON_ETRANGER_PORTES.cle,
     demandes.flatMap(({ messageId }) => (messageId ? [messageId] : [])),
   );
 }

@@ -1,22 +1,32 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Texte des regles joueurs (docs/regles-joueurs.md), decoupe en sections pour publicationRegles.ts.
-// Chemin valable depuis src/discord (dev) comme depuis dist/discord (build).
+// Texte des regles joueurs (docs/regles-joueurs.md), decoupe en sections pour publicationRegles.ts, et du message
+// de bienvenue (docs/bienvenue.md, bienvenue.ts). Chemins valables depuis src/discord (dev) comme depuis dist/discord (build).
 const CHEMIN_REGLES = join(__dirname, "..", "..", "docs", "regles-joueurs.md");
+const CHEMIN_BIENVENUE = join(__dirname, "..", "..", "docs", "bienvenue.md");
 
-function lireContenuRegles(): string {
-  const brut = readFileSync(CHEMIN_REGLES, "utf8");
+function lireContenu(chemin: string): string {
+  const brut = readFileSync(chemin, "utf8");
   const sansBom = brut.charCodeAt(0) === 0xfeff ? brut.slice(1) : brut; // BOM UTF-8 eventuel (editeurs Windows)
   return sansBom.replace(/<!--[\s\S]*?-->/g, ""); // commentaires destines aux editeurs du fichier
 }
 
 // Sections des regles : chaque titre "# " ouvre une section (publiee en image, voir renduRegles.ts)
-export function lireSectionsRegles(): string[] {
-  return lireContenuRegles()
+function lireSections(chemin: string): string[] {
+  return lireContenu(chemin)
     .split(/^(?=# )/m)
     .map((section) => section.trim())
     .filter((section) => section.startsWith("# "));
+}
+
+export function lireSectionsRegles(): string[] {
+  return lireSections(CHEMIN_REGLES);
+}
+
+// Message de bienvenue : premiere section de docs/bienvenue.md, null si le fichier n'en a pas
+export function lireSectionBienvenue(): string | null {
+  return lireSections(CHEMIN_BIENVENUE)[0] ?? null;
 }
 
 // Titres "# " et "## " d'une section, dans l'ordre (niveau 1 = titre principal, 2 = sous-titre)

@@ -31,7 +31,7 @@ import { rafraichirPanneauMaisons } from "./maisons";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "./messageVille";
 import { estMjOuAdmin } from "./permissions";
 import { trouverRole, trouverSalonTexte } from "./reconcile";
-import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, SALON_NOUVEL_ARRIVANT } from "./structure";
+import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, SALON_ETRANGER_PORTES } from "./structure";
 import { ensureTerritoiresGroupe } from "./territoires";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "./texteLibre";
 import { creerStructureVille } from "./villeStructure";
@@ -53,7 +53,7 @@ async function villeEnCreation(villeId: number) {
   return ville?.statut === StatutVille.EN_CREATION ? ville : null;
 }
 
-// --- Rejoindre : choix du metier, formulaire de motivations, demande dans #nouvel-arrivant ---
+// --- Rejoindre : choix du metier, formulaire de motivations, demande dans #un-etranger-aux-portes ---
 
 async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: number) {
   const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
@@ -158,7 +158,7 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
     data: { villeId: ville.id, utilisateurId: utilisateur.id, metierDemande: metierChoisi ?? undefined, motivation },
   });
 
-  const salon = await trouverSalonTexte(guild, SALON_NOUVEL_ARRIVANT.cle);
+  const salon = await trouverSalonTexte(guild, SALON_ETRANGER_PORTES.cle);
   if (salon) {
     const message = await salon.send({
       content:
@@ -181,7 +181,7 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
     content:
       `Demande envoyée pour rejoindre **${ville.nom}**. En attente de validation par le créateur ` +
       `(bouton « Quitter la ville » pour la retirer).` +
-      (salon ? "" : " (Salon #nouvel-arrivant introuvable : un Admin doit initialiser le serveur (panneau /admin).)"),
+      (salon ? "" : " (Salon #un-etranger-aux-portes introuvable : un Admin doit initialiser le serveur (panneau /admin).)"),
     components: [],
   };
   if (soumission.isFromMessage()) await soumission.update(confirmation);
@@ -220,7 +220,7 @@ async function quitter(interaction: ButtonInteraction, guild: Guild, villeId: nu
       data: { statut: StatutDemande.ANNULEE, dateReponse: new Date() },
     });
     if (demande.messageId) {
-      const salon = await trouverSalonTexte(guild, SALON_NOUVEL_ARRIVANT.cle);
+      const salon = await trouverSalonTexte(guild, SALON_ETRANGER_PORTES.cle);
       const message = await salon?.messages.fetch(demande.messageId).catch(() => null);
       await message?.delete().catch(() => null);
     }
@@ -307,7 +307,7 @@ async function fonder(interaction: ButtonInteraction, guild: Guild, villeId: num
     await repondre(
       interaction,
       `**${ville.nom}** compte ${nombreHabitants} habitant(s) : il en faut au moins ${JOUEURS_MIN_FONDATION} pour la fonder. ` +
-        "Acceptez d'autres demandes d'inscription dans #nouvel-arrivant.",
+        "Acceptez d'autres demandes d'inscription dans #un-etranger-aux-portes.",
     );
     return;
   }

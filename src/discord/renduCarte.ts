@@ -1,8 +1,7 @@
-import { join } from "node:path";
-import { Resvg } from "@resvg/resvg-js";
 import type { PalierZone } from "@prisma/client";
 import { TYPES_ZONE } from "../config/zones";
 import type { CaseCarte } from "../services/carte";
+import { COULEURS, COULEURS_TYPE_ZONE, EPAISSEUR_CADRE, debutSvg, echapperSvg as echapper, svgEnPng, titreSvg } from "./charteImages";
 
 // Rendu PNG de la carte d'un joueur (SVG rasterise par resvg, sans dependance systeme). Disposition calquee
 // sur le graphe des zones (services/zones.ts) : la ville au centre, un anneau par palier (proche -> eloignee),
@@ -10,9 +9,7 @@ import type { CaseCarte } from "../services/carte";
 // (ville -> proche -> moyenne -> eloignee d'un meme type), soit un quart d'anneau (types voisins d'un palier).
 // Charte inspiree de la carte de MyHordes : ecran radar vert olive quadrille dans un cadre brun, zones
 // carrees, zones inconnues en noir, position courante en vert lumineux, citoyens en points jaunes cercles
-// de rouge, police Courier Prime.
-
-const POLICES = ["CourierPrime-Regular.ttf", "CourierPrime-Bold.ttf"].map((f) => join(__dirname, "../../assets/fonts", f));
+// de rouge. Couleurs, polices et cadre : charte commune des images (charteImages.ts).
 
 const LARGEUR = 800;
 const HAUTEUR = 850;
@@ -27,29 +24,23 @@ const DEMI_VILLE = 46;
 const ANGLE_TYPE = [-135, -45, 45, 135].map((deg) => (deg * Math.PI) / 180);
 const NOM_ANNEAU = ["PROCHE", "MOYENNE", "ÉLOIGNÉE"];
 
+// Role de chaque couleur de la charte sur la carte
 const COULEUR = {
-  cadre: "#5c2b20",
-  bordCadre: "#ddab76",
-  titre: "#f0d79e",
-  radar: "#2e3a0c",
-  quadrillage: "#3a4a10",
-  anneau: "#506415",
-  lienConnu: "#b4da4c",
-  bordZone: "#718f1d",
-  inconnue: "#000000",
-  texte: "#b4da4c",
-  ici: "#d7ff5b",
-  ville: "#7e4d2a",
-  citoyen: "#ffff00",
-  bordCitoyen: "#ff0000",
+  bordCadre: COULEURS.bord,
+  titre: COULEURS.titre,
+  radar: COULEURS.vertFonce,
+  quadrillage: COULEURS.quadrillage,
+  anneau: COULEURS.anneau,
+  lienConnu: COULEURS.vert,
+  bordZone: COULEURS.bordZone,
+  inconnue: COULEURS.inconnue,
+  texte: COULEURS.vert,
+  ici: COULEURS.vertLumineux,
+  ville: COULEURS.filet,
+  citoyen: COULEURS.citoyen,
+  bordCitoyen: COULEURS.bordCitoyen,
 };
-// Teintes tirees de la palette MyHordes, une par type de zone
-const COULEUR_TYPE: Record<string, string> = {
-  "Ville en ruines": "#947726",
-  Forêt: "#4f7a1f",
-  Marécages: "#3e5f55",
-  Montagnes: "#696486",
-};
+const COULEUR_TYPE = COULEURS_TYPE_ZONE;
 
 export interface DonneesRenduCarte {
   nomVille: string;
@@ -57,10 +48,6 @@ export interface DonneesRenduCarte {
   grille: { palier: PalierZone; cases: CaseCarte[] }[];
   // Citoyens de la ville du joueur presents dans chaque zone (joueurs en ville exclus)
   citoyensParZone: Map<number, number>;
-}
-
-function echapper(texte: string): string {
-  return texte.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function point(rayon: number, angle: number): { x: number; y: number } {
@@ -84,7 +71,7 @@ function pointsCitoyens(x: number, y: number, nombre: number): string {
   if (nombre > 6) {
     return (
       rond(x - 10, y) +
-      `<text x="${x + 1}" y="${y + 5}" font-size="15" font-weight="bold" fill="#ffffff" stroke="#000000" stroke-width="3" paint-order="stroke">×${nombre}</text>`
+      `<text x="${x + 1}" y="${y + 5}" font-size="15" font-weight="bold" fill="${COULEURS.gras}" stroke="${COULEURS.contour}" stroke-width="3" paint-order="stroke">×${nombre}</text>`
     );
   }
   const rangees = nombre > 3 ? [Math.ceil(nombre / 2), Math.floor(nombre / 2)] : [nombre];
@@ -135,7 +122,7 @@ export function construireSvgCarte(donnees: DonneesRenduCarte): string {
       }
       if (connue(c)) {
         noeuds.push(
-          carre(x, y, DEMI_ZONE, `fill="${COULEUR_TYPE[c.nomType] ?? COULEUR.radar}" stroke="#000000" stroke-width="2"`),
+          carre(x, y, DEMI_ZONE, `fill="${COULEUR_TYPE[c.nomType] ?? COULEUR.radar}" stroke="${COULEURS.contour}" stroke-width="2"`),
           carre(x, y, DEMI_ZONE - 4, `fill="none" stroke="${COULEUR.bordZone}" stroke-width="1"`),
         );
       } else {
@@ -176,17 +163,15 @@ export function construireSvgCarte(donnees: DonneesRenduCarte): string {
   }
 
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${LARGEUR}" height="${HAUTEUR}" viewBox="0 0 ${LARGEUR} ${HAUTEUR}" font-family="Courier Prime">` +
-    `<defs>` +
-    `<filter id="lueur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="flou"/>` +
+    debutSvg(
+      LARGEUR,
+      HAUTEUR,
+      `<filter id="lueur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="flou"/>` +
     `<feMerge><feMergeNode in="flou"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` +
-    `<radialGradient id="vignette" cx="50%" cy="50%" r="70%"><stop offset="60%" stop-color="#000000" stop-opacity="0"/>` +
-    `<stop offset="100%" stop-color="#000000" stop-opacity="0.55"/></radialGradient>` +
-    `</defs>` +
-    // Cadre brun et bandeau de titre
-    `<rect x="1" y="1" width="${LARGEUR - 2}" height="${HAUTEUR - 2}" fill="${COULEUR.cadre}" stroke="${COULEUR.bordCadre}" stroke-width="2"/>` +
-    `<text x="${CX}" y="${BANDEAU / 2 + 9}" text-anchor="middle" font-size="24" font-weight="bold" letter-spacing="2" fill="${COULEUR.titre}">` +
-    `CARTE — ${echapper((donnees.nomVille.length > 36 ? `${donnees.nomVille.slice(0, 35)}…` : donnees.nomVille).toUpperCase())}</text>` +
+    `<radialGradient id="vignette" cx="50%" cy="50%" r="70%"><stop offset="60%" stop-color="${COULEURS.contour}" stop-opacity="0"/>` +
+        `<stop offset="100%" stop-color="${COULEURS.contour}" stop-opacity="0.55"/></radialGradient>`,
+    ) +
+    titreSvg(LARGEUR, BANDEAU, `CARTE — ${donnees.nomVille.length > 36 ? `${donnees.nomVille.slice(0, 35)}…` : donnees.nomVille}`) +
     // Ecran radar
     `<rect x="${ecran.x}" y="${ecran.y}" width="${ecran.l}" height="${ecran.h}" fill="${COULEUR.radar}"/>` +
     `<g stroke="${COULEUR.quadrillage}" stroke-width="1">${quadrillage.join("")}</g>` +
@@ -194,14 +179,11 @@ export function construireSvgCarte(donnees: DonneesRenduCarte): string {
     noeuds.join("") +
     etiquettes.join("") +
     `<rect x="${ecran.x}" y="${ecran.y}" width="${ecran.l}" height="${ecran.h}" fill="url(#vignette)"/>` +
-    `<rect x="${ecran.x}" y="${ecran.y}" width="${ecran.l}" height="${ecran.h}" fill="none" stroke="${COULEUR.bordCadre}" stroke-width="2"/>` +
+    `<rect x="${ecran.x}" y="${ecran.y}" width="${ecran.l}" height="${ecran.h}" fill="none" stroke="${COULEUR.bordCadre}" stroke-width="${EPAISSEUR_CADRE - 1}"/>` +
     `</svg>`
   );
 }
 
 export function rendreCarte(donnees: DonneesRenduCarte): Buffer {
-  const resvg = new Resvg(construireSvgCarte(donnees), {
-    font: { fontFiles: POLICES, loadSystemFonts: false, defaultFontFamily: "Courier Prime" },
-  });
-  return resvg.render().asPng();
+  return svgEnPng(construireSvgCarte(donnees), LARGEUR);
 }

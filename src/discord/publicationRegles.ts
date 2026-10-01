@@ -7,25 +7,33 @@ import {
   SALON_COMMEMORATION,
   SALON_FONDER_COLONIE,
   SALON_GENERAL,
-  SALON_NOUVEL_ARRIVANT,
+  SALON_ETRANGER_PORTES,
+  SALON_NOUVEL_HABITANT,
   SALON_REGLES,
 } from "./structure";
 
 const COULEUR_SOMMAIRE = 0xddab76; // bordure beige de la charte MyHordes, comme les images
 const LONGUEUR_MAX_MESSAGE = 2000;
-const LONGUEUR_MAX_DESCRIPTION_IMAGE = 1024;
+export const LONGUEUR_MAX_DESCRIPTION_IMAGE = 1024;
 
 const SALONS_LIABLES = [
   SALON_GENERAL,
   SALON_ANNONCES,
   SALON_REGLES,
+  SALON_NOUVEL_HABITANT,
   SALON_FONDER_COLONIE,
-  SALON_NOUVEL_ARRIVANT,
+  SALON_ETRANGER_PORTES,
   SALON_COMMEMORATION,
 ];
 
+// Salons citables dans un texte publie (#nom), par nom : id du salon Discord
+export async function salonsLiables(guild: Guild): Promise<Map<string, string>> {
+  const salons = await salonsLiables(guild);
+  return salons;
+}
+
 // Texte brut d'une section, pour la description (texte alternatif) de son image
-function texteBrut(section: string): string {
+export function texteBrut(section: string): string {
   return section
     .replace(/^#+\s+/gm, "")
     .replace(/^>\s+/gm, "")

@@ -1,35 +1,32 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
+import { COULEURS, ECHELLE, EPAISSEUR_CADRE, POLICE_TEXTE, POLICE_TITRE, TITRE_SECTION, policesPourSatori } from "./charteImages";
 import { imageEmoji } from "./emojis";
 
-// Rendu PNG d'une section des regles joueurs (docs/regles-joueurs.md), publiee en image dans #regles.
-// satori met en page (retour a la ligne, gras, emojis) et produit un SVG, rasterise ensuite par resvg.
-// Charte inspiree de MyHordes, comme la carte : cadre brun, bordure beige, titres crème en Courier Prime,
-// corps en Nunito. Les emojis sont remplaces par leur image Twemoji (paquet @twemoji/svg, licence CC-BY 4.0).
+// Rendu PNG d'une section de texte : regles joueurs (docs/regles-joueurs.md, publiees dans #regles) et message de
+// bienvenue (docs/bienvenue.md). satori met en page (retour a la ligne, gras, emojis) et produit un SVG, rasterise
+// ensuite par resvg. Couleurs, polices et cadre : charte commune des images (charteImages.ts). Les emojis sont
+// remplaces par leur image Twemoji (paquet @twemoji/svg, licence CC-BY 4.0).
 //
 // Markdown pris en charge (celui du fichier de regles) : "# " titre de section, "## " sous-titre, "> " encadre,
 // une ligne = une ligne affichee, ligne vide = espacement ; en ligne : **gras**, *italique*, `code`, #salon.
 
-const DOSSIER_POLICES = join(__dirname, "..", "..", "assets", "fonts");
-
 const LARGEUR = 800;
-const ECHELLE = 1.5; // image finale de 1200 px de large, nette une fois reduite par Discord
 
+// Role de chaque couleur de la charte dans les sections de texte
 const COULEUR = {
-  cadre: "#5c2b20",
-  bandeau: "#3e2417",
-  bord: "#ddab76",
-  titre: "#f0d79e",
-  sousTitre: "#ddab76",
-  texte: "#f8eacb",
-  gras: "#ffffff",
-  encadre: "#4a261e",
-  code: "#b4da4c",
-  fondCode: "#2e3a0c",
-  salon: "#b4da4c",
-  filet: "#7e4d2a",
+  cadre: COULEURS.cadre,
+  bandeau: COULEURS.bandeau,
+  bord: COULEURS.bord,
+  titre: COULEURS.titre,
+  sousTitre: COULEURS.sousTitre,
+  texte: COULEURS.texte,
+  gras: COULEURS.gras,
+  encadre: COULEURS.encadre,
+  code: COULEURS.vert,
+  fondCode: COULEURS.vertFonce,
+  salon: COULEURS.vert,
+  filet: COULEURS.filet,
 };
 
 interface Noeud {
@@ -40,23 +37,6 @@ interface Noeud {
 function el(type: string, style: Record<string, unknown>, children?: Noeud[] | string): Noeud {
   return { type, props: { style: { display: "flex", ...style }, children } };
 }
-
-// --- Polices et emojis ---
-
-let polices: Parameters<typeof satori>[1]["fonts"] | null = null;
-function chargerPolices() {
-  const lire = (fichier: string) => readFileSync(join(DOSSIER_POLICES, fichier));
-  polices ??= [
-    { name: "Nunito", data: lire("nunito-latin-400-normal.woff"), weight: 400, style: "normal" },
-    { name: "Nunito", data: lire("nunito-latin-400-italic.woff"), weight: 400, style: "italic" },
-    { name: "Nunito", data: lire("nunito-latin-700-normal.woff"), weight: 700, style: "normal" },
-    { name: "Nunito", data: lire("nunito-latin-800-normal.woff"), weight: 800, style: "normal" },
-    { name: "Courier Prime", data: lire("CourierPrime-Regular.ttf"), weight: 400, style: "normal" },
-    { name: "Courier Prime", data: lire("CourierPrime-Bold.ttf"), weight: 700, style: "normal" },
-  ];
-  return polices;
-}
-
 
 // --- Markdown -> elements satori ---
 
@@ -94,7 +74,7 @@ function ligneTexte(ligne: string, styleLigne: Record<string, unknown> = {}): No
     if (style === "italique") Object.assign(base, { fontStyle: "italic" });
     if (style === "code") {
       Object.assign(base, {
-        fontFamily: "Courier Prime",
+        fontFamily: POLICE_TITRE,
         fontWeight: 700,
         color: COULEUR.code,
         backgroundColor: COULEUR.fondCode,
@@ -124,7 +104,7 @@ function blocs(texte: string): Noeud[] {
             marginBottom: 6,
             paddingBottom: 4,
             borderBottom: `2px solid ${COULEUR.filet}`,
-            fontFamily: "Courier Prime",
+            fontFamily: POLICE_TITRE,
             fontWeight: 700,
             fontSize: 25,
             color: COULEUR.sousTitre,
@@ -160,8 +140,8 @@ export function construireArbreSection(section: string): Noeud {
       width: LARGEUR,
       flexDirection: "column",
       backgroundColor: COULEUR.cadre,
-      border: `3px solid ${COULEUR.bord}`,
-      fontFamily: "Nunito",
+      border: `${EPAISSEUR_CADRE}px solid ${COULEUR.bord}`,
+      fontFamily: POLICE_TEXTE,
       fontSize: 21,
       lineHeight: 1.45,
       color: COULEUR.texte,
@@ -172,12 +152,12 @@ export function construireArbreSection(section: string): Noeud {
         {
           padding: "20px 30px",
           backgroundColor: COULEUR.bandeau,
-          borderBottom: `3px solid ${COULEUR.bord}`,
-          fontFamily: "Courier Prime",
+          borderBottom: `${EPAISSEUR_CADRE}px solid ${COULEUR.bord}`,
+          fontFamily: POLICE_TITRE,
           fontWeight: 700,
-          fontSize: 32,
+          fontSize: TITRE_SECTION.taille,
           color: COULEUR.titre,
-          letterSpacing: 1,
+          letterSpacing: TITRE_SECTION.espacement,
         },
         titre,
       ),
@@ -189,7 +169,7 @@ export function construireArbreSection(section: string): Noeud {
 export async function rendreSection(section: string): Promise<Buffer> {
   const svg = await satori(construireArbreSection(section) as unknown as Parameters<typeof satori>[0], {
     width: LARGEUR,
-    fonts: chargerPolices(),
+    fonts: policesPourSatori(),
     loadAdditionalAsset: async (code, segment) => (code === "emoji" ? imageEmoji(segment) : []),
   });
   return new Resvg(svg, { fitTo: { mode: "width", value: LARGEUR * ECHELLE } }).render().asPng();

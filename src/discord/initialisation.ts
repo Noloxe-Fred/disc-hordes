@@ -20,9 +20,11 @@ import {
   SALON_FONDER_COLONIE,
   SALON_GENERAL,
   SALON_GESTION,
-  SALON_NOUVEL_ARRIVANT,
+  SALON_ETRANGER_PORTES,
+  SALON_NOUVEL_HABITANT,
   SALON_REGLES,
   SALON_SIGNALEMENTS,
+  SALONS_OBSOLETES,
 } from "./structure";
 
 // Initialisation du serveur (bouton « Initialiser le serveur » du panneau /admin) : efface la structure fixe de
@@ -30,12 +32,12 @@ import {
 // est en creation ou en jeu (il faut d'abord « Reinitialiser la base »).
 // - Roles fixes supprimes puis recrees ; les roles du staff (Admin, MJ actif, MJ inactif) sont rendus a leurs membres.
 // - Categories et salons fixes supprimes puis recrees, sauf les salons a historique (general, annonces,
-//   commemoration, discussion-mj, signalements), gardes mais dont les permissions sont entierement reecrites.
+//   nouvel-habitant, commemoration, discussion-mj, signalements), gardes mais dont les permissions sont entierement reecrites.
 // - Restes de parties inconnus de la base supprimes (nettoyage.ts), regles republiees dans #regles.
 
 // Salons fixes dont on garde les messages
-const SALONS_CONSERVES = [SALON_GENERAL, SALON_ANNONCES, SALON_COMMEMORATION, SALON_DISCUSSION_MJ, SALON_SIGNALEMENTS];
-const SALONS_RECREES = [SALON_REGLES, SALON_FONDER_COLONIE, SALON_NOUVEL_ARRIVANT, SALON_GESTION];
+const SALONS_CONSERVES = [SALON_GENERAL, SALON_ANNONCES, SALON_NOUVEL_HABITANT, SALON_COMMEMORATION, SALON_DISCUSSION_MJ, SALON_SIGNALEMENTS];
+const SALONS_RECREES = [SALON_REGLES, SALON_FONDER_COLONIE, SALON_ETRANGER_PORTES, SALON_GESTION];
 // Roles rendus a leurs membres apres recreation ; Citoyen, Mort et Radio n'ont pas de porteur hors partie, Nomade est
 // recalcule
 const ROLES_STAFF = [ROLE_ADMIN.cle, ROLE_MJ.cle, ROLE_MJ_INACTIF.cle];
@@ -104,6 +106,7 @@ export async function initialiserServeur(guild: Guild): Promise<string> {
       CATEGORIE_ADMIN_MJ.cle,
       CATEGORIE_DISCHORDES.cle,
       ...SALONS_RECREES.map((s) => s.cle),
+      ...SALONS_OBSOLETES,
     ]);
     const restes = await supprimerRestesDePartie(guild);
     return await creerStructure(guild, membres, restes);
@@ -162,8 +165,9 @@ async function creerStructure(
     await ensureTextChannel(guild, SALON_GENERAL.cle, SALON_GENERAL.nom, categorieDiscHordes.id),
     await ensureTextChannel(guild, SALON_ANNONCES.cle, SALON_ANNONCES.nom, categorieDiscHordes.id, overwritesLectureSeule),
     await ensureTextChannel(guild, SALON_REGLES.cle, SALON_REGLES.nom, categorieDiscHordes.id, overwritesLectureSeule),
+    await ensureTextChannel(guild, SALON_NOUVEL_HABITANT.cle, SALON_NOUVEL_HABITANT.nom, categorieDiscHordes.id, overwritesLectureSeule),
     await ensureTextChannel(guild, SALON_FONDER_COLONIE.cle, SALON_FONDER_COLONIE.nom, categorieDiscHordes.id),
-    await ensureTextChannel(guild, SALON_NOUVEL_ARRIVANT.cle, SALON_NOUVEL_ARRIVANT.nom, categorieDiscHordes.id, [
+    await ensureTextChannel(guild, SALON_ETRANGER_PORTES.cle, SALON_ETRANGER_PORTES.nom, categorieDiscHordes.id, [
       { id: everyoneId, deny: [PermissionFlagsBits.SendMessages] },
     ]),
     await ensureTextChannel(guild, SALON_COMMEMORATION.cle, SALON_COMMEMORATION.nom, categorieDiscHordes.id, overwritesLectureSeule),
@@ -185,7 +189,7 @@ async function creerStructure(
 
   return (
     "Structure Discord effacée puis recréée à neuf : rôles (staff rendu à ses membres), catégorie Admin-MJ (signalements + discussion-mj + gestion) " +
-    "et catégorie Disc'Hordes (général + annonces + règles + fonder-une-colonie + nouvel-arrivant + commémoration). " +
+    "et catégorie Disc'Hordes (général + annonces + règles + nouvel-habitant + fonder-une-colonie + un-etranger-aux-portes + commémoration). " +
     `Rôle Nomade synchronisé sur ${membres.filter((m) => !m.user.bot).size} membre(s). ` +
     `${restes.categories} catégorie(s) et ${restes.roles} rôle(s) d'anciennes parties supprimés. ` +
     `Règles : ${await publierRegles(guild)}` +

@@ -42,8 +42,13 @@ export const SALON_GESTION = { cle: "salon:gestion", nom: "gestion" } as const; 
 // Categorie publique d'accueil
 export const CATEGORIE_DISCHORDES = { cle: "categorie:dischordes", nom: "Disc'Hordes" } as const;
 export const SALON_GENERAL = { cle: "salon:general", nom: "général" } as const;
+// Message de bienvenue de chaque membre qui arrive sur le serveur, poste par le bot (lecture seule pour les joueurs)
+export const SALON_NOUVEL_HABITANT = { cle: "salon:nouvel-habitant", nom: "nouvel-habitant" } as const;
 export const SALON_FONDER_COLONIE = { cle: "salon:fonder-une-colonie", nom: "fonder-une-colonie" } as const;
 // Demandes d'inscription aux villes, postees par le bot (lecture seule pour les joueurs)
-export const SALON_NOUVEL_ARRIVANT = { cle: "salon:nouvel-arrivant", nom: "nouvel-arrivant" } as const;
+export const SALON_ETRANGER_PORTES = { cle: "salon:un-etranger-aux-portes", nom: "un-etranger-aux-portes" } as const;
+// Salons d'anciennes versions, supprimes a l'initialisation s'ils existent encore (nouvel-arrivant : devenu
+// un-etranger-aux-portes)
+export const SALONS_OBSOLETES = ["salon:nouvel-arrivant"] as const;
 export const SALON_COMMEMORATION = { cle: "salon:commemoration", nom: "commémoration" } as const; // recaps de chute de ville
 export const SALON_ANNONCES = { cle: "salon:annonces", nom: "annonces" } as const; // lecture pour tous, ecriture MJ/Admin

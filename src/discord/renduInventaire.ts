@@ -1,17 +1,14 @@
-import { join } from "node:path";
-import { Resvg } from "@resvg/resvg-js";
 import { TypeObjet } from "@prisma/client";
 import { emojiObjet } from "../config/objets";
+import { COULEURS, EPAISSEUR_CADRE, debutSvg, echapperSvg as echapper, svgEnPng, titreSvg } from "./charteImages";
 import { imageEmoji } from "./emojis";
 
 // Rendu PNG du sac d'un joueur (SVG rasterise par resvg), dans la charte MyHordes de la carte et des regles :
-// cadre brun a bordure beige, titre creme en Courier Prime. Les objets sont ranges par famille (ressources,
+// cadre brun a bordure beige, titre creme. Les objets sont ranges par famille (ressources,
 // objets fabriques, objets rares), une case par objet avec son icone Twemoji et sa quantite ; la derniere
 // rangee de chaque famille est completee de cases vides, comme les emplacements du sac de MyHordes. Sous le titre,
 // un bandeau reunit les PA, la jauge de charge (poids des objets sur la capacite, orange quand elle est atteinte) et
-// les equipements portes hors du sac, comme la radio.
-
-const POLICES = ["CourierPrime-Regular.ttf", "CourierPrime-Bold.ttf"].map((f) => join(__dirname, "../../assets/fonts", f));
+// les equipements portes hors du sac, comme la radio. Couleurs, polices et cadre : charte commune (charteImages.ts).
 
 const COLONNES = 6;
 const CASE = 88;
@@ -25,24 +22,23 @@ const ENTETE = 56; // bandeau PA, charge et equipements, sous le titre
 const CASE_EQUIPEMENT = 44;
 const ICONE_EQUIPEMENT = 30;
 const LARGEUR = 2 * MARGE + COLONNES * CASE + (COLONNES - 1) * ESPACE;
-const ECHELLE = 1.5; // image nette une fois reduite par Discord
 
+// Role de chaque couleur de la charte dans le sac
 const COULEUR = {
-  cadre: "#5c2b20",
-  bordCadre: "#ddab76",
-  titre: "#f0d79e",
-  famille: "#ddab76",
-  filet: "#7e4d2a",
-  case: "#3e2417",
-  bordCase: "#7e4d2a",
-  caseVide: "#4a261e",
-  texte: "#f8eacb",
-  badge: "#2e3a0c",
-  bordBadge: "#b4da4c",
-  quantite: "#d7ff5b",
-  fondJauge: "#3e2417",
-  jauge: "#b4da4c",
-  jaugePleine: "#e0703a",
+  bordCadre: COULEURS.bord,
+  titre: COULEURS.titre,
+  famille: COULEURS.sousTitre,
+  filet: COULEURS.filet,
+  case: COULEURS.bandeau,
+  bordCase: COULEURS.filet,
+  caseVide: COULEURS.encadre,
+  texte: COULEURS.texte,
+  badge: COULEURS.vertFonce,
+  bordBadge: COULEURS.vert,
+  quantite: COULEURS.vertLumineux,
+  fondJauge: COULEURS.bandeau,
+  jauge: COULEURS.vert,
+  jaugePleine: COULEURS.alerte,
 };
 
 const FAMILLES: { titre: string; types: TypeObjet[] }[] = [
@@ -55,10 +51,6 @@ export interface ObjetSac {
   nom: string;
   type: TypeObjet;
   quantite: number;
-}
-
-function echapper(texte: string): string {
-  return texte.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function couper(texte: string, max: number): string {
@@ -188,20 +180,14 @@ export function construireSvgInventaire(titre: string, objets: ObjetSac[], entet
 
   const hauteur = y + MARGE - ESPACE;
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${LARGEUR}" height="${hauteur}" viewBox="0 0 ${LARGEUR} ${hauteur}" font-family="Courier Prime">` +
-    `<rect x="1" y="1" width="${LARGEUR - 2}" height="${hauteur - 2}" fill="${COULEUR.cadre}" stroke="${COULEUR.bordCadre}" stroke-width="2"/>` +
-    `<text x="${LARGEUR / 2}" y="${BANDEAU / 2 + 9}" text-anchor="middle" font-size="24" font-weight="bold" letter-spacing="2" fill="${COULEUR.titre}">` +
-    `${echapper(couper(titre, 36).toUpperCase())}</text>` +
-    `<line x1="${MARGE}" y1="${BANDEAU}" x2="${LARGEUR - MARGE}" y2="${BANDEAU}" stroke="${COULEUR.bordCadre}" stroke-width="2"/>` +
+    debutSvg(LARGEUR, hauteur) +
+    titreSvg(LARGEUR, BANDEAU, couper(titre, 36)) +
+    `<line x1="${MARGE}" y1="${BANDEAU}" x2="${LARGEUR - MARGE}" y2="${BANDEAU}" stroke="${COULEUR.bordCadre}" stroke-width="${EPAISSEUR_CADRE - 1}"/>` +
     elements.join("") +
     `</svg>`
   );
 }
 
 export function rendreInventaire(titre: string, objets: ObjetSac[], entete: EnteteInventaire = {}): Buffer {
-  const resvg = new Resvg(construireSvgInventaire(titre, objets, entete), {
-    fitTo: { mode: "width", value: Math.round(LARGEUR * ECHELLE) },
-    font: { fontFiles: POLICES, loadSystemFonts: false, defaultFontFamily: "Courier Prime" },
-  });
-  return resvg.render().asPng();
+  return svgEnPng(construireSvgInventaire(titre, objets, entete), LARGEUR);
 }

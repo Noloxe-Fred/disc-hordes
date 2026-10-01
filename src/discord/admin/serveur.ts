@@ -25,8 +25,8 @@ async function initialiser(interaction: ButtonInteraction, guild: Guild) {
   const choix = await confirmer(
     interaction,
     "⚠️ **Initialisation du serveur** : les rôles, catégories et salons fixes de Disc'Hordes sont supprimés puis recréés. " +
-      "Les messages de #règles (republiées), #fonder-une-colonie, #nouvel-arrivant et #gestion sont perdus ; général, " +
-      "annonces, commémoration, discussion-mj et signalements gardent leur historique. Les rôles Admin, MJ actif et MJ " +
+      "Les messages de #règles (republiées), #fonder-une-colonie, #un-etranger-aux-portes et #gestion sont perdus ; général, " +
+      "annonces, nouvel-habitant, commémoration, discussion-mj et signalements gardent leur historique. Les rôles Admin, MJ actif et MJ " +
       "inactif sont rendus à leurs membres. Refusé si une ville est en création ou en jeu.",
     "Initialiser le serveur",
   );
