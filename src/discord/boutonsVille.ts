@@ -26,6 +26,7 @@ import {
 import { prisma } from "../db";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
+import { posterAccueilVille } from "./accueilVille";
 import { rafraichirPanneauChantiers } from "./chantiers";
 import { rafraichirPanneauMaisons } from "./maisons";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "./messageVille";
@@ -385,6 +386,12 @@ export async function fonderVille(guild: Guild, villeId: number): Promise<{ nomb
       `<@${ville.createur.discordId}> devient le premier maire (mandat de ${CYCLES_PAR_MANDAT_MAIRE} cycles).\n` +
       "Faim et soif démarrent à 100/100. Cette mairie ne sert qu'aux annonces de la ville et du maire : discutez sur la place publique.",
   );
+  await posterAccueilVille(
+    guild,
+    ville.id,
+    salonMairie,
+    ville.habitants.map((h) => h.utilisateur.discordId),
+  ).catch((error) => console.error("Message d'accueil de la ville impossible", error));
 
   return { nombreHabitants, paMax };
 }

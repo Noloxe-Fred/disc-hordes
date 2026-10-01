@@ -57,6 +57,7 @@ La ville reçoit ses salons privés : mairie, journal, place publique, chantiers
 📜 Le **journal** raconte la vie de la ville : chaque minute, le bot y inscrit ce que les citoyens ont fait **en ville** (banque, chantiers, repas, fabrications, dons, soins, votes…). Tu le lis sans y écrire. Ce qui se passe **dehors** n'y apparaît jamais : à toi de raconter tes expéditions.
 Le **créateur devient le premier maire** pour 4 cycles. Le maire publie ses annonces dans la mairie avec le bouton **Annonce** de `/action`, en notifiant ou non toute la ville.
 Tous les habitants deviennent **Citoyens**. Plus personne ne peut rejoindre la ville ensuite.
+👋 Un **mot d'accueil** épinglé dans la mairie rappelle à chacun l'essentiel pour bien démarrer.
 Les **Territoires externes** de la région (forêt, marécages, montagnes, ville en ruines) sont créés avec elle.
 
 

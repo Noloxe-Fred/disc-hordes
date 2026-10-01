@@ -148,7 +148,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : posté par le bot dans `nouvel-habitant` à l'arrivée de chaque membre : mention du nouvel arrivant (seul notifié), puis le texte en image dans le style des règles (texte dans `docs/bienvenue.md`), avec les liens des salons cités ; explique le concept, renvoie vers `règles` et `fonder-une-colonie` (ou `/creer-ville`) et rappelle le rôle Nomade
-- **Message d'accueil** posté au joueur au moment où il rejoint effectivement une ville, à sa fondation : résume les bases (PA, faim/soif, `/action`, `/aide`)
+- **Message d'accueil** à la fondation d'une ville : posté par le bot dans la `mairie`, juste après l'annonce de fondation, et épinglé ; mentionne tous les habitants (notifiés), puis le texte en image dans le style des règles (texte dans `docs/accueil-ville.md`), avec les liens des salons cités ; résume les bases (PA et sommeil, faim/soif, attaque de l'aube, `/action`, `/personnage`, `/inventaire`). `/aide` y sera ajouté quand la commande existera
 
 ### Commandes pré-jeu (salon dédié "fonder-une-colonie", catégorie "Disc'Hordes", créé à l'initialisation du serveur)
 - `/creer-ville` : seule commande pré-jeu, sans paramètre. Ouvre un formulaire unique : **nom de la ville** (50 caractères max), **métier du créateur** (liste déroulante, dont "simple citoyen") et **projet de ville** facultatif (1000 caractères max). Poste dans `fonder-une-colonie` un **message de ville** (Components V2) : nom, créateur, projet, liste des inscrits avec leur métier (mise à jour à chaque arrivée/départ), et quatre boutons :

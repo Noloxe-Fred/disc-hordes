@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Texte des regles joueurs (docs/regles-joueurs.md), decoupe en sections pour publicationRegles.ts, et du message
-// de bienvenue (docs/bienvenue.md, bienvenue.ts). Chemins valables depuis src/discord (dev) comme depuis dist/discord (build).
+// de bienvenue (docs/bienvenue.md, bienvenue.ts) et de l'accueil a la fondation d'une ville (docs/accueil-ville.md,
+// accueilVille.ts). Chemins valables depuis src/discord (dev) comme depuis dist/discord (build).
 const CHEMIN_REGLES = join(__dirname, "..", "..", "docs", "regles-joueurs.md");
 const CHEMIN_BIENVENUE = join(__dirname, "..", "..", "docs", "bienvenue.md");
+const CHEMIN_ACCUEIL_VILLE = join(__dirname, "..", "..", "docs", "accueil-ville.md");
 
 function lireContenu(chemin: string): string {
   const brut = readFileSync(chemin, "utf8");
@@ -27,6 +29,11 @@ export function lireSectionsRegles(): string[] {
 // Message de bienvenue : premiere section de docs/bienvenue.md, null si le fichier n'en a pas
 export function lireSectionBienvenue(): string | null {
   return lireSections(CHEMIN_BIENVENUE)[0] ?? null;
+}
+
+// Message d'accueil a la fondation d'une ville : premiere section de docs/accueil-ville.md, null si le fichier n'en a pas
+export function lireSectionAccueilVille(): string | null {
+  return lireSections(CHEMIN_ACCUEIL_VILLE)[0] ?? null;
 }
 
 // Titres "# " et "## " d'une section, dans l'ordre (niveau 1 = titre principal, 2 = sous-titre)

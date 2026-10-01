@@ -68,7 +68,14 @@ function motsStyles(ligne: string): { mot: string; style: Style; colle: boolean 
 }
 
 function ligneTexte(ligne: string, styleLigne: Record<string, unknown> = {}): Noeud {
-  const mots = motsStyles(ligne).map(({ mot, style, colle }) => {
+  const mots = motsStyles(ligne).flatMap(({ mot, style, colle }) => {
+    // Mention de salon : #nom-du-salon, sans la ponctuation qui suit (« #chantiers, »)
+    const salon = style !== "code" ? /^#[\p{L}\d-]*[\p{L}\d]/u.exec(mot) : null;
+    if (salon) {
+      const suite = mot.slice(salon[0].length);
+      const span = el("span", { marginRight: suite || colle ? 0 : 6, color: COULEUR.salon, fontWeight: 700 }, salon[0]);
+      return suite ? [span, el("span", { marginRight: colle ? 0 : 6 }, suite)] : [span];
+    }
     const base: Record<string, unknown> = { marginRight: colle ? 0 : 6 };
     if (style === "gras") Object.assign(base, { fontWeight: 800, color: COULEUR.gras });
     if (style === "italique") Object.assign(base, { fontStyle: "italic" });
@@ -82,9 +89,7 @@ function ligneTexte(ligne: string, styleLigne: Record<string, unknown> = {}): No
         borderRadius: 4,
       });
     }
-    // Mention de salon : #nom-du-salon
-    if (style !== "code" && /^#[\p{L}\d-]+/u.test(mot)) Object.assign(base, { color: COULEUR.salon, fontWeight: 700 });
-    return el("span", base, mot);
+    return [el("span", base, mot)];
   });
   return el("div", { flexWrap: "wrap", alignItems: "center", ...styleLigne }, mots);
 }
