@@ -28,7 +28,11 @@ const SALONS_LIABLES = [
 
 // Salons citables dans un texte publie (#nom), par nom : id du salon Discord
 export async function salonsLiables(guild: Guild): Promise<Map<string, string>> {
-  const salons = await salonsLiables(guild);
+  const salons = new Map<string, string>();
+  for (const { cle, nom } of SALONS_LIABLES) {
+    const salon = await trouverSalonTexte(guild, cle);
+    if (salon) salons.set(nom, salon.id);
+  }
   return salons;
 }
 
@@ -100,11 +104,7 @@ export async function publierRegles(guild: Guild): Promise<string> {
   const botId = guild.client.user.id;
   const supprimes = await nettoyer(salonRegles, botId);
 
-  const salons = new Map<string, string>();
-  for (const { cle, nom } of SALONS_LIABLES) {
-    const salon = await trouverSalonTexte(guild, cle);
-    if (salon) salons.set(nom, salon.id);
-  }
+  const salons = await salonsLiables(guild);
 
   // Sommaire poste en premier (sans liens), puis complete une fois les sections publiees et leurs liens connus
   const embedSommaire = (liens: (string | null)[]) =>
