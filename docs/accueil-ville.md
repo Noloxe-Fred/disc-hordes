@@ -26,5 +26,6 @@ Deux jauges de **0 à 100**, qui baissent à chaque phase (**−16** faim, **−
 ⚡ `/action` : te déplacer, fouiller, soigner, voter… tout ce que tu peux faire là où tu es
 🧍 `/personnage` : tes PV, PA, faim, soif et le temps avant la prochaine phase
 🎒 `/inventaire` : ton sac, la banque, fabriquer, manger et boire
+❓ `/aide` : les commandes utiles là où tu es
 
 > 💬 Organise-toi avec les autres sur la #place-publique et bâtis ta maison dans #maisons-privées. Le détail de chaque règle est dans #règles.

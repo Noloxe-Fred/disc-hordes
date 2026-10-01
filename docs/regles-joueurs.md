@@ -247,6 +247,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
 ⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
+❓ `/aide` : les commandes utiles selon le salon où tu la tapes et ta situation (nomade, en ville, dehors, face à un zombie, mort)
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
 
