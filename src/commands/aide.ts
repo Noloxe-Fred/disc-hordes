@@ -25,6 +25,8 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 const COULEUR_AIDE = 0x3498db;
 
+const SIGNALER = "🚩 `/signaler` : signaler un comportement problématique à l'équipe";
+
 // Lien cliquable vers un salon, ou son nom s'il n'existe pas (encore)
 async function lienSalon(guild: Guild, cle: string, nom: string): Promise<string> {
   const salon = await trouverSalonTexte(guild, cle);
@@ -41,7 +43,7 @@ const SALONS_FIXES: Record<string, string> = {
   [SALON_ETRANGER_PORTES.cle]: "Les demandes d'inscription aux villes en recrutement. Lecture seule.",
   [SALON_COMMEMORATION.cle]: "Le souvenir des villes tombées : durée de survie, maires, pire attaque, destin de chaque habitant.",
   [SALON_ANNONCES.cle]: "Les annonces de l'équipe du serveur. Lecture seule.",
-  [SALON_SIGNALEMENTS.cle]: "Les signalements des joueurs, traités par l'équipe.",
+  [SALON_SIGNALEMENTS.cle]: "Les signalements des joueurs (`/signaler`) : le bouton **Marquer traité** range ceux qui sont réglés.",
   [SALON_DISCUSSION_MJ.cle]: "Discussion entre MJ et Admins.",
   [SALON_GESTION.cle]: "Gestion du serveur, réservée aux Admins.",
 };
@@ -91,14 +93,16 @@ async function texteJoueur(guild: Guild, utilisateurId: number): Promise<string>
       (demande
         ? `Ta demande pour rejoindre **${demande.ville.nom}** attend la réponse de la ville.\n`
         : `🏘️ Rejoins une ville en recrutement depuis ${fonder}\n🏗️ \`/creer-ville\` : crée ta ville et lance son recrutement\n`) +
-      "❓ `/aide` : cette aide, selon le salon et ta situation"
+      "❓ `/aide` : cette aide, selon le salon et ta situation\n" +
+      SIGNALER
     );
   }
 
   const ville = joueur.ville;
   const communes =
     "🧍 `/personnage` : tes PV, PA, faim, soif et le temps avant la prochaine phase\n" +
-    "❓ `/aide` : cette aide, selon le salon et ta situation";
+    "❓ `/aide` : cette aide, selon le salon et ta situation\n" +
+    SIGNALER;
 
   if (ville.statut !== StatutVille.ACTIVE) {
     return (

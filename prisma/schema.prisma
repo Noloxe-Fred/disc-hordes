@@ -113,6 +113,8 @@ model Utilisateur {
   succes              UtilisateurSucces[]
   villesCreees        Ville[]              @relation("CreateurVille")
   demandesInscription DemandeInscription[]
+  signalementsEmis    Signalement[]        @relation("Signalant")
+  signalementsRecus   Signalement[]        @relation("Cible")
 }
 
 model Succes {
@@ -509,8 +511,6 @@ model Joueur {
   gardesMontees     GardeVolontaire[]
   candidatures      Candidature[]
   votes             Vote[]
-  signalementsEmis  Signalement[]      @relation("Signalant")
-  signalementsRecus Signalement[]      @relation("Cible")
   journal           JournalEntree[]
   zombieDevenu      ZombieErrant?      @relation("ZombieTransforme")
   zombieAffronte    ZombieErrant?      @relation("ZombieCible")
@@ -609,16 +609,22 @@ model Vote {
 // Moderation & journal
 // =========================================================================
 
+// /signaler (conception.md §4) : lie aux comptes et non aux personnages, pour que les nomades puissent signaler
+// et que l'historique de moderation survive a la chute d'une ville. Poste dans #signalements (messageId).
 model Signalement {
-  id           Int      @id @default(autoincrement())
-  signalantId  Int
-  cibleId      Int?
-  message      String
-  dateCreation DateTime @default(now())
-  traite       Boolean  @default(false)
+  id                 Int      @id @default(autoincrement())
+  signalantId        Int
+  cibleId            Int?
+  message            String   @db.Text
+  // Salon ou /signaler a ete tapee
+  salonId            String?
+  messageId          String?
+  dateCreation       DateTime @default(now())
+  traite             Boolean  @default(false)
+  traiteParDiscordId String?
 
-  signalant Joueur  @relation("Signalant", fields: [signalantId], references: [id])
-  cible     Joueur? @relation("Cible", fields: [cibleId], references: [id])
+  signalant Utilisateur  @relation("Signalant", fields: [signalantId], references: [id])
+  cible     Utilisateur? @relation("Cible", fields: [cibleId], references: [id])
 }
 
 // Flux du journal de bord (conception.md §7) : public pour les actions en ville, prive/absent

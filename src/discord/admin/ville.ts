@@ -63,7 +63,7 @@ export async function effacerVille(guild: Guild, villeId: number): Promise<void>
   }
   await supprimerRessources(guild, [`role:ville:${villeId}`, `categorie:ville:${villeId}`], [`salon:ville:${villeId}:`]);
 
-  // Ordre impose par les cles etrangeres sans cascade vers Joueur (votes, gardes, signalements...)
+  // Ordre impose par les cles etrangeres sans cascade vers Joueur (votes, gardes...)
   const joueurIds = ville.habitants.map((h) => h.id);
   await prisma.$transaction([
     prisma.ville.update({ where: { id: villeId }, data: { maireId: null } }),
@@ -72,7 +72,6 @@ export async function effacerVille(guild: Guild, villeId: number): Promise<void>
     prisma.election.deleteMany({ where: { villeId } }),
     prisma.gardeVolontaire.deleteMany({ where: { OR: [{ joueurId: { in: joueurIds } }, { cycleAttaque: { villeId } }] } }),
     prisma.cycleAttaque.deleteMany({ where: { villeId } }),
-    prisma.signalement.deleteMany({ where: { OR: [{ signalantId: { in: joueurIds } }, { cibleId: { in: joueurIds } }] } }),
     prisma.journalEntree.deleteMany({ where: { OR: [{ villeId }, { joueurId: { in: joueurIds } }] } }),
     prisma.contributionBatiment.deleteMany({ where: { batiment: { villeId } } }),
     prisma.joueur.deleteMany({ where: { villeId } }), // inventaires et cartes supprimes en cascade

@@ -12,6 +12,7 @@ import { gererBoutonOutilMj } from "./boutonsMj";
 import { gererBoutonMaison } from "./maisons";
 import { gererBoutonVille } from "./boutonsVille";
 import { rafraichirMessageVille } from "./messageVille";
+import { gererBoutonSignalement } from "./signalement";
 
 async function gererDemande(interaction: ButtonInteraction, action: "accepter" | "refuser", idBrut: string) {
   const demandeId = Number(idBrut);
@@ -118,5 +119,7 @@ export async function gererBouton(interaction: ButtonInteraction) {
     await gererBoutonSanction(interaction, action, id);
   } else if (prefixe === "accueil") {
     await gererBoutonAccueil(interaction, action, id);
+  } else if (prefixe === "signalement") {
+    await gererBoutonSignalement(interaction, action, id);
   }
 }

@@ -31,17 +31,16 @@ export async function declarerChuteVille(guild: Guild, villeId: number): Promise
 }
 
 // Etat de jeu d'une ville tombee, efface de la base : sacs et cartes de ses joueurs, banque, batiments, journal,
-// attaques et gardes, elections, signalements et demandes. Restent la ville et ses personnages (historique).
+// attaques et gardes, elections et demandes. Restent la ville et ses personnages (historique).
 export async function purgerEtatVilleTombee(villeId: number): Promise<void> {
   const joueurIds = (await prisma.joueur.findMany({ where: { villeId }, select: { id: true } })).map((j) => j.id);
-  // Ordre impose par les cles etrangeres sans cascade vers Joueur (votes, gardes, signalements...)
+  // Ordre impose par les cles etrangeres sans cascade vers Joueur (votes, gardes...)
   await prisma.$transaction([
     prisma.vote.deleteMany({ where: { OR: [{ votantId: { in: joueurIds } }, { election: { villeId } }] } }),
     prisma.candidature.deleteMany({ where: { OR: [{ joueurId: { in: joueurIds } }, { election: { villeId } }] } }),
     prisma.election.deleteMany({ where: { villeId } }),
     prisma.gardeVolontaire.deleteMany({ where: { OR: [{ joueurId: { in: joueurIds } }, { cycleAttaque: { villeId } }] } }),
     prisma.cycleAttaque.deleteMany({ where: { villeId } }),
-    prisma.signalement.deleteMany({ where: { OR: [{ signalantId: { in: joueurIds } }, { cibleId: { in: joueurIds } }] } }),
     prisma.journalEntree.deleteMany({ where: { OR: [{ villeId }, { joueurId: { in: joueurIds } }] } }),
     prisma.contributionBatiment.deleteMany({ where: { batiment: { villeId } } }),
     prisma.batimentVille.deleteMany({ where: { villeId } }),
