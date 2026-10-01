@@ -38,16 +38,15 @@ export function extraireTitres(message: string): { niveau: 1 | 2; texte: string 
     .map((m) => ({ niveau: m[1].length as 1 | 2, texte: m[2].trim() }));
 }
 
-// Sommaire : chaque titre renvoie (lien cliquable) au message qui le contient. Discord n'a pas
-// d'ancre a l'interieur d'un message : le lien mene au debut du message concerne.
+// Sommaire : chaque titre de section renvoie (lien cliquable) au message qui la contient. Discord n'a pas
+// d'ancre a l'interieur d'un message : un lien par sous-titre menerait au meme endroit, et ferait depasser la limite.
 // Texte de la description d'un embed (limite 4096 caracteres, contre 2000 pour un message).
 export function construireSommaire(messages: string[], liens: (string | null)[]): string {
   const lignes: string[] = [];
   messages.forEach((message, index) => {
     const lien = liens[index];
     for (const { niveau, texte } of extraireTitres(message)) {
-      const libelle = lien ? `[${texte}](${lien})` : texte;
-      lignes.push(niveau === 1 ? `**${libelle}**` : `- ${libelle}`);
+      lignes.push(niveau === 1 ? `**${lien ? `[${texte}](${lien})` : texte}**` : `- ${texte}`);
     }
   });
   return lignes.join("\n");
