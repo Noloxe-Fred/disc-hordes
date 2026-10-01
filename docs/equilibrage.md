@@ -246,6 +246,8 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Réparation voiture (ingénieur, atelier palier 1) | 8 PA + pièces | — |
 | Voiture — déplacement à plusieurs (bonus) | −50 % PA du trajet, partagé entre passagers | idem |
 
+**Anti-spam de `/action`** : **3 secondes** minimum entre deux ouvertures de `/action` par un même joueur ; un seul menu ouvert à la fois (en rouvrir un ferme le précédent).
+
 ---
 
 ## 5. Ressources brutes (matières premières)

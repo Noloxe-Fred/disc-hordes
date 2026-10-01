@@ -295,7 +295,7 @@ Règles :
 **Contraintes techniques notées pour l'implémentation** (pas des décisions de conception, à traiter lors de la conversation dédiée TeoHeberg) :
 - Timer de cycle stocké en base pour survivre à un redémarrage du bot
 - Logs techniques séparés des logs d'action admin
-- Cooldown court entre deux utilisations de `/action` (anti-spam)
+- Cooldown court entre deux utilisations de `/action` (anti-spam) : 3 s, et un seul menu `/action` ouvert à la fois (voir document d'équilibrage, section 4)
 - Le reset admin déjà prévu suffit en V1 ; pas de système de rollback ciblé en plus
 
 *Une conversation technique dédiée est prévue sur TeoHeberg (déploiement, architecture du bot).*

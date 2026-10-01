@@ -58,12 +58,18 @@ import { destinationsDepuis } from "../services/zones";
 // « Quitter la ville »). Face a un zombie
 // (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
 // rejoindre une autre.
+// Anti-spam (equilibrage.md §4) : delai minimal entre deux /action d'un meme utilisateur, et un seul menu
+// ouvert a la fois — ouvrir un nouveau menu ferme le precedent, pour qu'aucun clic ne passe par deux menus.
 
 const DELAI_CHOIX_MS = 120_000;
+const DELAI_ENTRE_ACTIONS_MS = 3_000;
+const derniereOuverture = new Map<string, number>();
+const menuOuvert = new Map<string, ChatInputCommandInteraction>();
 const COULEUR_VIVANT = 0x2ecc71;
 const COULEUR_MORT = 0xc0392b;
 const VALEUR_VILLE = "ville";
 const OBJET_TORCHE = "Torche";
+const MESSAGE_MENU_FERME = "Menu fermé : vous avez rouvert `/action`.";
 const MESSAGE_ZOMBIE = "🧟 Un zombie vous barre la route : combattez-le ou fuyez d'abord (`/action`).";
 
 function encadre(texte: string, couleur = COULEUR_VIVANT): ContainerBuilder {
@@ -326,6 +332,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   for (;;) {
     const clic = await reponse.awaitMessageComponent({ time: DELAI_CHOIX_MS }).catch(() => null);
     if (!clic) return;
+    if (await menuRemplace(interaction, clic)) return;
 
     if (clic.customId === "retour") {
       await clic.update({ components: [menu], attachments: [] }); // retire l'image de la carte le cas echeant
@@ -482,6 +489,20 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
 
 // Compte rendu d'une action : ecran de combat si le joueur est (toujours) face a un zombie, texte seul sinon. Renvoie
 // true si le combat continue (le message reste a l'ecoute des boutons « Attaquer » et « Fuir »).
+// Clic arrive sur un menu deja remplace par un /action plus recent : refuse sans rien executer
+async function menuRemplace(interaction: ChatInputCommandInteraction, clic: MessageComponentInteraction): Promise<boolean> {
+  if (menuOuvert.get(interaction.user.id) === interaction) return false;
+  await clic.update({ components: [encadre(MESSAGE_MENU_FERME)], attachments: [] }).catch(() => null);
+  return true;
+}
+
+// Ouverture d'un nouveau menu : vide l'ancien (son jeton de reponse reste valable 15 min) et l'oublie
+async function fermerMenuPrecedent(interaction: ChatInputCommandInteraction) {
+  const precedent = menuOuvert.get(interaction.user.id);
+  menuOuvert.set(interaction.user.id, interaction);
+  if (precedent) await precedent.editReply({ components: [encadre(MESSAGE_MENU_FERME)], attachments: [] }).catch(() => null);
+}
+
 async function afficherResultat(clic: MessageComponentInteraction, joueurId: number, texte: string): Promise<boolean> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
   const enCombat = joueur.rencontrePvZombie !== null && (joueur.statut === StatutJoueur.VIVANT || joueur.statut === StatutJoueur.EXCLU);
@@ -708,6 +729,7 @@ async function actionsMort(interaction: ChatInputCommandInteraction, guild: Guil
     .awaitMessageComponent({ componentType: ComponentType.Button, time: DELAI_CHOIX_MS })
     .catch(() => null);
   if (!clic) return;
+  if (await menuRemplace(interaction, clic)) return;
 
   // Collecte sur le message de reponse lui-meme : sur une reponse a un bouton, discord.js collecterait
   // sinon les clics du message portant ce bouton
@@ -754,6 +776,17 @@ const command: Command = {
       return;
     }
 
+    const maintenant = Date.now();
+    const attente = (derniereOuverture.get(interaction.user.id) ?? 0) + DELAI_ENTRE_ACTIONS_MS - maintenant;
+    if (attente > 0) {
+      await interaction.reply({
+        content: `⏳ Patientez encore ${Math.ceil(attente / 1000)} s avant de rouvrir \`/action\`.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    derniereOuverture.set(interaction.user.id, maintenant);
+
     const utilisateur = await trouverOuCreerUtilisateur(interaction.user);
     const joueur = await trouverJoueurActif(utilisateur.id);
     if (!joueur?.ville) {
@@ -764,6 +797,7 @@ const command: Command = {
       return;
     }
 
+    await fermerMenuPrecedent(interaction);
     if (joueur.statut === StatutJoueur.VIVANT || joueur.statut === StatutJoueur.EXCLU) {
       await actionsVivant(interaction, guild, joueur.id);
     } else {

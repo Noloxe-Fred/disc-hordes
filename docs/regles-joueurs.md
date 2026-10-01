@@ -251,6 +251,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🚩 `/signaler` : signaler à l'équipe un comportement problématique (le membre concerné, si besoin, et ce qui s'est passé) ; seuls les MJ et les Admins le lisent
 
 Toutes les réponses du bot à tes commandes ne sont visibles que par toi. 🤫
+⏳ Un seul menu `/action` reste ouvert à la fois : en rouvrir un ferme le précédent, et il faut attendre **3 secondes** entre deux `/action`.
 
 # 🚧 Feuille de route
 
