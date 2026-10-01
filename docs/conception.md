@@ -122,7 +122,7 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 
 ### Cycle de vie du joueur (hors mort)
 - **Sortie volontaire d'un vivant** (bouton « Quitter la ville » de `/action`, confirmation obligatoire, en ville comme dehors, exclus compris) : annoncée dans la mairie, libère le rôle Position/Citoyen et la place de métier, un maire perd son mandat, le sac reste avec le personnage abandonné ; retour au rôle Nomade, sans retour possible dans cette ville. Si c'était le dernier habitant vivant, la ville tombe
-- Joueur qui quitte le serveur Discord (pas le jeu) : traité comme une exclusion technique automatique (nettoyage des rôles), pas compté comme une mort dans les stats
+- Joueur qui quitte le serveur Discord (pas le jeu) : traité comme une exclusion technique automatique, pas compté comme une mort dans les stats. Ses demandes d'inscription en attente sont retirées (messages supprimés) ; inscrit à une ville en création, son inscription disparaît, et s'il en était le créateur la ville est annulée ; habitant d'une ville en jeu, il la quitte comme par « Quitter la ville » (entrée au journal, annonce dans la mairie sauf s'il était mort, place de métier libérée, mandat de maire perdu, chute si c'était le dernier vivant) et ses permissions propres sur les salons de la ville et la radio sont effacées
 - Inactivité prolongée : rien d'automatisé en V1, gérée manuellement par les admins (via les commandes admin existantes)
 - Nouveaux arrivants une fois une ville lancée : aucune option sauf attendre une ville en cours de recrutement ailleurs (pas de recrutement continu en V1)
 - **Détection multi-compte** : rien de prévu en V1, pas de solution technique — vigilance communautaire/admin en cas de soupçon

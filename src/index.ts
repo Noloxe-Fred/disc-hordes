@@ -10,6 +10,7 @@ import { ensureAdjacencesGroupe } from "./services/zones";
 import { demarrerHorlogeCycle } from "./scheduler/cycle";
 import { rafraichirTousLesPanneaux } from "./discord/chantiers";
 import { posterBienvenue } from "./discord/bienvenue";
+import { gererDepartServeur } from "./discord/departServeur";
 
 const client = createClient();
 
@@ -49,6 +50,12 @@ client.once(Events.ClientReady, async (readyClient) => {
 client.on(Events.GuildMemberAdd, async (membre) => {
   await synchroniserNomade(membre).catch((error) => console.error("Attribution du role Nomade impossible", error));
   await posterBienvenue(membre).catch((error) => console.error("Message de bienvenue impossible", error));
+});
+
+// Depart du serveur : exclusion technique de sa ville (pas une mort), demandes et inscriptions retirees
+client.on(Events.GuildMemberRemove, async (membre) => {
+  if (membre.user?.bot) return;
+  await gererDepartServeur(membre.guild, membre.id).catch((error) => console.error("Départ du serveur non traité", error));
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

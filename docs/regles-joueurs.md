@@ -236,6 +236,8 @@ En ville, tu fouilles les citoyens de ta ville morts en ville ; dehors, n'import
 ## 🚪 Partir
 Vivant, tu peux aussi **quitter ta ville pour toujours** avec le bouton **Quitter la ville** de `/action`, après confirmation. Ton départ est annoncé dans la mairie ; tu abandonnes ton personnage et ton sac, et tu redeviens **Nomade**, libre de rejoindre ou créer une autre ville, mais **jamais de revenir** dans celle-ci. Si tu étais le dernier vivant, la ville tombe.
 
+Quitter le serveur Discord revient au même : tu quittes ta ville pour toujours (ce n'est pas compté comme une mort), et tes inscriptions ou demandes en attente sont retirées ; si tu avais créé une ville pas encore fondée, elle est annulée.
+
 ## 🕯️ La chute d'une ville
 Quand le **dernier habitant vivant** meurt, la ville **tombe**.
 Son histoire est gravée dans #commémoration : durée de survie, dernier maire, pire attaque, dernier survivant, et le destin de chaque habitant.
