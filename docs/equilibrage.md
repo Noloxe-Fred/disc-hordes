@@ -55,7 +55,7 @@ Changement de logique par rapport à une V0 à PA fixe unique pour tous : **le P
 ### Déclenchement de l'infection
 Une infection se déclenche via un **"coup reçu"**, avec **10 % de chance** à chaque occurrence :
 - **En rencontre externe** : uniquement si le joueur choisit de combattre — aucune infection possible en cas de fuite (réussie ou non).
-- **En attaque de nuit** : si le citoyen est "touché" par le jet de risque de défense insuffisante (voir section 3), ce contact compte aussi comme un coup reçu.
+- **En attaque de nuit** : si le citoyen est l'une des victimes de la défense insuffisante (voir section 3), ce contact compte aussi comme un coup reçu.
 - **En combat raté** en territoire externe : en plus de la perte de PV.
 
 Une fois déclenchée, l'infection est cachée (seul le joueur le sait) et suit l'incubation de 2 cycles jour/nuit (96h) avec le malus PA linéaire ci-dessus.
@@ -186,19 +186,21 @@ Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gib
 ### Défense insuffisante
 - Déficit = Attaque − Défense (si positif)
 - **Dégâts sur chantiers** : voir ci-dessous (cascade validée le 2026-09-30)
-- **Risque par citoyen présent en ville** ("touché" ou non) : `min(50%, déficit / attaque)` par citoyen présent, jet indépendant.
+- **Victimes parmi les citoyens présents en ville** : leur nombre est proportionnel à `déficit / attaque`, tirées au hasard (détail ci-dessous).
 
 ### Blessures en défense insuffisante (PV perdus)
-Pour chaque citoyen présent en ville (pas en territoire externe), jet indépendant :
-- **Ratio** = `min(50 %, déficit / attaque)`.
-- **Chance d'être touché** = ratio × facteur maison ; la maison privée réduit cette chance de **25 % par palier au-delà du palier 1** (sans maison ou P1 : ×1 ; P2 : ×0,75 ; plancher ×0,25 si d'autres paliers arrivent).
-- **PV perdus si touché** = `ceil(ratio × 10)`, soit **1 à 5 PV** : un petit déficit égratigne, un déficit au plafond coûte 5 PV.
-- Être touché est aussi un coup reçu : 10 % de chance d'infection (section 1).
+Seuls les citoyens présents en ville (pas en territoire externe) sont exposés (révisé le 2026-10-03 : plus de jet indépendant par citoyen ni de plafond à 50 %) :
+- **Ratio** = `déficit / attaque` (0 à 100 %).
+- **Nombre de victimes** = `ratio × citoyens présents` ; la partie décimale est la chance d'une victime de plus. Les victimes sont **tirées au hasard** parmi les présents.
+- **Maison privée** : une victime tirée au sort a **25 % de chance par palier au-delà du palier 1** de repousser les zombies depuis sa maison (sans maison ou P1 : 0 % ; P2 : 25 % ; plafond 75 % si d'autres paliers arrivent). Si elle se défend, personne n'est frappé à sa place.
+- **PV perdus par victime** = `ceil(min(50 %, ratio) × 10)`, soit **1 à 5 PV** : un petit déficit égratigne, un déficit de moitié ou plus coûte 5 PV.
+- Être frappé est aussi un coup reçu : 10 % de chance d'infection (section 1).
 - Il n'y a plus de jet « fatal » séparé : on meurt seulement si ces pertes font tomber à 0 PV.
 
 **Exemples** :
-- Attaque 20 contre défense 18 → ratio 10 % → 10 % de chance d'être touché (7,5 % avec une maison P2), 1 PV perdu.
-- Déficit au plafond (ratio 50 %) → 50 % de chance d'être touché (37,5 % en maison P2), 5 PV perdus : deux nuits de ce type suffisent à tuer un joueur en pleine santé.
+- Attaque 20 contre défense 18, 10 présents → ratio 10 % → 1 victime, 1 PV perdu (25 % de chance de s'en tirer en maison P2).
+- Attaque 18,2 contre défense 5, 4 présents → ratio 72,5 % → 2,9 : 2 victimes, 90 % de chance d'une troisième, 5 PV perdus chacune.
+- Seul en ville avec un ratio de 72,5 % → 72,5 % de chance d'être frappé. Deux nuits de 5 PV suffisent à tuer un joueur en pleine santé.
 
 ### Dégâts sur les chantiers (validé le 2026-09-30)
 Après les blessures, le **déficit devient un budget de dégâts**, consommé dans cet ordre. Chaque élément détruit absorbe sa valeur de défense, donc un petit déficit ne touche que les premières cibles :
@@ -329,7 +331,7 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 
 ### Changements de phase pour les survivants dehors (vivants ou exclus)
 - **Tombée de la nuit** : pas d'attaque. Sauf zombie déjà présent (−1 PV ci-dessus), **jet de rencontre au taux de nuit** de la zone (22,5 / 45 / 67,5 %), divisé par deux si un feu brûlait pendant la journée qui s'achève, **sans** le bonus des fouilles. Un zombie qui surgit ouvre la rencontre, sans dégâts immédiats ; le joueur est mentionné dans le salon de sa zone.
-- **Aube — la horde** (en même temps que l'attaque de la ville, avant faim/soif) : **tout survivant dehors est attaqué**, sans jet. **PV perdus d'entrée : 1 / 2 / 3** (proche / moyenne / éloignée), **−1 si un feu brûlait** pendant la nuit qui s'achève ; c'est un coup reçu (**10 % d'infection**). S'il survit, un combat s'ouvre contre un zombie aux PV de la zone (s'il en avait déjà un sur le dos, il ne prend que les dégâts). Mention dans le salon de zone ; les morts (« dévoré par la horde ») sont annoncées dans la mairie avec le compte rendu de l'attaque. Rester dehors la nuit coûte donc toujours cher : il faut être rentré avant l'aube.
+- **Aube — la horde** (en même temps que l'attaque de la ville, avant faim/soif) : **tout survivant dehors est attaqué**, sans jet. **PV perdus d'entrée : 3 / 4 / 5** (proche / moyenne / éloignée), **−2 si un feu brûlait** (relevé le 2026-10-03, depuis 1 / 2 / 3 et −1) pendant la nuit qui s'achève ; c'est un coup reçu (**10 % d'infection**). S'il survit, un combat s'ouvre contre un zombie aux PV de la zone (s'il en avait déjà un sur le dos, il ne prend que les dégâts). Mention dans le salon de zone ; les morts (« dévoré par la horde ») sont annoncées dans la mairie avec le compte rendu de l'attaque. Rester dehors la nuit coûte donc toujours cher : il faut être rentré avant l'aube.
 - *(Point de conception tranché le 2026-09-29 : auparavant un joueur dehors échappait entièrement à l'attaque de l'aube.)*
 - Mort en combat : cause « tué en territoire externe ».
 - Ordre de grandeur : à mains nues, un zombie moyen demande ~4,3 échanges (~9 PA le jour) et coûte ~1 PV.
@@ -413,7 +415,7 @@ Les 3 recettes cuisinier sont gardées telles quelles pour le lancement V1 (pas 
 - L'acquisition de ressources (pas l'installation) est le vrai frein aux chantiers : avec 2–5 objets par fouille et plusieurs ressources différentes requises par palier, réunir 400 Bois + 120 Ferraille pour la palissade palier 8 nécessite des dizaines d'allers-retours répartis sur plusieurs joueurs et plusieurs phases.
 - La faim/soif oblige à des allers-retours réguliers vers les zones proches (régénérantes), pendant que les ingrédients de remède et les pièces rares forcent des incursions ponctuelles en zones éloignées (et désormais, à un rythme plus soutenu, en zones moyennes).
 - Les 5 métiers à recette exclusive sont chacun un goulot d'étranglement réel : sans médecin, pas de remède (l'infusion du cuisinier ne fait que ralentir l'échéance, pas la stopper) ; sans ingénieur, pas de voiture ni de défense avancée.
-- Se porter volontaire garde dès la nuit 1 est quasi obligatoire : sans palissade ni garde, la défense de base (5) contre une attaque de 15 laisse un déficit de 10, soit 50 % (plafond) de risque "touché" par citoyen présent — l'organisation de la garde doit être opérationnelle dès le premier cycle, pas ajoutée plus tard.
+- Se porter volontaire garde dès la nuit 1 est quasi obligatoire : sans palissade ni garde, la défense de base (5) contre une attaque de 15 laisse un déficit de 10, soit 2 citoyens présents sur 3 frappés — l'organisation de la garde doit être opérationnelle dès le premier cycle, pas ajoutée plus tard.
 
 ---
 

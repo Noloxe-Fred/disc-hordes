@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 
-// Charte graphique commune a toutes les images generees par le bot (carte, sac, regles, bienvenue), inspiree de
+// Charte graphique commune a toutes les images generees par le bot (carte, sac, regles, bienvenue, annonces de phase), inspiree de
 // MyHordes : cadre brun a bordure beige, titres creme en Courier Prime, texte courant en Nunito, accents vert olive.
 // Toute modification visuelle partagee (couleur, police, epaisseur, nettete) se fait ici ; les fichiers rendu*.ts
 // ne gardent que leur mise en page (dimensions, positions).

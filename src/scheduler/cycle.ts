@@ -4,11 +4,12 @@ import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
 import { AVANCE_ALERTE_ATTAQUE_MINUTES, BONUS_PALISSADE_CUMULE, BONUS_STRUCTURE_DEFENSE, DEFENSE_BASE } from "../config/defense";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
-import { chanceTouche, degatsNuit, ratioDeficit } from "../game/blessuresNuit";
+import { chanceDefenseMaison, degatsNuit, nombreVictimes, ratioDeficit, tirerAuHasard } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { evenementsTombeeNuit, hordeAube } from "../discord/combat";
+import { posterAnnonceCycle } from "../discord/annonceCycle";
 import { infligerDegatsChantiers } from "../discord/degatsChantiers";
 import { gardesDeLaNuit } from "../discord/garde";
 import { posterDansMairie } from "../discord/villeStructure";
@@ -125,14 +126,20 @@ async function basculerVersNuit(guild: Guild, ville: Ville) {
 
   const aube = Math.floor(prochaineBascule().getTime() / 1000);
   const dehors = await evenementsTombeeNuit(guild, ville.id, ville.phaseDepuis);
-  await posterDansMairie(
-    guild,
-    ville.id,
-    `🌙 La nuit tombe sur **${ville.nom}**. Les zombies attaqueront à l'aube, <t:${aube}:R>.` +
-      (dehors.lignes.length > 0 ? `\n${dehors.lignes.join("\n")}` : "") +
-      (dehors.villeTombee ? `\n\n**${ville.nom}** est tombée.` : ""),
-    { mentionnerVille: true },
-  );
+  await posterAnnonceCycle(guild, ville.id, {
+    titre: `🌙 Nuit ${ville.cycleActuel} — ${ville.nom}`,
+    resume: `🌙 La nuit tombe sur **${ville.nom}**. Les zombies attaqueront à l'aube, <t:${aube}:R>.`,
+    sections: [
+      {
+        lignes: [
+          "Les zombies se rassemblent autour de la ville. Ils attaqueront **à l'aube**.",
+          "> 🛡️ Montez la garde depuis `/action`, et soyez en ville à l'aube pour qu'elle compte.",
+        ],
+      },
+      { titre: "🌲 Dehors", lignes: dehors.lignes },
+      { lignes: dehors.villeTombee ? [`💀 **${ville.nom}** est tombée.`] : [] },
+    ],
+  });
   if (dehors.villeTombee) return;
   await appliquerEffetsPhase(guild, ville.id);
 }
@@ -150,8 +157,12 @@ async function resoudreBlessuresNuit(
   if (ratio <= 0) return { lignes, villeTombee: false };
 
   const presents = (await habitantsVivants(ville.id)).filter((j) => j.zoneActuelleId === null);
-  for (const joueur of presents) {
-    if (Math.random() >= chanceTouche(ratio, joueur.maisonPalier)) continue;
+  const victimes = tirerAuHasard(presents, nombreVictimes(ratio, presents.length));
+  for (const joueur of victimes) {
+    if (Math.random() < chanceDefenseMaison(joueur.maisonPalier)) {
+      lignes.push(`🏠 <@${joueur.utilisateur.discordId}> a repoussé les zombies depuis sa maison.`);
+      continue;
+    }
 
     const pvPerdus = degatsNuit(ratio);
     await tenterInfection(joueur.id);
@@ -173,7 +184,7 @@ export async function resoudreAttaque(
   guild: Guild,
   ville: Ville,
   enregistrer: boolean,
-): Promise<{ compteRendu: string; villeTombee: boolean }> {
+): Promise<{ compteRendu: string; lignes: string[]; villeTombee: boolean }> {
   const palissade = await prisma.batimentVille.findUnique({
     where: { villeId_type: { villeId: ville.id, type: TypeBatiment.PALISSADE } },
   });
@@ -201,18 +212,23 @@ export async function resoudreAttaque(
   const deficit = Math.max(0, forceAttaque - defenseTotale);
   // Puis les zombies s'en prennent aux constructions (structures, palissade, chantiers en cours, maisons)
   const degats = deficit > 0 && !villeTombee ? await infligerDegatsChantiers(guild, ville.id, deficit) : [];
+  const detailDefense =
+    `base ${DEFENSE_BASE}, palissade +${BONUS_PALISSADE_CUMULE[Math.min(palierPalissade, BONUS_PALISSADE_CUMULE.length - 1)]}` +
+    (ville.structuresDefense > 0 ? `, structures +${ville.structuresDefense * BONUS_STRUCTURE_DEFENSE}` : "") +
+    `, ${gardes.length} garde${gardes.length > 1 ? "s" : ""} +${bonusGardes}`;
+  const suites = deficit > 0 ? [...(lignes.length > 0 ? lignes : ["Personne n'a été touché."]), ...degats] : [];
   const compteRendu =
     `🧟 Attaque de zombies sur **${ville.nom}** : force ${forceAttaque.toFixed(1)} contre une défense de ${defenseTotale}` +
-    ` (base ${DEFENSE_BASE}, palissade +${BONUS_PALISSADE_CUMULE[Math.min(palierPalissade, BONUS_PALISSADE_CUMULE.length - 1)]}` +
-    (ville.structuresDefense > 0 ? `, structures +${ville.structuresDefense * BONUS_STRUCTURE_DEFENSE}` : "") +
-    `, ${gardes.length} garde${gardes.length > 1 ? "s" : ""} +${bonusGardes})` +
-    (deficit > 0
-      ? ` — déficit de ${deficit.toFixed(1)}.` +
-        (lignes.length > 0 ? `\n${lignes.join("\n")}` : "\nPersonne n'a été touché.") +
-        (degats.length > 0 ? `\n${degats.join("\n")}` : "")
-      : " — repoussée sans difficulté.");
+    ` (${detailDefense})` +
+    (deficit > 0 ? ` — déficit de ${deficit.toFixed(1)}.\n${suites.join("\n")}` : " — repoussée sans difficulté.");
+  // Meme bilan, mis en forme pour l'image de l'annonce (annonceCycle.ts)
+  const lignesAnnonce = [
+    `**Force ${forceAttaque.toFixed(1)}** contre **défense ${defenseTotale}** (${detailDefense})`,
+    deficit > 0 ? `> ⚠️ Déficit de **${deficit.toFixed(1)}**` : "> ✅ Attaque repoussée sans difficulté.",
+    ...suites,
+  ];
 
-  return { compteRendu, villeTombee };
+  return { compteRendu, lignes: lignesAnnonce, villeTombee };
 }
 
 // L'attaque de zombies se resout a l'aube, en cloture de la nuit qui s'acheve (pas a la
@@ -223,10 +239,17 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   const attaque = await resoudreAttaque(guild, ville, true);
   // En meme temps, la horde balaie les territoires : tout survivant dehors est attaque (discord/combat.ts)
   const horde = attaque.villeTombee ? { lignes: [], villeTombee: false } : await hordeAube(guild, ville.id, ville.phaseDepuis);
-  const compteRendu = attaque.compteRendu + (horde.lignes.length > 0 ? `\n${horde.lignes.join("\n")}` : "");
+  const sectionsAttaque = [
+    { titre: "🧟 Attaque de zombies", lignes: attaque.lignes },
+    { titre: "🌲 Dehors, la horde", lignes: horde.lignes },
+  ];
 
   if (attaque.villeTombee || horde.villeTombee) {
-    await posterDansMairie(guild, ville.id, `${compteRendu}\n\n**${ville.nom}** est tombée.`, { mentionnerVille: true });
+    await posterAnnonceCycle(guild, ville.id, {
+      titre: `💀 Chute de ${ville.nom}`,
+      resume: `☠️ L'aube se lève sur les ruines de **${ville.nom}** : la ville est tombée.`,
+      sections: [...sectionsAttaque, { lignes: [`💀 **${ville.nom}** est tombée.`] }],
+    });
     return;
   }
 
@@ -239,12 +262,11 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   const puits = await produireEauPuits(ville.id);
   // Les ressources naturelles des territoires repoussent (une fois par aube pour le groupe)
   if (ville.groupeId !== null) await regenererRessourcesNaturelles(ville.groupeId);
-  await posterDansMairie(
-    guild,
-    ville.id,
-    `${compteRendu}\n☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).` + (puits ? `\n${puits}` : ""),
-    { mentionnerVille: true },
-  );
+  await posterAnnonceCycle(guild, ville.id, {
+    titre: `☀️ Jour ${nouveauCycle} — ${ville.nom}`,
+    resume: `☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`,
+    sections: [...sectionsAttaque, { titre: "🏙️ En ville", lignes: puits ? [puits] : [] }],
+  });
   await appliquerEffetsPhase(guild, ville.id);
   // Mandat du maire echu : interim et election (discord/election.ts)
   await verifierFinMandat(guild, ville.id);

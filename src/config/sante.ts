@@ -10,11 +10,12 @@ export const SOIN_AVANCE_PV = 5;
 // Chance d'infection a chaque coup recu (attaque de nuit, combat en territoire externe)
 export const CHANCE_INFECTION_PAR_COUP = 0.1;
 
-// Attaque nocturne : chance d'etre touche = min(50 %, deficit / attaque), reduite de 25 % par palier
-// de maison au-dela du palier 1 (plancher x0,25) ; PV perdus = ceil(ratio x 10), soit 1 a 5 PV.
-export const RATIO_TOUCHE_MAX = 0.5;
-export const REDUCTION_TOUCHE_PAR_PALIER_MAISON = 0.25;
-export const FACTEUR_TOUCHE_MAISON_MIN = 0.25;
+// Attaque nocturne : nombre de victimes = (deficit / attaque) x citoyens presents, tirees au hasard ; une victime
+// en maison privee repousse les zombies a 25 % par palier au-dela du palier 1 (plafond 75 %) ;
+// PV perdus = ceil(min(50 %, ratio) x 10), soit 1 a 5 PV.
+export const DEFENSE_MAISON_PAR_PALIER = 0.25;
+export const CHANCE_DEFENSE_MAISON_MAX = 0.75;
+export const RATIO_DEGATS_MAX = 0.5;
 export const FACTEUR_DEGATS_NUIT = 10;
 
 // Faim et soif (jauges 0-100)

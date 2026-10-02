@@ -101,14 +101,14 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 
 ### Points de vie, blessures & infection
 - Chaque joueur a **10 PV**, consultables dans `/personnage`. Les PV perdus représentent les blessures : chaque PV manquant réduit le **PA max** (pas de malus séparé ; chiffres dans le document d'équilibrage)
-- Perte de PV : attaque nocturne en défense insuffisante (aléatoire, la maison privée réduit la chance d'être touché), faim ou soif critique/vide (perte progressive à chaque phase), combat raté en territoire externe (gameplay de combat à définir, avec en plus un risque d'infection)
+- Perte de PV : attaque nocturne en défense insuffisante (victimes tirées au hasard, la maison privée donne une chance de repousser les zombies), faim ou soif critique/vide (perte progressive à chaque phase), combat raté en territoire externe (gameplay de combat à définir, avec en plus un risque d'infection)
 - Soin basique : réalisable par n'importe quel joueur, rend des PV
 - Soin avancé : réservé au métier médecin, rend plus de PV
 - À 0 PV ou moins, le joueur meurt (voir Mort)
 
 **Infection** :
 - Déclenchement caché — seul le joueur infecté le sait, libre d'en parler ou non
-- **Déclencheur** : un "coup reçu" donne 10 % de chance d'infection à chaque occurrence — en rencontre externe uniquement si le joueur combat (jamais en cas de fuite), ou via le jet de risque de l'attaque de nuit si le citoyen est "touché" par une défense insuffisante (formule chiffrée dans le document d'équilibrage)
+- **Déclencheur** : un "coup reçu" donne 10 % de chance d'infection à chaque occurrence — en rencontre externe uniquement si le joueur combat (jamais en cas de fuite), ou si le citoyen est l'une des victimes de l'attaque de nuit en défense insuffisante (formule chiffrée dans le document d'équilibrage)
 - Incubation : **2 cycles jour/nuit (96h)** avant transformation en zombie : le joueur meurt et son zombie reste sur place, en ville ou dans sa zone, pour attaquer les survivants présents (détails : equilibrage.md §1)
 - Pendant l'incubation : malus en PA progressif de façon **linéaire continue** (de 0 % à −30 % du PA max sur les 96h, voir document d'équilibrage) + symptômes visibles par les autres qui s'aggravent avec le temps
 - Guérison : remède fabriqué par le médecin, avec des ingrédients trouvables uniquement en territoire externe (loot rare)
@@ -149,6 +149,7 @@ Principe directeur : maximiser les interactions via **components Discord V2** (b
 ### Onboarding
 - **Message de bienvenue au niveau du serveur** Discord (avant même de rejoindre une ville) : posté par le bot dans `nouvel-habitant` à l'arrivée de chaque membre : mention du nouvel arrivant (seul notifié), puis le texte en image dans le style des règles (texte dans `docs/bienvenue.md`), avec les liens des salons cités ; explique le concept, renvoie vers `règles` et `fonder-une-colonie` (ou `/creer-ville`) et rappelle le rôle Nomade
 - **Message d'accueil** à la fondation d'une ville : posté par le bot dans la `mairie`, juste après l'annonce de fondation, et épinglé ; mentionne tous les habitants (notifiés), puis le texte en image dans le style des règles (texte dans `docs/accueil-ville.md`), avec les liens des salons cités ; résume les bases (PA et sommeil, faim/soif, attaque de l'aube, `/action`, `/personnage`, `/inventaire`). `/aide` y sera ajouté quand la commande existera
+- **Annonces de changement de phase** dans la `mairie` (tombée de la nuit, aube, attaque déclenchée par un admin) : mention du rôle de la ville et résumé en texte, joueurs cités mentionnés à la suite (notifiés), puis le détail en image dans le style des règles (attaque et défense, déficit, victimes, dégâts aux chantiers, horde dehors, puits) ; repli en texte si le rendu échoue
 
 ### Commandes pré-jeu (salon dédié "fonder-une-colonie", catégorie "Disc'Hordes", créé à l'initialisation du serveur)
 - `/creer-ville` : seule commande pré-jeu, sans paramètre. Ouvre un formulaire unique : **nom de la ville** (50 caractères max), **métier du créateur** (liste déroulante, dont "simple citoyen") et **projet de ville** facultatif (1000 caractères max). Poste dans `fonder-une-colonie` un **message de ville** (Components V2) : nom, créateur, projet, liste des inscrits avec leur métier (mise à jour à chaque arrivée/départ), et quatre boutons :
@@ -224,7 +225,7 @@ Règles :
 - Défense totale = bonus des chantiers construits + bonus par garde assigné cette nuit-là
 - Tout citoyen peut se porter volontaire pour monter la garde (bonus plus élevé pour le métier garde)
 - Se porter volontaire coûte des PA/du repos
-- Défense insuffisante → dégâts sur les chantiers ET perte de PV aléatoire parmi les citoyens en ville (chance d'être touché et PV perdus proportionnels au ratio déficit/attaque, chance réduite par la maison privée — chiffrés dans le document d'équilibrage) ; la mort n'arrive qu'à 0 PV
+- Défense insuffisante → dégâts sur les chantiers ET perte de PV aléatoire parmi les citoyens en ville (nombre de victimes tirées au hasard et PV perdus proportionnels au ratio déficit/attaque, la maison privée donne une chance de repousser les zombies — chiffrés dans le document d'équilibrage) ; la mort n'arrive qu'à 0 PV
 
 ---
 

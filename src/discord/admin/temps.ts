@@ -2,7 +2,7 @@ import { StatutVille, TypePhase } from "@prisma/client";
 import { ButtonStyle, MessageFlags, type ButtonInteraction, type Guild, type LabelBuilder } from "discord.js";
 import { prisma } from "../../db";
 import { basculerPhase, resoudreAttaque } from "../../scheduler/cycle";
-import { posterDansMairie } from "../villeStructure";
+import { posterAnnonceCycle } from "../annonceCycle";
 import { champTexte, champVille, journaliser, lireChoix, lireEntier, ouvrirFormulaire, repondre, type FamilleAdmin } from "./outils";
 
 // Famille "Temps" du panneau /admin (conception.md §4) : forcer le passage jour/nuit, declencher une attaque
@@ -62,8 +62,12 @@ async function declencherAttaque(interaction: ButtonInteraction, guild: Guild) {
 
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   // Hors historique : l'attaque de l'aube de ce cycle reste celle qui compte dans les statistiques
-  const { compteRendu, villeTombee } = await resoudreAttaque(guild, ville, false);
-  await posterDansMairie(guild, ville.id, villeTombee ? `${compteRendu}\n\n**${ville.nom}** est tombée.` : compteRendu);
+  const { compteRendu, lignes, villeTombee } = await resoudreAttaque(guild, ville, false);
+  await posterAnnonceCycle(guild, ville.id, {
+    titre: `🧟 Attaque sur ${ville.nom}`,
+    resume: `🧟 Les zombies attaquent **${ville.nom}** !`,
+    sections: [{ lignes }, { lignes: villeTombee ? [`💀 **${ville.nom}** est tombée.`] : [] }],
+  });
 
   await journaliser(interaction.user, "Déclencher une attaque", `${ville.nom} (#${ville.id}), cycle ${ville.cycleActuel}`);
   await soumission.editReply({ content: `Attaque déclenchée sur **${ville.nom}** :\n${compteRendu}`, allowedMentions: { parse: [] } });

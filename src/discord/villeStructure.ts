@@ -1,5 +1,5 @@
 import { TypeBatiment } from "@prisma/client";
-import { PermissionFlagsBits, type Guild, type Role, type TextChannel } from "discord.js";
+import { PermissionFlagsBits, type AttachmentBuilder, type Guild, type Role, type TextChannel } from "discord.js";
 import { prisma } from "../db";
 import { synchroniserAccesJoueur } from "./joueurDiscord";
 import {
@@ -87,7 +87,7 @@ export async function posterDansMairie(
   guild: Guild,
   villeId: number,
   message: string,
-  options: { mentionnerVille?: boolean } = {},
+  options: { mentionnerVille?: boolean; fichiers?: AttachmentBuilder[] } = {},
 ): Promise<void> {
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:mairie`);
   if (!salon) return;
@@ -95,6 +95,7 @@ export async function posterDansMairie(
   await salon
     .send({
       content: roleVille ? `${roleVille} ${message}` : message,
+      files: options.fichiers ?? [],
       allowedMentions: { parse: ["users"], roles: roleVille ? [roleVille.id] : [] },
     })
     .catch(() => null);

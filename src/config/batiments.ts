@@ -100,5 +100,5 @@ export function chantier(type: TypeBatiment): Chantier {
 // appliques ailleurs : chance d'etre touche a l'attaque (game/blessuresNuit.ts), +15 % de PA max au palier 2 (game/pa.ts).
 export const PALIERS_MAISON: readonly PalierBatiment[] = [
   { ressources: { Bois: 30, Tissu: 15 }, pa: 9, bonus: "Un toit à soi" },
-  { ressources: { Bois: 50, Tissu: 30 }, pa: 16, bonus: "+15 % de PA max, chance d'être blessé à l'attaque −25 %" },
+  { ressources: { Bois: 50, Tissu: 30 }, pa: 16, bonus: "+15 % de PA max, 25 % de chance de repousser les zombies à l'attaque" },
 ];

@@ -266,8 +266,8 @@ export async function evenementsTombeeNuit(guild: Guild, villeId: number, debutP
   return { lignes, villeTombee: false };
 }
 
-// Aube : la horde balaie les territoires. Tout survivant dehors perd d'entree 1/2/3 PV selon sa zone (un feu encore
-// allume en retire 1), coup recu (10 % d'infection), puis un combat s'ouvre s'il n'avait pas deja un zombie sur le dos.
+// Aube : la horde balaie les territoires. Tout survivant dehors perd d'entree 3/4/5 PV selon sa zone (un feu encore
+// allume en retire 2), coup recu (10 % d'infection), puis un combat s'ouvre s'il n'avait pas deja un zombie sur le dos.
 export async function hordeAube(guild: Guild, villeId: number, debutPhaseFinie: Date | null): Promise<BilanDehors> {
   const lignes: string[] = [];
   for (const joueur of await survivantsDehors(villeId)) {

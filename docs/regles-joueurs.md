@@ -66,7 +66,7 @@ Les **Territoires externes** de la région (forêt, marécages, montagnes, ville
 Chaque ville vit au rythme d'une **horloge commune** : le jour et la nuit durent **24h réelles** chacun, et basculent à **minuit**.
 
 🌙 **À la tombée de la nuit**, les zombies se rassemblent… La mairie prévient toute la ville à chaque changement de phase, puis **une heure avant l'attaque**.
-☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, les citoyens présents en ville risquent d'être **blessés**, et les **chantiers** d'être abîmés (voir « Les chantiers »). Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
+☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, des citoyens présents en ville sont **blessés** au hasard, d'autant plus nombreux que l'écart est grand, et les **chantiers** d'être abîmés (voir « Les chantiers »). Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
 
 🛡️ **La nuit, en ville**, le bouton **Monter la garde** de `/action` renforce la défense de l'aube : **+3** pour un citoyen, **+6** pour un **Garde**, pour **6 PA**. Il faut être encore en ville au moment de l'attaque pour que ça compte.
 📈 Les attaques deviennent **plus fortes à chaque nuit**. Une ville qui ne se défend pas finira par tomber.
@@ -96,7 +96,7 @@ On ne dépasse jamais **10 PV**, et chaque PV rendu redonne des PA max. Soigner 
 ## 🏠 Ta maison
 Tu arrives **sans maison** : à toi de la bâtir, dans le salon **maisons-privées** de ta ville. Même principe que les chantiers : 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** pour déposer les ressources, puis 🔨 **Installer** pour y verser tes PA (**2 PA par tranche de 10 ressources**). 🏠 **Ma maison** te montre où tu en es.
 🏠 **Palier 1** : 30 Bois + 15 Tissu, 9 PA — un toit à toi.
-🏡 **Palier 2** : 50 Bois + 30 Tissu, 16 PA — **+15 % de PA max** et **25 % de chances en moins d'être blessé** pendant les attaques.
+🏡 **Palier 2** : 50 Bois + 30 Tissu, 16 PA — **+15 % de PA max** et **25 % de chances de repousser les zombies** si l'attaque tombe sur toi.
 Tout ce que tu prends à la banque pour ta maison est noté au journal de la ville. 👀
 
 ## 🦠 L'infection
@@ -132,7 +132,7 @@ Après chaque fouille et à chaque arrivée dans une zone, un **zombie** peut su
 🗡️ Une **arme** dans ton sac aide : **arme de fortune** (−1 PA par attaque), **arme simple** (tu touches plus souvent), **arme avancée** (−2 PA et 2 dégâts par coup). Seule la meilleure compte.
 ⏳ Un zombie qu'on laisse là ne s'en va pas : **−1 PV à la tombée de la nuit** tant que tu ne l'as pas réglé.
 🌙 **À la tombée de la nuit**, si tu es dehors, un zombie peut sortir de l'ombre et te tomber dessus.
-☀️ **À l'aube, la horde déferle** sur tous ceux qui sont encore dehors : **−1 PV** en zone proche, **−2** en moyenne, **−3** en éloignée (un feu allumé t'en épargne 1), puis un zombie reste sur toi. **Rentre avant l'aube !**
+☀️ **À l'aube, la horde déferle** sur tous ceux qui sont encore dehors : **−3 PV** en zone proche, **−4** en moyenne, **−5** en éloignée (un feu allumé t'en épargne 2), puis un zombie reste sur toi. **Rentre avant l'aube !**
 
 ## 🔥 Feu et sieste
 Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (2 Bois, à fabriquer) pour **1 PA** (2 la nuit). Jusqu'au prochain changement de phase, la zone est plus sûre pour tous ceux qui s'y trouvent : **deux fois moins de zombies**.

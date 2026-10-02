@@ -41,13 +41,13 @@ export const CHANCE_FUITE: Record<TypePhase, number> = {
 export const DEGATS_RENCONTRE_PAR_PHASE = 1;
 
 // Horde de l'aube : tout survivant dehors est attaque, PV perdus d'entree selon le palier de sa zone (un feu encore
-// allume en retire 1), puis un combat s'ouvre contre un zombie de la zone
+// allume en retire 2), puis un combat s'ouvre contre un zombie de la zone
 export const DEGATS_HORDE_AUBE: Record<PalierZone, number> = {
-  [PalierZone.PROCHE]: 1,
-  [PalierZone.MOYENNE]: 2,
-  [PalierZone.ELOIGNEE]: 3,
+  [PalierZone.PROCHE]: 3,
+  [PalierZone.MOYENNE]: 4,
+  [PalierZone.ELOIGNEE]: 5,
 };
-export const PROTECTION_FEU_HORDE = 1;
+export const PROTECTION_FEU_HORDE = 2;
 
 // Citoyen transforme en zombie au bout de l'incubation : en ville, il a les PV d'un zombie de zone proche, dehors ceux
 // d'un zombie de sa zone ; il frappe par surprise (-1 PV, coup recu) le survivant qu'il attaque, puis combat normal
