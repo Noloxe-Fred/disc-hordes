@@ -13,6 +13,7 @@ import {
 } from "discord.js";
 import { prisma } from "../db";
 import { ajouterACarte, citoyensDehors, grilleCarte, zonesDecouvertes } from "../services/carte";
+import { partagerPieges, zonesPiegesConnus } from "../services/pieges";
 import { trouverSalonTexte } from "./reconcile";
 import { rendreCarte } from "./renduCarte";
 
@@ -41,14 +42,15 @@ export async function ecranCarte(
 ): Promise<{ conteneur: ContainerBuilder; fichiers: AttachmentBuilder[] }> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   const ville = joueur.ville!;
-  const [grille, dehors] = await Promise.all([
+  const [grille, dehors, pieges] = await Promise.all([
     grilleCarte(ville.groupeId!, joueurId, joueur.zoneActuelleId),
     citoyensDehors(ville.id, joueurId),
+    zonesPiegesConnus(joueurId),
   ]);
 
   const citoyensParZone = new Map<number, number>();
   for (const c of dehors) citoyensParZone.set(c.zoneActuelleId!, (citoyensParZone.get(c.zoneActuelleId!) ?? 0) + 1);
-  const png = rendreCarte({ nomVille: ville.nom, enVille: joueur.zoneActuelleId === null, grille, citoyensParZone });
+  const png = rendreCarte({ nomVille: ville.nom, enVille: joueur.zoneActuelleId === null, grille, citoyensParZone, pieges });
 
   const cases = grille.flatMap((ligne) => ligne.cases);
   const connues = cases.filter((c) => c.decouverte || c.ici).length;
@@ -65,7 +67,7 @@ export async function ecranCarte(
     )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        "-# Contour lumineux : vous · cases noires : zones inconnues · points jaunes : vos concitoyens. " +
+        "-# Contour lumineux : vous · cases noires : zones inconnues · points jaunes : vos concitoyens · 🪤 : pièges connus. " +
           "Les liens suivent les anneaux (zones de même distance) et les rayons (même type de zone).",
       ),
     )
@@ -96,6 +98,7 @@ export async function ecranPartage(joueurId: number, retour: ButtonBuilder): Pro
   if (raison) return encadre(raison).addActionRowComponents(ligneRetour);
 
   const nbZones = (await zonesDecouvertes(joueurId)).length;
+  const nbPieges = (await zonesPiegesConnus(joueurId)).size;
   if (nbZones === 0) {
     return encadre("Votre carte est vide : explorez les territoires externes avant de la partager.").addActionRowComponents(ligneRetour);
   }
@@ -111,7 +114,7 @@ export async function ecranPartage(joueurId: number, retour: ButtonBuilder): Pro
     return encadre("Aucun autre citoyen vivant avec qui partager votre carte.").addActionRowComponents(ligneRetour);
   }
 
-  return encadre(`## 🤝 Partager votre carte\nVous connaissez **${nbZones} zone(s)**. Avec qui les partager ?`)
+  return encadre(`## 🤝 Partager votre carte\nVous connaissez **${nbZones} zone(s)**${nbPieges > 0 ? ` et **${nbPieges} piège(s)**` : ""}. Avec qui les partager ?`)
     .addActionRowComponents(
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
         new StringSelectMenuBuilder()
@@ -158,12 +161,14 @@ export async function partagerCarte(guild: Guild, joueurId: number, destinataire
   const bilans: string[] = [];
   for (const destinataire of destinataires) {
     const nouvelles = await ajouterACarte(destinataire.id, zoneIds);
-    bilans.push(`• **${nomJoueur(destinataire)}** : ${nouvelles > 0 ? `${nouvelles} nouvelle(s) zone(s)` : "rien de nouveau"}`);
+    const pieges = await partagerPieges(joueurId, destinataire.id);
+    const apports = [nouvelles > 0 ? `${nouvelles} nouvelle(s) zone(s)` : null, pieges > 0 ? `${pieges} piège(s)` : null].filter((a) => a !== null);
+    bilans.push(`• **${nomJoueur(destinataire)}** : ${apports.length > 0 ? apports.join(", ") : "rien de nouveau"}`);
     await prisma.journalEntree.create({
       data: {
         villeId: ville.id,
         joueurId: destinataire.id,
-        message: `Carte reçue de ${nomJoueur(joueur)}${nouvelles > 0 ? ` (+${nouvelles} zone(s))` : ""}`,
+        message: `Carte reçue de ${nomJoueur(joueur)}${apports.length > 0 ? ` (+${apports.join(", +")})` : ""}`,
         public: false,
       },
     });

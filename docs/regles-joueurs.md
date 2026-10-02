@@ -116,15 +116,22 @@ Dans `/action`, le bouton **Se déplacer** te propose les destinations possibles
 📡 Une fois la **tour radio** construite, tous les habitants vivants **en ville** rejoignent **ondes-radio**, même sans radio (dehors, il faut une radio pour capter les ondes), et un porteur de radio dehors garde l'accès à tous les salons de sa ville.
 
 ## 🗺️ Ta carte
-Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consulter avec le bouton **Carte** de `/action`. Elle montre aussi, en jaune, les citoyens de ta ville partis dehors.
+Chaque zone où tu mets les pieds s'ajoute à **ta carte personnelle**, à consulter avec le bouton **Carte** de `/action`. Elle montre aussi, en jaune, les citoyens de ta ville partis dehors, et 🪤 les pièges que tu connais.
 👁️ Le bouton **Observer** de `/action` te montre les zones voisines sans t'y rendre : tu vois combien de survivants s'y trouvent, et elles rejoignent ta carte. Coût : **1 PA** (2 la nuit) ; pour un **Éclaireur**, c'est gratuit le jour et **1 PA** la nuit.
-🤝 De retour en ville, le bouton **Partager la carte** de `/action` transmet gratuitement ta carte à un ou plusieurs citoyens, ou à toute la ville. Le partage est annoncé sur la place publique.
+🤝 De retour en ville, le bouton **Partager la carte** de `/action` transmet gratuitement ta carte, pièges connus compris, à un ou plusieurs citoyens, ou à toute la ville. Le partage est annoncé sur la place publique.
 
 ## 🔍 Fouiller
 Dans une zone, le bouton **Fouiller** de `/action` te fait chercher ce qui traîne, pour **2 PA** (3 la nuit), après confirmation.
 🎒 Tu trouves **2 à 5 objets** selon la zone (plus on s'éloigne, plus il y en a), mais certaines trouvailles ne valent rien. Tout va dans ton sac (`/inventaire`), **tant qu'il y a de la place** : ce qui ne rentre pas reste sur place et est perdu. Sac plein, tu ne peux pas fouiller.
 🌲 Chaque type de zone a son butin : **bois**, baies et gibier en forêt, **eau** et plantes médicinales dans les marécages, **pierre** et ferraille en montagne, tissu, ferraille et pièces mécaniques dans la ville en ruines. Les objets rares se cachent loin de la ville.
 ♻️ Les zones s'épuisent à force d'être fouillées. Le **bois de forêt, les baies et le gibier repoussent** un peu chaque matin ; **tout le reste ne revient pas**. Le bot te prévient quand une zone se vide : pense à changer de coin.
+
+## 🪤 Les pièges
+Avec un piège dans ton sac, le bouton **Piège** de `/action` le pose dans ta zone, en **forêt** ou en **montagnes**, pour **1 PA** (2 la nuit). Un seul piège par zone.
+🪤 Le **piège simple** (bouton Fabriquer, ouvert à tous) attrape du **gibier** (+10 faim) ; le **piège avancé** (fabriqué par le Chasseur) attrape du **gros gibier** (+25 faim).
+🦌 Le piège reste en place. **À chaque aube**, il a **60 %** de chances d'attraper sa proie en zone proche, **75 %** en moyenne et **90 %** en éloignée, tant que la zone a encore du gibier. Il garde une seule prise à la fois : tant que personne ne vient la chercher, il n'attrape plus rien.
+✋ **N'importe qui** passant dans la zone, même d'une autre ville, peut **relever la prise** gratuitement avec le bouton **Piège**. Ne tarde pas trop !
+🗺️ Ton piège apparaît sur ta carte, et sur celle des citoyens avec qui tu la partages.
 
 ## 🧟 Les zombies
 Après chaque fouille et à chaque arrivée dans une zone, un **zombie** peut surgir : **15 %** en zone proche, **30 %** en moyenne, **45 %** en éloignée, et **50 % de plus la nuit**. Et plus tu fouilles sans croiser de zombie, plus le bruit en attire : **+10 %** à chaque fouille d'affilée, jusqu'à ce qu'un zombie surgisse ou que tu rentres en ville. Tant qu'il est là, `/action` ne te propose que deux choix :
@@ -149,7 +156,7 @@ Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâ
 
 ## 🛠️ L'atelier
 Une fois l'atelier construit, son salon s'ouvre. Lance `/inventaire` **dans ce salon** : le bouton **Craft avancé** te propose les recettes de ton métier. Les ingrédients viennent de ton sac, puis de la banque.
-💉 **Médecin** : remède contre l'infection · 🛡️ **Ingénieur** : structures de défense (et réparation de voiture, bientôt utile) · 🥘 **Cuisinier** : ragoût fortifiant (+40 faim, +2 PA au réveil), conserve (+25 faim), infusion (+15 soif, soulage l'infection) · 🪤 **Chasseur** : pièges avancés (bientôt utiles) · 🛠️ **Artisan** : armes/outils avancés (−2 PA et 2 dégâts par coup en combat)
+💉 **Médecin** : remède contre l'infection · 🛡️ **Ingénieur** : structures de défense (et réparation de voiture, bientôt utile) · 🥘 **Cuisinier** : ragoût fortifiant (+40 faim, +2 PA au réveil), conserve (+25 faim), infusion (+15 soif, soulage l'infection) · 🪤 **Chasseur** : pièges avancés, qui attrapent du gros gibier (voir Les pièges) · 🛠️ **Artisan** : armes/outils avancés (−2 PA et 2 dégâts par coup en combat)
 ✅ Quand toutes les ressources et tous les PA sont là, le palier est construit et son effet s'applique tout de suite. La mairie l'annonce.
 Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim et soif d'au moins 10).
 🧟 **Quand la défense ne suffit pas**, les zombies saccagent aussi les constructions, d'autant plus que l'écart est grand : d'abord les **structures de défense**, puis **un palier de palissade**, puis les **ressources et PA déjà versés** sur les chantiers et les maisons en cours, et enfin **un palier d'un bâtiment au hasard** (maisons comprises). Un palier perdu perd son effet, et il faut le reconstruire.
@@ -173,12 +180,13 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 🍶 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
 🔦 **Torche** : 1 Bois + 1 Tissu
 🪤 **Piège simple** : 2 Bois + 1 Ferraille
-🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner et le feu à sécuriser une zone (`/action`), l'arme de fortune aide au combat. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner, le feu à sécuriser une zone et le piège à attraper du gibier (`/action`), l'arme de fortune aide au combat. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
 
 ## 🍲 Manger et boire
 Le bouton **Manger / boire (sac)** consomme ce que tu as sur toi, partout, gratuitement. En ville, **Manger / boire (banque)** puise directement dans la réserve commune.
 🫐 **Baies** : +5 faim
 🍖 **Gibier** : +10 faim
+🦌 **Gros gibier** : +25 faim
 🍲 **Plat préparé** : +20 faim
 💧 **Eau brute** : +10 soif, mais **1 chance sur 5 de perdre 1 PV** : mieux vaut la purifier
 🍶 **Ration d'eau purifiée** : +30 soif, sans risque

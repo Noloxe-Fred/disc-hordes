@@ -156,36 +156,36 @@ model Groupe {
 }
 
 model Ville {
-  id                    Int         @id @default(autoincrement())
+  id                    Int           @id @default(autoincrement())
   nom                   String
   createurUtilisateurId Int
   // Nul tant que la ville est EN_CREATION : le rattachement a un groupe de territoires
   // externes n'a lieu qu'a /fonder-ville, jamais avant (conception.md §4).
   groupeId              Int?
-  statut                StatutVille @default(EN_CREATION)
-  dateCreation          DateTime    @default(now())
+  statut                StatutVille   @default(EN_CREATION)
+  dateCreation          DateTime      @default(now())
   dateFondation         DateTime?
   dateChute             DateTime?
   // Calcule une seule fois a /fonder-ville : floor(180 / habitants au lancement), plafonne a 40
   // (equilibrage.md §1). Conserve ici a titre d'historique/stats ; le PA max operatoire
   // de chaque joueur vit sur Joueur.paMax et ne bouge plus jamais ensuite.
   paMaxFondation        Int?
-  cycleActuel           Int         @default(0)
-  phaseActuelle         TypePhase   @default(JOUR)
+  cycleActuel           Int           @default(0)
+  phaseActuelle         TypePhase     @default(JOUR)
   // Debut de la phase courante ; sert a calculer le temps restant avant jour/nuit affiche
   // dans /personnage (conception.md §2, phase de 24h). Mis a jour a chaque bascule par
   // l'horloge commune de minuit (src/scheduler/cycle.ts).
   phaseDepuis           DateTime?
-  meteoActuelle         MeteoType   @default(NORMALE)
+  meteoActuelle         MeteoType     @default(NORMALE)
   // Rationnement decide par le maire (informatif, conception.md §5) : portions max par citoyen et par jour
   // (null = sans limite) et consigne libre, rappeles sur le panneau des chantiers
-  rationnementActif     Boolean     @default(false)
+  rationnementActif     Boolean       @default(false)
   rationNourriture      Int?
   rationEau             Int?
-  rationNote            String?     @db.Text
+  rationNote            String?       @db.Text
   // Chantier prioritaire designe par le maire (informatif), rappele sur le panneau des chantiers
   chantierPrioritaire   TypeBatiment?
-  maireId               Int?        @unique
+  maireId               Int?          @unique
   mandatFinCycle        Int?
   // Message d'annonce poste dans #fonder-une-colonie a /creer-ville ; supprime avec les
   // messages de demande a /fonder-ville (conception.md §4 : "messages ... supprimes/archives").
@@ -193,24 +193,24 @@ model Ville {
   // Panneau permanent des chantiers poste dans #chantiers a la fondation (discord/chantiers.ts)
   messageChantiersId    String?
   // Structures de defense avancees posees (ingenieur) : +3 defense chacune, definitivement (equilibrage.md §8)
-  structuresDefense     Int         @default(0)
+  structuresDefense     Int           @default(0)
   // Panneau permanent des maisons privees poste dans #maisons-privees (discord/maisons.ts)
   messageMaisonsId      String?
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
-  projet                String?     @db.Text
+  projet                String?       @db.Text
 
-  createur       Utilisateur          @relation("CreateurVille", fields: [createurUtilisateurId], references: [id])
-  groupe         Groupe?              @relation(fields: [groupeId], references: [id])
-  maire          Joueur?              @relation("MaireVille", fields: [maireId], references: [id])
-  habitants      Joueur[]             @relation("HabitantsVille")
-  demandes       DemandeInscription[]
+  createur        Utilisateur          @relation("CreateurVille", fields: [createurUtilisateurId], references: [id])
+  groupe          Groupe?              @relation(fields: [groupeId], references: [id])
+  maire           Joueur?              @relation("MaireVille", fields: [maireId], references: [id])
+  habitants       Joueur[]             @relation("HabitantsVille")
+  demandes        DemandeInscription[]
   demandesAccueil DemandeAccueil[]
-  inventaire     InventaireVille[]
-  batiments      BatimentVille[]
-  attaques       CycleAttaque[]
-  zombiesErrants ZombieErrant[]
-  elections      Election[]
-  journal        JournalEntree[]
+  inventaire      InventaireVille[]
+  batiments       BatimentVille[]
+  attaques        CycleAttaque[]
+  zombiesErrants  ZombieErrant[]
+  elections       Election[]
+  journal         JournalEntree[]
 }
 
 enum StatutDemande {
@@ -281,8 +281,43 @@ model Zone {
   decouvertesPar   CarteDecouverte[]
   stocksRessources ZoneRessourceStock[]
   zombiesErrants   ZombieErrant[]
+  piege            Piege?
 
   @@unique([groupeId, nom])
+}
+
+enum TypePiege {
+  SIMPLE // capture du Gibier
+  AVANCE // capture du Gros gibier
+}
+
+// Piege pose dans une zone (equilibrage.md §6 et §8) : un seul par zone, permanent. A chaque aube, s'il est vide, il
+// capture une proie avec une chance qui depend du palier de la zone (puisee dans le stock naturel de la zone) ; la
+// prise attend dedans qu'un survivant present dans la zone la releve, quelle que soit sa ville.
+model Piege {
+  id       Int       @id @default(autoincrement())
+  zoneId   Int       @unique
+  type     TypePiege @default(AVANCE)
+  poseurId Int?
+  poseLe   DateTime  @default(now())
+  // Prise en attente (une proie) : le piege ne capture plus rien tant qu'elle n'est pas relevee
+  priseLe  DateTime?
+
+  zone     Zone         @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  poseur   Joueur?      @relation("PiegesPoses", fields: [poseurId], references: [id], onDelete: SetNull)
+  connuPar PiegeConnu[]
+}
+
+// Joueurs qui voient un piege sur leur carte : son poseur, puis ceux qui recoivent sa carte en partage
+model PiegeConnu {
+  id       Int @id @default(autoincrement())
+  piegeId  Int
+  joueurId Int
+
+  piege  Piege  @relation(fields: [piegeId], references: [id], onDelete: Cascade)
+  joueur Joueur @relation(fields: [joueurId], references: [id], onDelete: Cascade)
+
+  @@unique([piegeId, joueurId])
 }
 
 // Arete non orientee stockee une seule fois (zoneAId < zoneBId, applique cote code) ;
@@ -502,20 +537,22 @@ model Joueur {
   // Zone ou le joueur est mort (null = en ville) : son corps y reste et son sac y est fouillable (conception.md §3)
   zoneMortId            Int?
 
-  utilisateur       Utilisateur        @relation(fields: [utilisateurId], references: [id])
-  ville             Ville?             @relation("HabitantsVille", fields: [villeId], references: [id])
-  villeDirigee      Ville?             @relation("MaireVille")
-  zoneActuelle      Zone?              @relation(fields: [zoneActuelleId], references: [id])
-  inventaire        InventaireJoueur[]
-  cartesDecouvertes CarteDecouverte[]
-  gardesMontees     GardeVolontaire[]
-  candidatures      Candidature[]
-  votes             Vote[]
-  journal           JournalEntree[]
-  zombieDevenu      ZombieErrant?      @relation("ZombieTransforme")
-  zombieAffronte    ZombieErrant?      @relation("ZombieCible")
+  utilisateur         Utilisateur          @relation(fields: [utilisateurId], references: [id])
+  ville               Ville?               @relation("HabitantsVille", fields: [villeId], references: [id])
+  villeDirigee        Ville?               @relation("MaireVille")
+  zoneActuelle        Zone?                @relation(fields: [zoneActuelleId], references: [id])
+  inventaire          InventaireJoueur[]
+  cartesDecouvertes   CarteDecouverte[]
+  gardesMontees       GardeVolontaire[]
+  candidatures        Candidature[]
+  votes               Vote[]
+  journal             JournalEntree[]
+  zombieDevenu        ZombieErrant?        @relation("ZombieTransforme")
+  zombieAffronte      ZombieErrant?        @relation("ZombieCible")
   contributionsMaison ContributionMaison[]
-  demandesAccueil   DemandeAccueil[]
+  demandesAccueil     DemandeAccueil[]
+  piegesPoses         Piege[]              @relation("PiegesPoses")
+  piegesConnus        PiegeConnu[]
 }
 
 // =========================================================================

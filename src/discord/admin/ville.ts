@@ -290,6 +290,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
     // Sacs des habitants, et des corps laisses par ceux qui sont partis (discord/depouilles.ts)
     prisma.inventaireJoueur.deleteMany({ where: { joueur: { villeId } } }),
     prisma.carteDecouverte.deleteMany({ where: { joueurId: { in: joueurIds } } }),
+    prisma.piegeConnu.deleteMany({ where: { joueurId: { in: joueurIds } } }),
     prisma.contributionMaison.deleteMany({ where: { joueurId: { in: joueurIds } } }),
     // Valeurs de depart d'un personnage (schema Joueur) ; le PA max fige a l'arrivee est conserve
     ...habitants.map((h) =>

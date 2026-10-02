@@ -1,6 +1,7 @@
 import type { PalierZone } from "@prisma/client";
 import { TYPES_ZONE } from "../config/zones";
 import type { CaseCarte } from "../services/carte";
+import { imageEmoji } from "./emojis";
 import { COULEURS, COULEURS_TYPE_ZONE, EPAISSEUR_CADRE, debutSvg, echapperSvg as echapper, svgEnPng, titreSvg } from "./charteImages";
 
 // Rendu PNG de la carte d'un joueur (SVG rasterise par resvg, sans dependance systeme). Disposition calquee
@@ -9,7 +10,8 @@ import { COULEURS, COULEURS_TYPE_ZONE, EPAISSEUR_CADRE, debutSvg, echapperSvg as
 // (ville -> proche -> moyenne -> eloignee d'un meme type), soit un quart d'anneau (types voisins d'un palier).
 // Charte inspiree de la carte de MyHordes : ecran radar vert olive quadrille dans un cadre brun, zones
 // carrees, zones inconnues en noir, position courante en vert lumineux, citoyens en points jaunes cercles
-// de rouge. Couleurs, polices et cadre : charte commune des images (charteImages.ts).
+// de rouge, pieges connus en icone au coin de leur zone. Couleurs, polices et cadre : charte commune des images
+// (charteImages.ts).
 
 const LARGEUR = 800;
 const HAUTEUR = 850;
@@ -48,6 +50,8 @@ export interface DonneesRenduCarte {
   grille: { palier: PalierZone; cases: CaseCarte[] }[];
   // Citoyens de la ville du joueur presents dans chaque zone (joueurs en ville exclus)
   citoyensParZone: Map<number, number>;
+  // Zones ou le joueur connait un piege (le sien ou recu en partage de carte)
+  pieges: Set<number>;
 }
 
 function point(rayon: number, angle: number): { x: number; y: number } {
@@ -127,6 +131,13 @@ export function construireSvgCarte(donnees: DonneesRenduCarte): string {
         );
       } else {
         noeuds.push(carre(x, y, DEMI_ZONE, `fill="${COULEUR.inconnue}" stroke="${COULEUR.anneau}" stroke-width="2"`));
+      }
+      // Piege connu : icone dans le coin superieur droit de la zone, a cheval sur son bord
+      if (donnees.pieges.has(c.zoneId)) {
+        noeuds.push(
+          `<circle cx="${x + DEMI_ZONE}" cy="${y - DEMI_ZONE}" r="15" fill="${COULEURS.contour}" stroke="${COULEUR.bordZone}" stroke-width="1.5"/>` +
+            `<image x="${x + DEMI_ZONE - 11}" y="${y - DEMI_ZONE - 11}" width="22" height="22" href="${imageEmoji("🪤")}"/>`,
+        );
       }
       if (citoyens > 0) noeuds.push(pointsCitoyens(x, y, citoyens));
       else if (!connue(c)) {

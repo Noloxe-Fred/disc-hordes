@@ -108,6 +108,7 @@ Bouton « Manger / boire (sac) » de `/inventaire`, partout, et « Manger / boir
 |---|---|
 | Baies | +5 faim |
 | Gibier | +10 faim |
+| Gros gibier | +25 faim |
 | Eau brute | +10 soif, **20 % de risque de perdre 1 PV** par unité bue (mort possible : cause « eau croupie ») |
 | Plat préparé | +20 faim |
 | Conserve longue durée | +25 faim |
@@ -115,7 +116,7 @@ Bouton « Manger / boire (sac) » de `/inventaire`, partout, et « Manger / boir
 | Ration d'eau purifiée | +30 soif |
 | Infusion médicinale | +15 soif (l'atténuation du malus d'infection n'est pas encore appliquée) |
 
-Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gibier crus = 15 faim contre 20 pour le plat préparé ; 2 Gibier = 20 contre 25 pour la conserve ; 2 Eau brute = 20 soif à risque contre 30 sans risque pour la ration. Les autres gibiers du loot (petit, gros, rare) ne se consomment pas (voir section 5, objets sans mécanique définie).
+Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gibier crus = 15 faim contre 20 pour le plat préparé ; 2 Gibier = 20 contre 25 pour la conserve ; 2 Eau brute = 20 soif à risque contre 30 sans risque pour la ration. Gros gibier (+25 faim, validé le 2026-10-03) : surtout rapporté par le piège avancé du chasseur (section 8), il nourrit plus que 2 Gibier (+20) mais pèse 3 et reste sous le ragoût fortifiant (+40). Le petit gibier et le gibier rare ne se consomment pas (voir section 5, objets sans mécanique définie).
 
 ### Régénération des ressources naturelles
 - Ressources **naturelles** (bois, baies, gibier) : régénèrent de **+40 % du stock max de la zone par cycle** (jour+nuit), plafonnées au stock max.
@@ -237,6 +238,8 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Fouiller/looter la zone courante | 2 PA | 3 PA |
 | Allumer un feu (territoire externe, consomme 1 Feu) | 1 PA | 2 PA |
 | Sieste (zone avec un feu, une fois par phase) | 0 PA | 0 PA |
+| Poser un piège, simple ou avancé (forêt ou montagnes, consomme le piège) | 1 PA | 2 PA |
+| Relever la prise d'un piège | 0 PA | 0 PA |
 | Combat — attaquer (par échange) | 2 PA (arme : −1 ou −2, jamais sous 1) | 3 PA (idem) |
 | Combat — fuir | 1 PA | 2 PA (+ risque d'échec accru la nuit) |
 | Craft simple (`/inventaire`) | 1 PA (symbolique) + ingrédients | idem |
@@ -284,7 +287,7 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Tirage d'une fouille** : le nombre d'objets est tiré uniformément dans la fourchette de la case (ex. 2–3), puis chaque objet est tiré indépendamment avec les probabilités de la case telles quelles. Le complément à 100 % (ex. 10 % pour 50 + 30 + 10 %) est une trouvaille sans valeur : cet objet-là ne rapporte rien. Une fouille peut donc rapporter moins d'objets que la fourchette, voire aucun.
 
-**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Petit gibier, Gros gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire.
+**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Petit gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire. Le Gros gibier en est sorti le 2026-10-03 (+25 faim, section 2).
 
 ### Poids et capacité (sac et banque de ville)
 
@@ -351,7 +354,7 @@ Coût PA symbolique (1 PA), coût réel = ingrédients. Liste évolutive.
 | Arme de fortune | 1 Ferraille + 1 Bois | −1 PA de coût sur l'action "attaquer" |
 | Ration d'eau purifiée | 2 Eau brute + 1 Tissu (filtre) | +30 soif, sans risque contrairement à l'eau brute |
 | Torche | 1 Bois + 1 Tissu | Annule le surcoût nocturne d'un seul déplacement (consommable, un usage) |
-| Piège simple | 2 Bois + 1 Ferraille | Génère une petite chance passive de gibier sur la zone où il est posé (moins efficace que le piège avancé chasseur) |
+| Piège simple | 2 Bois + 1 Ferraille | Posé dans une zone de forêt ou de montagnes : capture 1 Gibier à chaque aube avec 60 / 75 / 90 % de chance (proche / moyenne / éloignée) ; mêmes règles que le piège avancé (section 8), qui capture du Gros gibier |
 
 ---
 
@@ -394,7 +397,7 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 | **Cuisinier** | Ragoût fortifiant | 1 Gibier + 2 Baies + 1 Eau purifiée | 5 | +40 faim + 2 PA au prochain réveil |
 | **Cuisinier** | Conserve longue durée | 2 Gibier + 1 Tissu (emballage) | 4 | +25 faim, ne se dégrade jamais, idéal en réserve de ville pour le rationnement |
 | **Cuisinier** | Infusion médicinale | 1 Plante médicinale + 1 Eau purifiée | 4 | +15 soif, atténue d'1 point le malus PA de l'infection pendant 1 phase (soulage sans guérir) |
-| **Chasseur/trappeur** | Pièges avancés | 2 Ferraille + 2 Bois + 1 Gibier (appât) | 5 | Chance de loot passif nettement supérieure au piège simple |
+| **Chasseur/trappeur** | Pièges avancés | 2 Ferraille + 2 Bois + 1 Gibier (appât) | 5 | Posé dans une zone de forêt ou de montagnes : 60 / 75 / 90 % de chance (proche / moyenne / éloignée) de capturer un Gros gibier à chaque aube |
 | **Artisan** | Armes/outils avancés | 3 Ferraille + 2 Bois + 1 Pièce mécanique | 6 | −2 PA sur "attaquer" + bonus dégâts en combat |
 
 **Fonctionnement (validé le 2026-09-29)** :
@@ -402,7 +405,8 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 - **Remède contre l'infection** : administré par le **médecin** (option du bouton « Soigner » de `/action`, sur soi ou un survivant au même endroit, gratuit en PA). L'infection étant cachée, le joueur doit dire au médecin qu'il est infecté : si la cible ne l'était pas, le remède est **consommé** et un message d'erreur le signale.
 - **Structures de défense avancées** : posées avec le bouton « Poser une structure » du panneau `#chantiers` (sac, puis banque) : **+3 défense** chacune (jusqu'à leur destruction par une attaque mal contenue, section 3), **5 au plus (+15)**, comptées dans la défense de l'aube (section 3).
 - **Infusion médicinale** : le malus PA de l'infection est réduit de **10 points** (ex. −25 % → −15 %, sans passer sous 0) jusqu'au prochain changement de phase ; l'incubation n'est pas ralentie.
-- **Réparation voiture** et **Pièges avancés** : fabricables, effet à venir (voiture T39, pièges non chiffrés).
+- **Réparation voiture** : fabricable, effet à venir (T39).
+- **Pièges (validé le 2026-10-03)** — le **piège simple** (craft simple, section 6) capture du **Gibier**, le **piège avancé** du chasseur du **Gros gibier** ; sinon, mêmes règles : posés en territoire externe avec le bouton « Piège » de `/action` (le piège du sac, 1 PA, 2 la nuit ; un bouton par type de piège porté), par n'importe quel survivant qui en porte un, **uniquement en forêt ou en montagnes** (là où vit le gibier, section 5) et **un seul piège par zone**. Le piège est **permanent**. À chaque aube (une fois par aube pour le groupe, juste après la repousse des ressources naturelles), un piège vide capture **1 proie** avec une chance qui croît avec l'éloignement de la zone : **60 %** en zone proche, **75 %** en moyenne, **90 %** en éloignée ; la proie est puisée dans le stock naturel de la zone (rien si le stock est vide). La prise attend dans le piège, qui ne capture plus rien tant qu'elle n'est pas relevée (**1 prise au plus**). **N'importe quel survivant présent dans la zone, de n'importe quelle ville**, peut la relever gratuitement (place dans le sac requise) ; le relevage est annoncé dans le salon de la zone. Le piège apparaît sur la **carte de son poseur** et de ceux qui reçoivent ensuite sa carte en partage (qui la retransmettent à leur tour) ; les autres ne le voient qu'en passant dans la zone.
 
 **Coûts PA (validés)** : seuls le remède et la réparation voiture avaient un chiffre exact au premier jet ; les 6 autres recettes n'étaient couvertes que par la fourchette générale de la section 4 (4–8 PA). Chiffrage retenu par palier d'utilité, cohérent avec les deux valeurs déjà fixées : 8 PA pour les bonus durables/structurels (structures de défense, à l'image de la réparation voiture), 6 PA pour un bonus de combat permanent (armes/outils avancés, même tier que le remède), 5 PA pour un effet notable mais consommable (pièges avancés, ragoût fortifiant), 4 PA pour un effet mineur/de confort (conserve longue durée, infusion médicinale).
 
@@ -439,4 +443,4 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 
 ## 12. Points ouverts restants
 
-- **Effet mécanique des objets de loot sans recette** (section 5) : Petit/Gros/rare gibier, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.
+- **Effet mécanique des objets de loot sans recette** (section 5) : Petit gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.

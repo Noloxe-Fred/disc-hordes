@@ -21,6 +21,7 @@ import { verifierElections, verifierFinMandat } from "../discord/election";
 import { INTERVALLE_JOURNAL_MS, publierJournaux } from "../discord/journal";
 import { cloreSanctions } from "../discord/sanction";
 import { produireEauPuits } from "../services/puits";
+import { capturerPieges } from "../services/pieges";
 import { regenererRessourcesNaturelles } from "../services/stocks";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
@@ -260,8 +261,9 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   });
 
   const puits = await produireEauPuits(ville.id);
-  // Les ressources naturelles des territoires repoussent (une fois par aube pour le groupe)
-  if (ville.groupeId !== null) await regenererRessourcesNaturelles(ville.groupeId);
+  // Les ressources naturelles des territoires repoussent, puis les pieges avances capturent (une fois par aube pour le
+  // groupe)
+  if (ville.groupeId !== null && (await regenererRessourcesNaturelles(ville.groupeId))) await capturerPieges(ville.groupeId);
   await posterAnnonceCycle(guild, ville.id, {
     titre: `☀️ Jour ${nouveauCycle} — ${ville.nom}`,
     resume: `☀️ Le jour se lève sur **${ville.nom}** (cycle ${nouveauCycle}).`,

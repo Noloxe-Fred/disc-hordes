@@ -20,6 +20,7 @@ import { DUREE_CANDIDATURES_HEURES, DUREE_DEFIANCE_HEURES, DUREE_VOTE_HEURES } f
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
+import { CHANCE_CAPTURE_PIEGE, PIEGES } from "../config/pieges";
 import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
@@ -34,6 +35,7 @@ import { declencherElectionJoueur, electionEnCours } from "../discord/election";
 import { demandeEnAttente, formulaireAccueil, villesAccueillantes } from "../discord/accueil";
 import { formulairePriorite, formulaireRationnement, formulaireSanction } from "../discord/maire";
 import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
+import { coutPosePiege, piegeAutorise, piegesEnSac, poserPiege, releverPiege } from "../discord/pieges";
 import { bonusGarde, estDeGarde, monterLaGarde } from "../discord/garde";
 import { formulaireSoin } from "../discord/soin";
 import { corpsAuMemeEndroit, formulaireFouilleCorps } from "../discord/depouilles";
@@ -54,7 +56,7 @@ import { destinationsDepuis } from "../services/zones";
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
 // « Fouiller un corps » quand un corps est sur place (discord/depouilles.ts), « Carte », « Partager la carte », « Soigner », la nuit en ville « Monter la garde », dehors « Allumer un feu » puis
-// « Sieste », « Maire » pour le maire (discord/maire.ts), « Élection » tant qu'aucune n'est en cours, dehors
+// « Sieste », dehors « Piège » (poser un piège simple ou avancé, ou relever sa prise, discord/pieges.ts), « Maire » pour le maire (discord/maire.ts), « Élection » tant qu'aucune n'est en cours, dehors
 // « Demander l'accueil » (discord/accueil.ts),
 // « Quitter la ville »). Face a un zombie
 // (discord/combat.ts), seuls « Attaquer » et « Fuir » sont proposes. Mort : quitter sa ville pour en
@@ -95,7 +97,7 @@ function boutonRetour(): ButtonBuilder {
 async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Guild, joueurId: number) {
   const joueur = await prisma.joueur.findUniqueOrThrow({
     where: { id: joueurId },
-    include: { ville: true, zoneActuelle: true },
+    include: { ville: true, zoneActuelle: { include: { piege: true } } },
   });
   const ville = joueur.ville!;
   const groupeId = ville.groupeId;
@@ -110,6 +112,10 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   const exclu = joueur.statut === StatutJoueur.EXCLU;
   const paActuel = joueur.paActuel ?? 0;
   const feuIci = feuActif(joueur.zoneActuelle, ville);
+  // Piege : celui de la zone, sinon les pieges du sac a poser dans une zone qui s'y prete
+  const piegeIci = joueur.zoneActuelle?.piege ?? null;
+  const piegesAPoser =
+    joueur.zoneActuelle !== null && piegeIci === null && piegeAutorise(joueur.zoneActuelle.nom) ? await piegesEnSac(joueurId) : [];
   const deGarde = await estDeGarde(joueurId, ville.id, ville.cycleActuel);
   // Garde volontaire : la nuit, en ville, pour les vivants qui ne la montent pas deja
   const gardePossible =
@@ -120,6 +126,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ` · ⚡ ${paActuel} / ${calculerPaMax(joueur).paMax} PA` +
     (ville.phaseActuelle === TypePhase.NUIT ? " · 🌙 nuit : actions plus coûteuses" : " · ☀️ jour") +
     (feuIci ? "\n🔥 Un feu brûle ici : zombies deux fois moins nombreux, sieste possible." : "") +
+    (piegeIci ? `\n🪤 Un piège est posé ici${piegeIci.priseLe ? " : une prise attend d'être relevée !" : ", vide pour l'instant."}` : "") +
     (deGarde && ville.phaseActuelle === TypePhase.NUIT ? "\n🛡️ Vous montez la garde cette nuit : restez en ville jusqu'à l'aube." : "") +
     (exclu ? "\nVous êtes **exclu** de votre ville : vous ne pouvez pas y rentrer." : "");
   // Election du maire : un citoyen vivant la declenche quand aucune n'est en cours (discord/election.ts)
@@ -140,6 +147,38 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
   ).addActionRowComponents(
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("confirmer-feu").setLabel(`Allumer (${coutDuFeu} PA)`).setEmoji("🔥").setStyle(ButtonStyle.Primary),
+      boutonRetour(),
+    ),
+  );
+
+  // Piege : relever la prise du piege de la zone, ou poser celui du sac (confirmation avant de depenser des PA)
+  const coutDuPiege = coutPosePiege(ville.phaseActuelle);
+  const chanceCapture = joueur.zoneActuelle ? Math.round(CHANCE_CAPTURE_PIEGE[joueur.zoneActuelle.palier] * 100) : 0;
+  const priseIci = piegeIci ? PIEGES[piegeIci.type].prise : null;
+  const ecranPiege = encadre(
+    piegeIci
+      ? `${entete}\n\n` +
+          (piegeIci.priseLe
+            ? `Un ${emojiObjet(priseIci!)} **${priseIci}** est pris dans le ${PIEGES[piegeIci.type].objet.toLowerCase()}. Le relever ? ` +
+              "N'importe quel survivant de passage peut le faire."
+            : `Le ${PIEGES[piegeIci.type].objet.toLowerCase()} est vide. À chaque aube, il a **${chanceCapture} %** de chances ` +
+              `d'attraper un ${emojiObjet(priseIci!)} ${priseIci}.`)
+      : `${entete}\n\n**Poser un piège** pour **${coutDuPiege} PA** ? Il restera en place et, à chaque aube, aura ` +
+          `**${chanceCapture} %** de chances d'attraper sa proie ici (plus la zone est loin, plus il attrape). ` +
+          "N'importe qui de passage pourra relever la prise.\n" +
+          piegesAPoser.map((type) => `${emojiObjet(PIEGES[type].objet)} **${PIEGES[type].objet}** : ${emojiObjet(PIEGES[type].prise)} ${PIEGES[type].prise}`).join("\n"),
+  ).addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      ...(piegeIci?.priseLe
+        ? [new ButtonBuilder().setCustomId("relever-piege").setLabel("Relever").setEmoji("🪤").setStyle(ButtonStyle.Primary)]
+        : []),
+      ...piegesAPoser.map((type) =>
+        new ButtonBuilder()
+          .setCustomId(`poser-piege:${type}`)
+          .setLabel(`Poser : ${PIEGES[type].objet.toLowerCase()} (${coutDuPiege} PA)`)
+          .setEmoji(emojiObjet(PIEGES[type].objet))
+          .setStyle(ButtonStyle.Primary),
+      ),
       boutonRetour(),
     ),
   );
@@ -208,6 +247,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
               ? new ButtonBuilder().setCustomId("sieste").setLabel("Sieste").setEmoji("😴").setStyle(ButtonStyle.Secondary)
               : new ButtonBuilder().setCustomId("feu").setLabel("Allumer un feu").setEmoji("🔥").setStyle(ButtonStyle.Secondary),
           ]
+        : []),
+      ...(piegeIci || piegesAPoser.length > 0
+        ? [new ButtonBuilder().setCustomId("piege").setLabel("Piège").setEmoji("🪤").setStyle(ButtonStyle.Secondary)]
         : []),
       new ButtonBuilder().setCustomId("quitter-ville").setLabel("Quitter la ville").setEmoji("🚪").setStyle(ButtonStyle.Danger),
     ),
@@ -435,6 +477,19 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     } else if (clic.customId === "confirmer-feu") {
       await clic.deferUpdate();
       await clic.editReply({ components: [encadre(await allumerFeu(guild, joueurId))] });
+      return;
+    } else if (clic.customId === "piege") {
+      await clic.update({ components: [ecranPiege] });
+    } else if (clic.customId.startsWith("poser-piege:") || clic.customId === "relever-piege") {
+      await clic.deferUpdate();
+      const type = piegesAPoser.find((t) => clic.customId === `poser-piege:${t}`);
+      const resultat =
+        clic.customId === "relever-piege"
+          ? await releverPiege(guild, joueurId)
+          : type
+            ? await poserPiege(guild, joueurId, type)
+            : "Ce piège n'est plus dans votre sac.";
+      await clic.editReply({ components: [encadre(resultat)] });
       return;
     } else if (clic.customId === "sieste") {
       await clic.deferUpdate();

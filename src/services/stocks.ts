@@ -8,11 +8,12 @@ import { stocksActuels } from "../game/stocks";
 // une aube de plus dans la foulee)
 const ECART_MIN_REGENERATIONS_MS = 12 * 3_600_000;
 
-// Aube : +40 % du max de ressources naturelles dans chaque zone du groupe, plafonne au max
-export async function regenererRessourcesNaturelles(groupeId: number): Promise<void> {
+// Aube : +40 % du max de ressources naturelles dans chaque zone du groupe, plafonne au max. Renvoie false si la
+// regeneration de cette aube a deja eu lieu.
+export async function regenererRessourcesNaturelles(groupeId: number): Promise<boolean> {
   const groupe = await prisma.groupe.findUnique({ where: { id: groupeId }, include: { zones: true } });
-  if (!groupe) return;
-  if (groupe.derniereRegenRessources && Date.now() - groupe.derniereRegenRessources.getTime() < ECART_MIN_REGENERATIONS_MS) return;
+  if (!groupe) return false;
+  if (groupe.derniereRegenRessources && Date.now() - groupe.derniereRegenRessources.getTime() < ECART_MIN_REGENERATIONS_MS) return false;
   await prisma.$transaction([
     ...groupe.zones.map((zone) => {
       const max = STOCK_NATUREL_MAX[zone.palier];
@@ -21,6 +22,7 @@ export async function regenererRessourcesNaturelles(groupeId: number): Promise<v
     }),
     prisma.groupe.update({ where: { id: groupeId }, data: { derniereRegenRessources: new Date() } }),
   ]);
+  return true;
 }
 
 // Recharge par un MJ ou un Admin (a la place des evenements IA prevus) : stocks remis a leur maximum / valeur de depart
