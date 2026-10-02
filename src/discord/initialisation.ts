@@ -59,14 +59,20 @@ async function placerStaffEnHaut(guild: Guild, roleAdmin: Role, roleMj: Role): P
   }
 }
 
-// Porteurs actuels des roles du staff, par cle ; une ancienne cle renommee (structure.ts) compte pour la nouvelle
-async function porteursStaff(guild: Guild): Promise<Map<string, string[]>> {
+// Porteurs actuels des roles du staff, par cle ; une ancienne cle renommee (structure.ts) compte pour la nouvelle.
+// Premiere initialisation (pas encore de role Admin) : le role Admin va aux membres ayant la permission Discord
+// Administrateur, Admins d'office (permissions.ts).
+async function porteursStaff(guild: Guild, membres: Collection<string, GuildMember>): Promise<Map<string, string[]>> {
   const porteurs = new Map<string, string[]>();
   const sources: (readonly [string, string])[] = [...ROLES_STAFF.map((cle) => [cle, cle] as const), ...CLES_RENOMMEES];
   for (const [source, cible] of sources) {
     const role = await trouverRole(guild, source);
     if (!role) continue;
     porteurs.set(cible, [...(porteurs.get(cible) ?? []), ...role.members.map((m) => m.id)]);
+  }
+  if (!porteurs.has(ROLE_ADMIN.cle)) {
+    const administrateurs = membres.filter((m) => !m.user.bot && m.permissions.has(PermissionFlagsBits.Administrator));
+    porteurs.set(ROLE_ADMIN.cle, administrateurs.map((m) => m.id));
   }
   return porteurs;
 }
@@ -96,7 +102,7 @@ export async function initialiserServeur(guild: Guild): Promise<string> {
 
   // Liste complete des membres, demandee une seule fois (Discord la limite) : porteurs du staff, puis role Nomade
   const membres = await tousLesMembres(guild);
-  const porteurs = await porteursStaff(guild);
+  const porteurs = await porteursStaff(guild, membres);
   let rendus = 0;
   try {
     await supprimerRessources(guild, [

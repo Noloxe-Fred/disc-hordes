@@ -4,9 +4,9 @@ const { execSync } = require("node:child_process");
 
 const run = (cmd) => execSync(cmd, { stdio: "inherit" });
 
-run("npx prisma generate");
-run("npx prisma migrate deploy");
-run("npx prisma db seed"); // idempotent (upserts) : resynchronise objets et recettes
-run("npx tsc -p tsconfig.json");
+run("npx --no-install prisma generate");
+run("npx --no-install prisma migrate deploy");
+run("npx --no-install prisma db seed"); // idempotent (upserts) : resynchronise objets et recettes
+run("npx --no-install tsc -p tsconfig.json");
 
 require("./dist/index.js");
