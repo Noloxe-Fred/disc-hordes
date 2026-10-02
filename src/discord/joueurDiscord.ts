@@ -190,6 +190,19 @@ export async function changerDeVilleDiscord(guild: Guild, joueurId: number, anci
   await synchroniserAccesJoueur(guild, joueurId);
 }
 
+// Arrivee d'un nouveau personnage dans une ville en jeu (ajout par un Admin, discord/admin/joueur.ts) : role-ville et
+// Citoyen a la place de Mort et Nomade, puis acces recalcules. Le joueur est deja cree en base.
+export async function ajouterJoueurEnVilleDiscord(guild: Guild, joueurId: number): Promise<void> {
+  const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
+  const membre = await guild.members.fetch(joueur.utilisateur.discordId).catch(() => null);
+  if (!membre) return;
+  await ajouterRole(membre, `role:ville:${joueur.villeId}`);
+  await ajouterRole(membre, ROLE_CITOYEN.cle);
+  await retirerRole(membre, ROLE_MORT.cle);
+  await retirerRole(membre, ROLE_NOMADE.cle);
+  await synchroniserAccesJoueur(guild, joueurId);
+}
+
 // Exclusion d'un joueur (conception.md §5) : il perd l'acces aux salons de sa ville mais garde son role-ville,
 // qui lui laisse la vue des territoires externes ou il continue d'exister.
 export async function appliquerExclusionDiscord(guild: Guild, joueurId: number): Promise<void> {

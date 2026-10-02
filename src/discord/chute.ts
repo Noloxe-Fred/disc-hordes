@@ -125,7 +125,7 @@ async function posterRecapitulatif(guild: Guild, villeId: number): Promise<void>
       new TextDisplayBuilder().setContent(
         [
           `**Nuits survécues :** ${Math.max(0, ville.cycleActuel - 1)}`,
-          `**Habitants :** ${ville.habitants.length} (PA max individuel fixé à la fondation : ${ville.paMaxFondation ?? "?"})`,
+          `**Habitants :** ${ville.habitants.length} (PA max individuel de la ville : ${ville.paMaxFondation ?? "?"})`,
           ville.maire ? `**Dernier maire :** <@${ville.maire.utilisateur.discordId}>` : null,
           pireAttaque
             ? `**Plus forte attaque subie :** ${pireAttaque.forceAttaque.toFixed(1)} (cycle ${pireAttaque.cycleNumero}, défense ${pireAttaque.defenseTotale})`

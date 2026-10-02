@@ -1,4 +1,4 @@
-import { CauseMort, Metier, StatutJoueur, StatutVille } from "@prisma/client";
+import { CauseMort, Metier, StatutDemande, StatutJoueur, StatutVille } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonStyle,
@@ -9,7 +9,7 @@ import {
   type Guild,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../../config/metiers";
+import { JOUEURS_MAX_PAR_VILLE, NOM_METIER, PA_CIBLE_VILLE, PA_MAX_PLAFOND, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../../config/metiers";
 import { LIBELLE_CAUSE_MORT } from "../../config/mort";
 import { JAUGE_MAX, PV_MAX } from "../../config/sante";
 import { prisma } from "../../db";
@@ -19,18 +19,24 @@ import { infligerDegats } from "../../game/sante";
 import { deplacerJoueur } from "../deplacement";
 import { pourvoirMairieVacante } from "../election";
 import { verifierZombiesErrants } from "../zombieErrant";
-import { appliquerExclusionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
+import { trouverJoueurActif } from "../../services/joueur";
+import { trouverOuCreerUtilisateur } from "../../services/utilisateur";
+import { ajouterJoueurEnVilleDiscord, appliquerExclusionDiscord, retablirJoueurDiscord } from "../joueurDiscord";
 import { rafraichirMessageVille } from "../messageVille";
+import { estMjActif } from "../permissions";
+import { posterDansMairie } from "../villeStructure";
 import {
   DELAI_SELECTION_MS,
   champChoix,
   champMembre,
   champTexte,
+  champVille,
   journaliser,
   lireAjustement,
   lireChoix,
   lireEntier,
   lireJoueur,
+  lireMembre,
   ouvrirFormulaire,
   repondre,
   type FamilleAdmin,
@@ -267,6 +273,113 @@ async function changerMetier(interaction: ButtonInteraction, guild: Guild) {
   );
 }
 
+// --- Ajouter a une ville : nouveau personnage pour un membre sans ville, dans une ville en creation ou en jeu ---
+// En creation : inscrit comme par une demande acceptee. En jeu : arrive en ville, pleines jauges, et le PA max de tous
+// les habitants vivants est recalcule sur leur nouveau nombre (equilibrage.md §1, contrairement au demenagement). Les
+// places (habitants, metiers) peuvent etre depassees.
+
+// PA max de la ville recalcule comme a la fondation, sur ses habitants vivants (exclus compris) : applique a chacun
+// (PA actuels ramenes au nouveau maximum s'il baisse), le nouveau venu commencant a pleins PA
+async function recalculerPaMaxVille(villeId: number, nouveauId: number) {
+  const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
+  const habitants = await prisma.joueur.findMany({
+    where: { villeId, dateSortie: null, statut: { in: [StatutJoueur.VIVANT, StatutJoueur.EXCLU] } },
+  });
+  const paMax = Math.min(PA_MAX_PLAFOND, Math.floor(PA_CIBLE_VILLE / habitants.length));
+  await prisma.$transaction([
+    prisma.ville.update({ where: { id: villeId }, data: { paMaxFondation: paMax } }),
+    ...habitants.map((h) =>
+      prisma.joueur.update({
+        where: { id: h.id },
+        data: { paMax, paActuel: h.id === nouveauId ? paMax : Math.min(h.paActuel ?? 0, paMax) },
+      }),
+    ),
+  ]);
+  return { paMax, ancien: ville.paMaxFondation, vivants: habitants.length };
+}
+
+async function ajouterAVille(interaction: ButtonInteraction, guild: Guild) {
+  const champVilles = await champVille([StatutVille.EN_CREATION, StatutVille.ACTIVE]);
+  if (!champVilles) {
+    await repondre(interaction, "Aucune ville en création ou en jeu.");
+    return;
+  }
+  const soumission = await ouvrirFormulaire(interaction, "Ajouter un joueur à une ville", [
+    champMembre(),
+    champVilles,
+    champChoix("metier", "Métier", [
+      { label: "Simple citoyen (sans métier)", value: VALEUR_SANS_METIER },
+      ...Object.values(Metier).map((metier) => ({ label: NOM_METIER[metier], value: metier })),
+    ]),
+  ]);
+  if (!soumission) return;
+
+  const membre = lireMembre(soumission);
+  const ville = await prisma.ville.findUnique({ where: { id: Number(lireChoix(soumission, "ville")) }, include: { habitants: true } });
+  if (!membre || membre.bot) {
+    await repondre(soumission, "Choisissez un membre (pas un bot).");
+    return;
+  }
+  if (!ville || (ville.statut !== StatutVille.EN_CREATION && ville.statut !== StatutVille.ACTIVE)) {
+    await repondre(soumission, "Cette ville n'est plus en création ni en jeu.");
+    return;
+  }
+  if (await estMjActif(guild, membre.id)) {
+    await repondre(soumission, `<@${membre.id}> est MJ actif : il doit d'abord passer en MJ inactif depuis \`/mj\`.`);
+    return;
+  }
+  const utilisateur = await trouverOuCreerUtilisateur(membre);
+  const actuel = await trouverJoueurActif(utilisateur.id);
+  if (actuel) {
+    await repondre(
+      soumission,
+      `<@${membre.id}> a déjà un personnage dans **${actuel.ville?.nom}** : il doit d'abord la quitter (ou la ville tomber).`,
+    );
+    return;
+  }
+
+  const valeur = lireChoix(soumission, "metier");
+  const metier = valeur === VALEUR_SANS_METIER ? null : (valeur as Metier);
+  const habitants = ville.habitants.filter((h) => h.dateSortie === null);
+  const occupees = habitants.filter((h) => h.metier === metier).length;
+  const places = metier ? PLACES_PAR_METIER[metier] : PLACES_SANS_METIER;
+  const enJeu = ville.statut === StatutVille.ACTIVE;
+
+  await soumission.deferReply({ flags: MessageFlags.Ephemeral });
+  const [, joueur] = await prisma.$transaction([
+    // Une demande d'inscription en attente ailleurs n'a plus lieu d'etre (un seul engagement a la fois)
+    prisma.demandeInscription.updateMany({
+      where: { utilisateurId: utilisateur.id, statut: StatutDemande.EN_ATTENTE },
+      data: { statut: StatutDemande.ANNULEE, dateReponse: new Date() },
+    }),
+    prisma.joueur.create({ data: { utilisateurId: utilisateur.id, villeId: ville.id, metier } }),
+  ]);
+  let recalcul = "";
+  if (enJeu) {
+    const { paMax, ancien, vivants } = await recalculerPaMaxVille(ville.id, joueur.id);
+    recalcul = `, en ville. PA max recalculé pour ses ${vivants} habitants vivants : ${ancien ?? "?"} → **${paMax}**.`;
+    await prisma.journalEntree.create({ data: { villeId: ville.id, joueurId: joueur.id, message: "Arrivé en ville (ajouté par l'équipe)" } });
+    await ajouterJoueurEnVilleDiscord(guild, joueur.id);
+    await posterDansMairie(guild, ville.id, `🚪 <@${membre.id}> rejoint **${ville.nom}** : bienvenue parmi nous !`);
+  } else {
+    await rafraichirMessageVille(guild, ville.id);
+  }
+
+  const nomMetier = metier ? NOM_METIER[metier] : "sans métier";
+  await journaliser(interaction.user, "Ajouter à une ville", `${membre.username} → ${ville.nom} (${nomMetier})`);
+  const avertissements = [
+    habitants.length >= JOUEURS_MAX_PAR_VILLE ? `habitants dépassés (${habitants.length + 1}/${JOUEURS_MAX_PAR_VILLE})` : null,
+    occupees >= places ? `places ${nomMetier} dépassées (${occupees + 1}/${places})` : null,
+  ].filter((ligne) => ligne !== null);
+  await soumission.editReply({
+    content:
+      `<@${membre.id}> rejoint **${ville.nom}** (${nomMetier})` +
+      (enJeu ? recalcul : ", inscrit avant la fondation.") +
+      (avertissements.length > 0 ? ` ⚠️ ${avertissements.join(", ")}.` : ""),
+    allowedMentions: { parse: [] },
+  });
+}
+
 // --- Blesser : retire des PV (la mort est possible, avec la cause choisie) ---
 
 const CAUSES_BLESSURE: { cause: CauseMort; libelle: string }[] = [
@@ -415,6 +528,14 @@ export const FAMILLE_JOUEUR: FamilleAdmin = {
       executer: exclure,
     },
     { cle: "reintegrer", libelle: "Réintégrer de force", description: "rend à un joueur exclu l'accès à sa ville.", executer: reintegrer },
+    {
+      cle: "ajouter-ville",
+      libelle: "Ajouter à une ville",
+      description:
+        "donne à un membre sans ville un personnage dans une ville en création ou en jeu (en ville, PA max de la fondation ; places dépassables).",
+      style: ButtonStyle.Success,
+      executer: ajouterAVille,
+    },
     {
       cle: "metier",
       libelle: "Changer de métier",
