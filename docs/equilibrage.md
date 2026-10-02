@@ -376,7 +376,7 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 | | 2 | 90 Bois + 60 Tissu | 30 | Banque de ville : capacité ×2, soit 160 en poids |
 | **Maison privée** (perso) | 1 | 30 Bois + 15 Tissu | 9 | (fonctionnel) — chaque joueur arrive sans maison (palier 0) et la construit |
 | | 2 | 50 Bois + 30 Tissu | 16 | +15 % du PA max personnel |
-| **Tour Radio** | unique | 20 Bois + 40 Ferraille + 20 Pièces mécaniques | 16 | Tous les habitants vivants de la ville accèdent au salon `ondes-radio` du groupe, radio ou non ; dehors, les **porteurs de radio** gardent l'accès complet aux salons de la ville (sans tour, seule la mairie reste lisible dehors). Chiffrée le 2026-09-30 |
+| **Tour Radio** | unique | 20 Bois + 40 Ferraille + 20 Pièces mécaniques | 16 | Tous les habitants vivants **présents en ville** accèdent au salon `ondes-radio` du groupe, radio ou non (dehors, seuls les porteurs de radio y accèdent) ; dehors, les **porteurs de radio** gardent l'accès complet aux salons de la ville (sans tour, seule la mairie reste lisible dehors). Chiffrée le 2026-09-30 |
 | **Mairie** | unique | 80 Bois + 40 Pierre | 24 | Fonctionnel uniquement (élections, décisions, rationnement) |
 
 ---

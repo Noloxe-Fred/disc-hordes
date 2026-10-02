@@ -17,7 +17,7 @@ import { ensureSalonRadio } from "./territoires";
 // - MJ actif : aucune restriction propre, son role lui ouvre tout le jeu (il ne peut pas jouer tant qu'il est actif).
 // Salon « ondes-radio » du groupe : ouvert aux porteurs de radio (vivants ou exclus), en ville comme dehors : un porteur
 // en ville relaie les nouvelles des ondes a ses concitoyens. La Tour Radio construite l'ouvre a tous les habitants
-// vivants de la ville, avec ou sans radio.
+// vivants presents en ville, avec ou sans radio ; dehors, seuls les porteurs de radio captent les ondes.
 
 const ECRITURE = ["SendMessages", "SendMessagesInThreads", "CreatePublicThreads", "AddReactions", "Connect", "Speak"] as const;
 type Permission = "ViewChannel" | (typeof ECRITURE)[number];
@@ -96,7 +96,7 @@ export async function synchroniserAccesJoueur(guild: Guild, joueurId: number): P
     enJeu &&
     (await prisma.inventaireJoueur.count({ where: { joueurId, quantite: { gt: 0 }, objet: { nom: OBJET_RADIO } } })) > 0;
   const tourRadio = await tourRadioConstruite(joueur.villeId);
-  const ondes = radio || (tourRadio && joueur.statut === StatutJoueur.VIVANT);
+  const ondes = radio || (tourRadio && joueur.statut === StatutJoueur.VIVANT && !dehors);
 
   if (radio) await ajouterRole(membre, ROLE_RADIO.cle);
   else await retirerRole(membre, ROLE_RADIO.cle);
