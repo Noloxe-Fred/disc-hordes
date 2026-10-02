@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille, TypeElection, TypePhase, type PalierZone } from "@prisma/client";
+import { Metier, StatutJoueur, StatutVille, TypeElection, TypePhase, type PalierZone } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -15,6 +15,7 @@ import {
 } from "discord.js";
 import type { Command } from "../client";
 import { COUT_GARDE } from "../config/defense";
+import { SURCOUT_ZONE_VIERGE } from "../config/deplacement";
 import { DUREE_CANDIDATURES_HEURES, DUREE_DEFIANCE_HEURES, DUREE_VOTE_HEURES } from "../config/politique";
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
@@ -44,7 +45,7 @@ import { tirerLoot } from "../game/loot";
 import { indicesStocks, puiserDansLesStocks, stocksActuels } from "../game/stocks";
 import { feuActif } from "../game/feu";
 import { calculerPaMax } from "../game/pa";
-import { ajouterACarte } from "../services/carte";
+import { ajouterACarte, zonesDecouvertes } from "../services/carte";
 import { chargeSac, deborde, libelleCharge, MESSAGE_SAC_PLEIN, sacPlein } from "../services/charge";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
@@ -80,6 +81,7 @@ interface Destination {
   id: number | null; // null = la ville
   nom: string;
   palier: PalierZone | null;
+  vierge: boolean; // zone encore absente de la carte du joueur (surcout, equilibrage.md §4)
   cout: number;
 }
 
@@ -258,11 +260,14 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     ),
   );
 
-  const accessibles = await destinationsDepuis(groupeId, joueur.zoneActuelleId);
+  const [accessibles, connues] = await Promise.all([
+    destinationsDepuis(groupeId, joueur.zoneActuelleId),
+    zonesDecouvertes(joueurId).then((ids) => new Set(ids)),
+  ]);
   const destinations: Destination[] = [
-    ...(accessibles.ville && !exclu ? [{ id: null, nom: `Rentrer en ville (${ville.nom})`, palier: null }] : []),
-    ...accessibles.zones.map((z) => ({ id: z.id, nom: z.nom, palier: z.palier })),
-  ].map((d) => ({ ...d, cout: coutDeplacement(d.palier, ville.phaseActuelle) }));
+    ...(accessibles.ville && !exclu ? [{ id: null, nom: `Rentrer en ville (${ville.nom})`, palier: null, vierge: false }] : []),
+    ...accessibles.zones.map((z) => ({ id: z.id, nom: z.nom, palier: z.palier, vierge: !connues.has(z.id) })),
+  ].map((d) => ({ ...d, cout: coutDeplacement(d.palier, ville.phaseActuelle, d.vierge, joueur.metier) }));
   const torches =
     ville.phaseActuelle === TypePhase.NUIT
       ? ((await prisma.inventaireJoueur.findFirst({ where: { joueurId, objet: { nom: OBJET_TORCHE } } }))?.quantite ?? 0)
@@ -278,7 +283,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
           destinations.map((d) => ({
             label: d.nom.slice(0, 100),
             value: valeur(d),
-            description: `${d.cout} PA${d.cout > paActuel ? " — PA insuffisants" : ""}`,
+            description:
+              `${d.cout} PA${d.vierge && joueur.metier !== Metier.ECLAIREUR ? " (zone inconnue)" : ""}` +
+              (d.cout > paActuel ? " — PA insuffisants" : ""),
           })),
         ),
     ),
@@ -446,7 +453,7 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       if (!destination) return;
       // Confirmation avant de depenser des PA (conception.md §4). La nuit, une torche du sac permet de payer
       // le cout de jour (equilibrage.md §6).
-      const coutTorche = coutDeplacement(destination.palier, TypePhase.JOUR);
+      const coutTorche = coutDeplacement(destination.palier, TypePhase.JOUR, destination.vierge, joueur.metier);
       const torchePossible = torches > 0 && coutTorche < destination.cout && coutTorche <= paActuel;
       const boutons = [
         ...(destination.cout <= paActuel
@@ -470,6 +477,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
               ).addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(boutonRetour()))
             : encadre(
                 `${entete}\n\nAller vers **${destination.nom}** pour **${destination.cout} PA** ?` +
+                  (destination.vierge && joueur.metier !== Metier.ECLAIREUR
+                    ? `\n🗺️ Zone absente de votre carte : **+${SURCOUT_ZONE_VIERGE} PA** pour s'aventurer en terrain inconnu.`
+                    : "") +
                   (torchePossible ? `\n🔥 Avec une torche (vous en avez ${torches}), le trajet ne coûte que **${coutTorche} PA**.` : ""),
               ).addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(...boutons, boutonRetour())),
         ],
@@ -529,7 +539,11 @@ async function confirmerDeplacement(
       ? await prisma.inventaireJoueur.findFirst({ where: { joueurId, objet: { nom: OBJET_TORCHE }, quantite: { gt: 0 } } })
       : null;
   if (avecTorche && nuit && !torche) return "Vous n'avez plus de torche : relancez `/action`.";
-  const cout = coutDeplacement(destination.palier, torche ? TypePhase.JOUR : ville.phaseActuelle);
+  // Vierge reverifie : la zone a pu rejoindre sa carte (observation, partage) pendant la confirmation
+  const vierge =
+    destination.id !== null &&
+    !(await prisma.carteDecouverte.findFirst({ where: { joueurId, zoneId: destination.id }, select: { id: true } }));
+  const cout = coutDeplacement(destination.palier, torche ? TypePhase.JOUR : ville.phaseActuelle, vierge, actuel.metier);
   const depuisActuel = await destinationsDepuis(groupeId, actuel.zoneActuelleId);
   const toujoursAccessible =
     destination.id === null ? depuisActuel.ville : depuisActuel.zones.some((z) => z.id === destination.id);

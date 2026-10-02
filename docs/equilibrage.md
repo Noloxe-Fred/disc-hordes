@@ -230,6 +230,7 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Déplacement — zone moyenne (palier 2) | 3 PA | 5 PA |
 | Déplacement — zone éloignée (palier 3) | 4 PA | 6 PA |
 | Retour en ville (depuis une zone proche) | 2 PA | 3 PA |
+| Surcoût — entrée dans une zone vierge (absente de la carte de découverte du joueur), sauf éclaireur | +2 PA | +2 PA (valeur fixe, pas ×1,5 ; s'applique aussi au trajet à la torche) |
 | Observer (zones adjacentes, depuis une zone ou la ville) | 1 PA | 2 PA |
 | Observer — éclaireur | 0 PA | 1 PA (valeur fixe, pas ×1,5) |
 | Partager sa carte (bouton de `/action`, en ville uniquement) | 0 PA | 0 PA |

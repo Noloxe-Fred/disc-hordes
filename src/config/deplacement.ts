@@ -8,6 +8,9 @@ export const COUT_DEPLACEMENT_JOUR: Record<PalierZone, number> = {
   [PalierZone.ELOIGNEE]: 4,
 };
 export const COUT_RETOUR_VILLE_JOUR = COUT_DEPLACEMENT_JOUR[PalierZone.PROCHE];
+// Entrer dans une zone encore vierge sur sa carte de decouverte : surcout fixe, jour comme nuit (pas x 1,5),
+// dont l'eclaireur est exempte (equilibrage.md §4)
+export const SURCOUT_ZONE_VIERGE = 2;
 
 // Observer les zones adjacentes sans s'y rendre (equilibrage.md §4)
 export const COUT_OBSERVATION_JOUR = 1;
