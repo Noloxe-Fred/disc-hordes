@@ -436,6 +436,7 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 - **Stock max des ressources naturelles par palier** : 100/150/200 (proche/moyenne/éloignée) validé tel quel (section 2).
 - **Coût PA des 6 recettes avancées restantes** : chiffré par palier d'utilité (4 à 8 PA), voir section 8.
 - **Capacité de stockage** : poids d'objet 1/2/3, sac 12, banque 40/80/160 selon la place publique, voir section 5.
+- **Métiers sans effet retirés (2026-10-03)** : guetteur, fossoyeur et diplomate/marchand supprimés (leurs porteurs passent sans métier). Places par ville : garde 2, médecin 2, artisan 2, éclaireur 2, cuisinier 2, ingénieur/bâtisseur 2, chasseur/trappeur 1, sans métier 2 (15 au total ; détail dans conception.md, « Métiers »).
 
 ## 11. Hors scope V1 (reporté volontairement à la bêta)
 

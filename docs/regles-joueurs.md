@@ -4,6 +4,8 @@ Règles affichées aux joueurs dans le salon #règles, publiées par le bouton �
   section, et un fil sous le sommaire contient le texte brut de toutes les règles.
 - Markdown compris par le rendu image : « ## » sous-titre, « > » encadré, **gras**, *italique*, `code`, emojis ;
   une ligne du fichier = une ligne affichée.
+- Une ligne « --- » dans une section ouvre une nouvelle page : une image de plus, avec le même titre de section ;
+  dans le sommaire, son premier sous-titre renvoie à cette image.
 - Les noms de salons (#général, #annonces, #règles, #nouvel-habitant, #fonder-une-colonie, #un-etranger-aux-portes, #commémoration)
   sont rappelés en liens cliquables sous l'image et dans le fil.
 - À tenir à jour à chaque nouvelle mécanique : ce texte ne doit décrire que ce qui fonctionne en jeu.
@@ -37,7 +39,7 @@ Ton seul espoir : **rejoindre une ville**, la faire tenir, et survivre le plus l
 # 🏗️ Fonder ou rejoindre une ville
 
 ## ✨ Créer une ville
-Tape `/creer-ville` : un formulaire s'ouvre pour donner le **nom** de ta ville, choisir ton **métier** et présenter ton **projet de ville** (facultatif).
+Tape `/creer-ville` : un formulaire s'ouvre pour donner le **nom** de ta ville, choisir ton **métier** (voir « Les métiers ») et présenter ton **projet de ville** (facultatif).
 Ta ville apparaît dans #fonder-une-colonie avec quatre boutons :
 
 🔵 **Rejoindre la ville** : choisis ton métier parmi les places libres et explique tes motivations. Ta demande part dans #un-etranger-aux-portes.
@@ -60,13 +62,27 @@ Tous les habitants deviennent **Citoyens**. Plus personne ne peut rejoindre la v
 👋 Un **mot d'accueil** épinglé dans la mairie rappelle à chacun l'essentiel pour bien démarrer.
 Les **Territoires externes** de la région (forêt, marécages, montagnes, ville en ruines) sont créés avec elle.
 
+---
+
+## 🧰 Les métiers
+Ton métier se choisit **une fois pour toutes**, en créant ou en rejoignant une ville. Chaque ville a un **nombre de places limité** par métier : premier arrivé, premier servi. Plus de place ? Choisis-en un autre, ou viens **sans métier**.
+🛡️ **Garde** (2 places) : monter la garde la nuit rapporte **+6** de défense, au lieu de +3.
+💉 **Médecin** (2 places) : seul à pratiquer le **soin avancé** (+5 PV) et à administrer le **remède contre l'infection**, qu'il fabrique à l'atelier.
+🧭 **Éclaireur** (2 places) : **observer** les environs est gratuit le jour (1 PA la nuit), et entrer dans une zone qui n'est pas sur sa carte ne lui coûte **rien de plus**.
+🗡️ **Artisan** (2 places) : fabrique à l'atelier les **armes avancées** (−2 PA et 2 dégâts par coup en combat).
+🥘 **Cuisinier** (2 places) : prépare à l'atelier le **ragoût fortifiant** (+40 faim, +2 PA au réveil), la **conserve** (+25 faim) et l'**infusion** (+15 soif, soulage l'infection).
+🔧 **Ingénieur/bâtisseur** (2 places) : fabrique à l'atelier les **structures de défense** (+3 défense chacune), et de quoi réparer la voiture (bientôt utile).
+🪤 **Chasseur/trappeur** (1 place) : fabrique à l'atelier les **pièges avancés**, qui attrapent du **gros gibier**.
+🙋 **Sans métier** (2 places) : pas de spécialité, mais toutes les actions de base te restent ouvertes.
+> 🛠️ Les recettes de métier demandent que ta ville ait construit son **atelier** (voir « Les chantiers »).
+
 
 # 🌗 Le cycle jour / nuit
 
 Chaque ville vit au rythme d'une **horloge commune** : le jour et la nuit durent **24h réelles** chacun, et basculent à **minuit**.
 
 🌙 **À la tombée de la nuit**, les zombies se rassemblent… La mairie prévient toute la ville à chaque changement de phase, puis **une heure avant l'attaque**.
-☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, des citoyens présents en ville sont **blessés** au hasard, d'autant plus nombreux que l'écart est grand, et les **chantiers** d'être abîmés (voir « Les chantiers »). Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
+☀️ **À l'aube**, l'attaque frappe la ville. Si la **défense** est trop faible face à la **force de l'attaque**, des citoyens présents en ville sont **blessés** au hasard, d'autant plus nombreux que l'écart est grand (une bonne **maison** aide à repousser les zombies), et les **chantiers** d'être abîmés (voir « Les chantiers »). Le compte rendu est posté dans la mairie. Et ceux qui sont restés **dehors** subissent la **horde** : bien pire (voir « Les zombies »).
 
 🛡️ **La nuit, en ville**, le bouton **Monter la garde** de `/action` renforce la défense de l'aube : **+3** pour un citoyen, **+6** pour un **Garde**, pour **6 PA**. Il faut être encore en ville au moment de l'attaque pour que ça compte.
 📈 Les attaques deviennent **plus fortes à chaque nuit**. Une ville qui ne se défend pas finira par tomber.
@@ -155,8 +171,7 @@ Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâ
 🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense** tant qu'elle tient (5 au plus).
 
 ## 🛠️ L'atelier
-Une fois l'atelier construit, son salon s'ouvre. Lance `/inventaire` **dans ce salon** : le bouton **Craft avancé** te propose les recettes de ton métier. Les ingrédients viennent de ton sac, puis de la banque.
-💉 **Médecin** : remède contre l'infection · 🛡️ **Ingénieur** : structures de défense (et réparation de voiture, bientôt utile) · 🥘 **Cuisinier** : ragoût fortifiant (+40 faim, +2 PA au réveil), conserve (+25 faim), infusion (+15 soif, soulage l'infection) · 🪤 **Chasseur** : pièges avancés, qui attrapent du gros gibier (voir Les pièges) · 🛠️ **Artisan** : armes/outils avancés (−2 PA et 2 dégâts par coup en combat)
+Une fois l'atelier construit, son salon s'ouvre. Lance `/inventaire` **dans ce salon** : le bouton **Craft avancé** te propose les recettes de ton métier (voir « Les métiers »). Les ingrédients viennent de ton sac, puis de la banque.
 ✅ Quand toutes les ressources et tous les PA sont là, le palier est construit et son effet s'applique tout de suite. La mairie l'annonce.
 Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim et soif d'au moins 10).
 🧟 **Quand la défense ne suffit pas**, les zombies saccagent aussi les constructions, d'autant plus que l'écart est grand : d'abord les **structures de défense**, puis **un palier de palissade**, puis les **ressources et PA déjà versés** sur les chantiers et les maisons en cours, et enfin **un palier d'un bâtiment au hasard** (maisons comprises). Un palier perdu perd son effet, et il faut le reconstruire.
@@ -257,7 +272,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
 🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, voir et partager ta carte, soigner, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, combattre ou fuir un zombie, allumer un feu et faire la sieste, poser ou relever un piège, voir et partager ta carte, soigner, monter la garde, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
 ❓ `/aide` : les commandes utiles selon le salon où tu la tapes et ta situation (nomade, en ville, dehors, face à un zombie, mort)
 🚩 `/signaler` : signaler à l'équipe un comportement problématique (le membre concerné, si besoin, et ce qui s'est passé) ; seuls les MJ et les Admins le lisent
 

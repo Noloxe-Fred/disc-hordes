@@ -26,6 +26,22 @@ export function lireSectionsRegles(): string[] {
   return lireSections(CHEMIN_REGLES);
 }
 
+// Une ligne "---" dans une section ouvre une nouvelle page (une image de plus) ; chaque page suivante reprend le
+// titre "# " de la section pour son bandeau
+export function decouperPages(section: string): string[] {
+  const [titre] = section.split(/\r?\n/);
+  return section
+    .split(/^---[ \t]*$/m)
+    .map((page) => page.trim())
+    .filter(Boolean)
+    .map((page, index) => (index === 0 ? page : `${titre}\n\n${page}`));
+}
+
+// Texte d'une section sans ses separateurs de pages (fil de texte sous le sommaire)
+export function sansSeparateurs(section: string): string {
+  return section.replace(/^---[ \t]*\r?\n?/gm, "").replace(/(\r?\n){3,}/g, "\n\n");
+}
+
 // Message de bienvenue : premiere section de docs/bienvenue.md, null si le fichier n'en a pas
 export function lireSectionBienvenue(): string | null {
   return lireSections(CHEMIN_BIENVENUE)[0] ?? null;
@@ -47,13 +63,24 @@ export function extraireTitres(message: string): { niveau: 1 | 2; texte: string 
 
 // Sommaire : chaque titre de section renvoie (lien cliquable) au message qui la contient. Discord n'a pas
 // d'ancre a l'interieur d'un message : un lien par sous-titre menerait au meme endroit, et ferait depasser la limite.
-// Texte de la description d'un embed (limite 4096 caracteres, contre 2000 pour un message).
+// Une page suivante d'une section (meme titre "# " que la precedente) n'est pas relistee : son premier sous-titre
+// renvoie a son message. Texte de la description d'un embed (limite 4096 caracteres, contre 2000 pour un message).
 export function construireSommaire(messages: string[], liens: (string | null)[]): string {
   const lignes: string[] = [];
+  let titreSection: string | null = null;
   messages.forEach((message, index) => {
     const lien = liens[index];
+    const lier = (texte: string) => (lien ? `[${texte}](${lien})` : texte);
+    let suite = false;
     for (const { niveau, texte } of extraireTitres(message)) {
-      lignes.push(niveau === 1 ? `**${lien ? `[${texte}](${lien})` : texte}**` : `- ${texte}`);
+      if (niveau === 1) {
+        suite = texte === titreSection;
+        titreSection = texte;
+        if (!suite) lignes.push(`**${lier(texte)}**`);
+      } else {
+        lignes.push(`- ${suite ? lier(texte) : texte}`);
+        suite = false;
+      }
     }
   });
   return lignes.join("\n");

@@ -16,12 +16,9 @@ enum Metier {
   MEDECIN
   ARTISAN
   ECLAIREUR
-  GUETTEUR
   CUISINIER
-  FOSSOYEUR
   INGENIEUR
   CHASSEUR
-  DIPLOMATE
 }
 
 // Causes de mort d'un joueur ; la mort du dernier habitant vivant fait tomber la ville.

@@ -79,7 +79,7 @@ Jeu Discord de survie zombie inspiré de *Hordes/MyHordes*, envisagé comme modu
 - XP générale (non spécifique au métier) en V1 ; XP par métier envisagée en V2 (crainte de lourdeur)
 
 ### Métiers
-Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur/bâtisseur, chasseur/trappeur, diplomate/marchand.
+Garde, médecin, artisan, éclaireur, cuisinier, ingénieur/bâtisseur, chasseur/trappeur. Guetteur, fossoyeur et diplomate/marchand ont été retirés le 2026-10-03 faute d'effet en jeu (leurs porteurs passent « sans métier ») ; leurs 3 places sont allées au médecin, au cuisinier et à l'ingénieur.
 
 - Choix définitif à la création du personnage, places limitées par métier (premier arrivé, premier servi)
 - Métier complet → non sélectionnable (grisé dans le menu), le joueur choisit un autre métier ou reste "sans métier"
@@ -88,15 +88,12 @@ Garde, médecin, artisan, éclaireur, guetteur, cuisinier, fossoyeur, ingénieur
 | Métier | Places |
 |---|---|
 | Garde | 2 |
-| Médecin | 1 |
+| Médecin | 2 |
 | Artisan | 2 |
 | Éclaireur | 2 |
-| Guetteur | 1 |
-| Cuisinier | 1 |
-| Fossoyeur | 1 |
-| Ingénieur/bâtisseur | 1 |
+| Cuisinier | 2 |
+| Ingénieur/bâtisseur | 2 |
 | Chasseur/trappeur | 1 |
-| Diplomate/marchand | 1 |
 | **Total métiers** | **13** |
 | **Sans métier** | **2 places restantes** |
 
@@ -249,7 +246,7 @@ Règles :
 | Chasseur/trappeur | Pièges avancés |
 | Artisan | Armes/outils avancés |
 
-  Les autres métiers (garde, guetteur, fossoyeur, diplomate/marchand, éclaireur) n'ont pas de recette avancée exclusive en V1 — leur spécialisation passe par les talents/compétences.
+  Les autres métiers n'ont pas de recette avancée exclusive : le garde apporte plus de défense en montant la garde (+6 au lieu de +3), l'éclaireur observe à moindre coût et ne paie pas le surcoût des zones inconnues (equilibrage.md §3 et §4).
 
 ### Exploration
 - Danger par zone : zones adjacentes à la ville moins dangereuses mais moins de ressources ; zones éloignées plus dangereuses mais plus de ressources ; certaines rencontres communes à toutes les zones (zombies, humains gentils ou méchants)

@@ -1,6 +1,6 @@
 import { AttachmentBuilder, EmbedBuilder, ThreadAutoArchiveDuration, type Guild, type TextChannel } from "discord.js";
 import { trouverSalonTexte } from "./reconcile";
-import { construireSommaire, lierSalons, lireSectionsRegles } from "./reglesJoueurs";
+import { construireSommaire, decouperPages, lierSalons, lireSectionsRegles, sansSeparateurs } from "./reglesJoueurs";
 import { rendreSection } from "./renduRegles";
 import {
   SALON_ANNONCES,
@@ -83,8 +83,9 @@ async function nettoyer(salon: TextChannel, botId: string): Promise<number> {
 }
 
 // Republie les regles joueurs (docs/regles-joueurs.md) dans #regles (bouton « Publier les règles » du panneau
-// /mj) : un sommaire en embed, puis une image par section (titre "# ") avec sous l'image les liens vers
-// les salons cites ; un fil verrouille sous le sommaire contient le texte de toutes les sections (recherche et copie).
+// /mj) : un sommaire en embed, puis une image par page (titre "# ", une section pouvant compter plusieurs pages
+// separees par "---") avec sous l'image les liens vers les salons cites ; un fil verrouille sous le sommaire
+// contient le texte de toutes les sections (recherche et copie).
 // Renvoie le compte rendu a afficher.
 export async function publierRegles(guild: Guild): Promise<string> {
   const salonRegles = await trouverSalonTexte(guild, SALON_REGLES.cle);
@@ -93,10 +94,12 @@ export async function publierRegles(guild: Guild): Promise<string> {
   const sections = lireSectionsRegles();
   if (sections.length === 0) return "Règles non publiées : aucune section (titre « # ») dans docs/regles-joueurs.md.";
 
+  const pages = sections.flatMap(decouperPages);
+
   // Images rendues avant de toucher au salon : en cas d'erreur, les anciennes regles restent en place
   let images: Buffer[];
   try {
-    images = await Promise.all(sections.map((section) => rendreSection(section)));
+    images = await Promise.all(pages.map((page) => rendreSection(page)));
   } catch (error) {
     return `Règles non publiées : rendu des images impossible (${(error as Error).message}).`;
   }
@@ -111,20 +114,20 @@ export async function publierRegles(guild: Guild): Promise<string> {
     new EmbedBuilder()
       .setTitle("📖 Sommaire")
       .setColor(COULEUR_SOMMAIRE)
-      .setDescription(construireSommaire(sections, liens))
+      .setDescription(construireSommaire(pages, liens))
       .setFooter({ text: "Cliquez sur un titre pour aller à la section. Le texte complet des règles est dans le fil de ce message." });
-  const sommaire = await salonRegles.send({ embeds: [embedSommaire(sections.map(() => null))] });
+  const sommaire = await salonRegles.send({ embeds: [embedSommaire(pages.map(() => null))] });
 
   const liens: string[] = [];
-  for (const [index, section] of sections.entries()) {
+  for (const [index, page] of pages.entries()) {
     // Les salons cites ne sont pas cliquables dans l'image : liens rappeles sous celle-ci
-    const cites = [...salons].filter(([nom]) => section.includes(`#${nom}`)).map(([, id]) => `<#${id}>`);
+    const cites = [...salons].filter(([nom]) => page.includes(`#${nom}`)).map(([, id]) => `<#${id}>`);
     const publie = await salonRegles.send({
       content: cites.length > 0 ? `🔗 ${cites.join(" · ")}` : undefined,
       files: [
         new AttachmentBuilder(images[index], {
           name: `regles-${index + 1}.png`,
-          description: texteBrut(section).slice(0, LONGUEUR_MAX_DESCRIPTION_IMAGE),
+          description: texteBrut(page).slice(0, LONGUEUR_MAX_DESCRIPTION_IMAGE),
         }),
       ],
       allowedMentions: { parse: [] },
@@ -140,7 +143,7 @@ export async function publierRegles(guild: Guild): Promise<string> {
     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
   });
   for (const section of sections) {
-    for (const morceau of decouper(lierSalons(section, salons))) {
+    for (const morceau of decouper(lierSalons(sansSeparateurs(section), salons))) {
       await fil.send({ content: morceau, allowedMentions: { parse: [] } });
     }
   }
@@ -149,7 +152,7 @@ export async function publierRegles(guild: Guild): Promise<string> {
 
   return (
     `Règles mises à jour dans ${salonRegles} : ${supprimes} ancien(s) message(s) supprimé(s), ` +
-    `sommaire + ${sections.length} section(s) publiée(s) en image, texte complet dans le fil du sommaire.` +
+    `sommaire + ${sections.length} section(s) publiée(s) en ${pages.length} image(s), texte complet dans le fil du sommaire.` +
     (verrouille ? "" : `\n⚠️ Fil non verrouillé : le bot n'a pas la permission « Gérer les fils » dans ${salonRegles}.`)
   );
 }
