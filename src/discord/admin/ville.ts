@@ -333,6 +333,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
         rationNote: null,
         chantierPrioritaire: null,
         structuresDefense: 0,
+        structuresRenforcees: 0,
         mandatFinCycle: ville.maireId !== null ? CYCLES_PAR_MANDAT_MAIRE : null,
       },
     }),

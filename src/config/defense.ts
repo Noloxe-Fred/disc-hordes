@@ -9,6 +9,15 @@ export const COUT_GARDE = 6;
 export const OBJET_STRUCTURE_DEFENSE = "Structures de défense avancées";
 export const BONUS_STRUCTURE_DEFENSE = 3;
 export const STRUCTURES_DEFENSE_MAX = 5;
+// Structure renforcee (ingenieur, atelier palier 2) : +5 defense ; comptee dans le maximum de 5 avec les structures
+// simples. Ville pleine, en poser une detruit une structure simple pour prendre sa place.
+export const OBJET_STRUCTURE_RENFORCEE = "Structure renforcée";
+export const BONUS_STRUCTURE_RENFORCEE = 5;
+
+// Bonus de defense des structures posees
+export function bonusStructures(simples: number, renforcees: number): number {
+  return simples * BONUS_STRUCTURE_DEFENSE + renforcees * BONUS_STRUCTURE_RENFORCEE;
+}
 
 // Bonus de palissade cumule par palier (index 0 = pas de palissade).
 export const BONUS_PALISSADE_CUMULE: readonly number[] = [0, 5, 10, 16, 22, 29, 36, 44, 52];

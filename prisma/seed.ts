@@ -17,15 +17,13 @@ const RESSOURCES_BRUTES: { nom: string; regenerant?: boolean }[] = [
   { nom: "Munitions" },
 ];
 
-// Loot rare sans recette — equilibrage.md §5
-const OBJETS_RARES: string[] = ["Radio"];
-
-// Objets de loot catalogues (equilibrage.md §5) mais sans effet mecanique defini pour
-// l'instant : tirables et stockables des la V1, comportement a trancher plus tard (§12).
-const OBJETS_SANS_MECANIQUE: string[] = [
+// Loot sans recette de fabrication — equilibrage.md §5 (effet de chacun : §2, §4, §5, §6 et §8)
+const OBJETS_RARES: string[] = [
+  "Radio",
   "Médicament basique",
   "Arme simple",
   "Arme avancée",
+  "Arme à feu cassée",
   "Petit gibier",
   "Gros gibier",
   "Gibier rare",
@@ -38,6 +36,8 @@ const OBJETS_SANS_MECANIQUE: string[] = [
 
 interface RecetteSeed {
   nom: string;
+  // Objet produit, quand il differe du nom de la recette (plusieurs recettes peuvent donner le meme objet)
+  produit?: string;
   ingredients: { nom: string; quantite: number }[];
   coutPA?: number;
   requiertAtelier?: boolean;
@@ -89,6 +89,15 @@ const RECETTES_SIMPLES: RecetteSeed[] = [
     ],
     coutPA: 1,
   },
+  {
+    nom: "Dérouiller des pièces",
+    produit: "Pièces mécaniques",
+    ingredients: [
+      { nom: "Pièces mécaniques rouillées", quantite: 2 },
+      { nom: "Eau brute", quantite: 1 },
+    ],
+    coutPA: 1,
+  },
 ];
 
 // Craft avance, atelier requis, une recette exclusive par metier — equilibrage.md §8
@@ -110,6 +119,7 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
     ingredients: [
       { nom: "Pièces mécaniques", quantite: 4 },
       { nom: "Ferraille", quantite: 2 },
+      { nom: "Pièces pour voiture", quantite: 2 },
     ],
     coutPA: 8,
     requiertAtelier: true,
@@ -186,6 +196,40 @@ const RECETTES_AVANCEES: RecetteSeed[] = [
     palierAtelierRequis: 1,
     metierExclusif: Metier.ARTISAN,
   },
+  {
+    nom: "Festin",
+    ingredients: [
+      { nom: "Gibier rare", quantite: 1 },
+      { nom: "Baies", quantite: 2 },
+      { nom: "Ration d'eau purifiée", quantite: 1 },
+    ],
+    coutPA: 6,
+    requiertAtelier: true,
+    palierAtelierRequis: 1,
+    metierExclusif: Metier.CUISINIER,
+  },
+  {
+    nom: "Structure renforcée",
+    ingredients: [
+      { nom: "Structures de défense avancées", quantite: 1 },
+      { nom: "Minerai rare", quantite: 2 },
+    ],
+    coutPA: 4,
+    requiertAtelier: true,
+    palierAtelierRequis: 2,
+    metierExclusif: Metier.INGENIEUR,
+  },
+  // Ouverte a tous, a l'atelier
+  {
+    nom: "Arme à feu",
+    ingredients: [
+      { nom: "Arme à feu cassée", quantite: 1 },
+      { nom: "Ferraille", quantite: 2 },
+    ],
+    coutPA: 3,
+    requiertAtelier: true,
+    palierAtelierRequis: 1,
+  },
 ];
 
 async function seedObjets() {
@@ -197,7 +241,7 @@ async function seedObjets() {
     });
   }
 
-  for (const nom of [...OBJETS_RARES, ...OBJETS_SANS_MECANIQUE]) {
+  for (const nom of OBJETS_RARES) {
     await prisma.objet.upsert({
       where: { nom },
       update: { type: TypeObjet.RARE },
@@ -208,25 +252,30 @@ async function seedObjets() {
 
 async function seedRecettes(recettes: RecetteSeed[], type: TypeObjet) {
   for (const recette of recettes) {
-    const objetResultat = await prisma.objet.upsert({
-      where: { nom: recette.nom },
-      update: { type },
-      create: { nom: recette.nom, type },
-    });
+    // Un objet produit sous un autre nom de recette existe deja (ressource brute...) : son type ne change pas
+    const objetResultat = recette.produit
+      ? await prisma.objet.findUniqueOrThrow({ where: { nom: recette.produit } })
+      : await prisma.objet.upsert({
+          where: { nom: recette.nom },
+          update: { type },
+          create: { nom: recette.nom, type },
+        });
 
     await prisma.recetteIngredient.deleteMany({
-      where: { recette: { objetResultatId: objetResultat.id } },
+      where: { recette: { nom: recette.nom } },
     });
 
     const recetteRow = await prisma.recette.upsert({
-      where: { objetResultatId: objetResultat.id },
+      where: { nom: recette.nom },
       update: {
+        objetResultatId: objetResultat.id,
         coutPA: recette.coutPA,
         requiertAtelier: recette.requiertAtelier ?? false,
         palierAtelierRequis: recette.palierAtelierRequis,
         metierExclusif: recette.metierExclusif,
       },
       create: {
+        nom: recette.nom,
         objetResultatId: objetResultat.id,
         coutPA: recette.coutPA,
         requiertAtelier: recette.requiertAtelier ?? false,

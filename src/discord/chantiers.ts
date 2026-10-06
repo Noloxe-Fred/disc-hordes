@@ -14,11 +14,19 @@ import {
   type ButtonInteraction,
   type Guild,
 } from "discord.js";
-import { CHANTIERS, chantier, type Chantier } from "../config/batiments";
-import { BONUS_STRUCTURE_DEFENSE, OBJET_STRUCTURE_DEFENSE, STRUCTURES_DEFENSE_MAX } from "../config/defense";
-import { emojiObjet } from "../config/objets";
+import { calculerDepot, CHANTIERS, chantier, objetsUtiles, ressourceDeposee, type Chantier } from "../config/batiments";
+import {
+  BONUS_STRUCTURE_DEFENSE,
+  BONUS_STRUCTURE_RENFORCEE,
+  bonusStructures,
+  OBJET_STRUCTURE_DEFENSE,
+  OBJET_STRUCTURE_RENFORCEE,
+  STRUCTURES_DEFENSE_MAX,
+} from "../config/defense";
+import { emojiObjet, poidsObjet } from "../config/objets";
 import { SEUIL_CRITIQUE_FAIM_SOIF } from "../config/sante";
 import { prisma } from "../db";
+import { chargeBanque } from "../services/charge";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
@@ -99,16 +107,19 @@ function ligneChantier(etat: EtatChantier, prioritaire: boolean): string {
 export async function construirePanneauChantiers(villeId: number): Promise<ContainerBuilder> {
   const etats = await etatsChantiers(villeId);
   const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
-  const { structuresDefense } = ville;
+  const { structuresDefense, structuresRenforcees } = ville;
+  const posees = structuresDefense + structuresRenforcees;
   // Decisions du maire (informatives, discord/maire.ts)
   const decisions = [
     ...(ville.chantierPrioritaire ? [`⭐ Chantier prioritaire : ${chantier(ville.chantierPrioritaire).emoji} **${chantier(ville.chantierPrioritaire).nom}**`] : []),
     ...(ville.rationnementActif ? [`🍽️ Rationnement : ${texteRationnement(ville)}`] : []),
   ];
   const structures =
-    `🛡️ **Structures de défense avancées** — ${structuresDefense} / ${STRUCTURES_DEFENSE_MAX} posées` +
-    ` (+${structuresDefense * BONUS_STRUCTURE_DEFENSE} défense)\n-# Fabriquées par un ingénieur à l'atelier, posées avec le bouton ` +
-    `ci-dessous : +${BONUS_STRUCTURE_DEFENSE} défense chacune, jusqu'à ce qu'une attaque mal contenue la détruise.`;
+    `🛡️ **Structures de défense** — ${posees} / ${STRUCTURES_DEFENSE_MAX} posées` +
+    (structuresRenforcees > 0 ? ` (dont ${structuresRenforcees} renforcée${structuresRenforcees > 1 ? "s" : ""})` : "") +
+    ` : +${bonusStructures(structuresDefense, structuresRenforcees)} défense\n-# Fabriquées par un ingénieur à l'atelier, posées avec le bouton ` +
+    `ci-dessous : +${BONUS_STRUCTURE_DEFENSE} défense chacune, +${BONUS_STRUCTURE_RENFORCEE} pour une renforcée, jusqu'à ce qu'une attaque ` +
+    "mal contenue la détruise. Une structure renforcée posée quand tout est plein remplace une structure simple.";
   return new ContainerBuilder()
     .setAccentColor(COULEUR)
     .addTextDisplayComponents(
@@ -131,7 +142,8 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
           .setLabel("Poser une structure")
           .setEmoji("🛡️")
           .setStyle(ButtonStyle.Secondary)
-          .setDisabled(structuresDefense >= STRUCTURES_DEFENSE_MAX),
+          // Plein : une structure renforcee peut encore remplacer une simple
+          .setDisabled(posees >= STRUCTURES_DEFENSE_MAX && structuresDefense === 0),
       ),
     );
 }
@@ -217,7 +229,7 @@ export async function gererBoutonChantier(interaction: ButtonInteraction, action
 }
 
 async function contribuer(interaction: ButtonInteraction, joueurId: number, villeId: number, source: Source, etats: EtatChantier[]) {
-  const utiles = new Set(etats.flatMap((e) => Object.keys(prochainPalier(e)!.ressources)));
+  const utiles = objetsUtiles(etats.flatMap((e) => Object.keys(prochainPalier(e)!.ressources)));
   const stock = (
     source === "sac"
       ? await prisma.inventaireJoueur.findMany({ where: { joueurId, quantite: { gt: 0 } }, include: { objet: true }, orderBy: { objet: { nom: "asc" } } })
@@ -257,7 +269,8 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
   await soumission.editReply(texte);
 }
 
-// Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque
+// Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque. Un
+// objet qui tient lieu d'une ressource (Bois rare : 5 Bois) est credite sur cette ressource.
 async function deposer(
   guild: Guild,
   joueurId: number,
@@ -271,13 +284,15 @@ async function deposer(
   const objet = await prisma.objet.findUniqueOrThrow({ where: { id: objetId } });
   const nom = `${emojiObjet(objet.nom)} ${objet.nom}`;
   if (!etat || !prochainPalier(etat)) return "Ce chantier est terminé.";
-  const besoin = manque(etat, objet.nom);
-  if (besoin === 0) return `Le ${etat.chantier.nom.toLowerCase()} n'a plus besoin de ${nom} pour ce palier.`;
+  const { ressource: nomRessource } = ressourceDeposee(objet.nom);
+  const ressource = await prisma.objet.findUniqueOrThrow({ where: { nom: nomRessource } });
+  const besoin = manque(etat, nomRessource);
+  if (besoin === 0) return `Le ${etat.chantier.nom.toLowerCase()} n'a plus besoin de ${emojiObjet(nomRessource)} ${nomRessource} pour ce palier.`;
   const disponible =
     source === "sac"
       ? ((await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId, objetId } } }))?.quantite ?? 0)
       : ((await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId, objetId } } }))?.quantite ?? 0);
-  const verse = Math.min(quantite, besoin, disponible);
+  const { pris: verse, credit } = calculerDepot(objet.nom, besoin, quantite, disponible);
   if (verse <= 0) return `${source === "sac" ? "Vous n'avez plus" : "La banque n'a plus"} de ${nom}.`;
 
   const batiment = await prisma.batimentVille.upsert({
@@ -290,9 +305,9 @@ async function deposer(
       ? prisma.inventaireJoueur.update({ where: { joueurId_objetId: { joueurId, objetId } }, data: { quantite: { decrement: verse } } })
       : prisma.inventaireVille.update({ where: { villeId_objetId: { villeId, objetId } }, data: { quantite: { decrement: verse } } }),
     prisma.contributionBatiment.upsert({
-      where: { batimentVilleId_objetId: { batimentVilleId: batiment.id, objetId } },
-      update: { quantiteDeposee: { increment: verse } },
-      create: { batimentVilleId: batiment.id, objetId, quantiteDeposee: verse },
+      where: { batimentVilleId_objetId: { batimentVilleId: batiment.id, objetId: ressource.id } },
+      update: { quantiteDeposee: { increment: credit } },
+      create: { batimentVilleId: batiment.id, objetId: ressource.id, quantiteDeposee: credit },
     }),
     prisma.journalEntree.create({
       data: { villeId, joueurId, message: `Chantier ${etat.chantier.nom} : ${objet.nom} ×${verse}${source === "banque" ? " (banque)" : ""}` },
@@ -302,6 +317,7 @@ async function deposer(
   await rafraichirPanneauChantiers(guild, villeId);
   return (
     `🏗️ Vous déposez **${nom} × ${verse}** sur le chantier **${etat.chantier.nom}**` +
+    (credit !== verse ? ` (${credit} ${emojiObjet(nomRessource)} ${nomRessource})` : "") +
     (source === "banque" ? " (pris à la banque)" : "") +
     "." +
     (verse < quantite ? ` Le reste n'était pas nécessaire${verse < disponible ? "" : " ou manquait"}.` : "") +
@@ -408,32 +424,111 @@ export async function construirePalier(guild: Guild, villeId: number, type: Type
   return annonce;
 }
 
-// Structure de defense avancee posee (sac, puis banque) : +3 defense pour la ville (jusqu'a sa destruction par une attaque, discord/degatsChantiers.ts), 5 au plus
+// Structure du sac, sinon de la banque, ou null
+async function structureDisponible(joueurId: number, villeId: number, nom: string) {
+  const objet = await prisma.objet.findUniqueOrThrow({ where: { nom } });
+  const sac = await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId, objetId: objet.id } } });
+  if (sac && sac.quantite > 0) return { source: "sac" as const, id: sac.id };
+  const banque = await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId, objetId: objet.id } } });
+  return banque && banque.quantite > 0 ? { source: "banque" as const, id: banque.id } : null;
+}
+
+// Structure de defense posee (sac, puis banque), renforcee de preference : +3 defense pour une simple, +5 pour une
+// renforcee (jusqu'a sa destruction par une attaque, discord/degatsChantiers.ts), 5 au plus toutes confondues. Ville
+// pleine, une renforcee detruit une structure simple pour prendre sa place.
 async function poserStructure(guild: Guild, joueurId: number, villeId: number): Promise<string> {
   const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
-  if (ville.structuresDefense >= STRUCTURES_DEFENSE_MAX) return `La ville a déjà ${STRUCTURES_DEFENSE_MAX} structures de défense : c'est le maximum.`;
-  const objet = await prisma.objet.findUniqueOrThrow({ where: { nom: OBJET_STRUCTURE_DEFENSE } });
-  const sac = await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId, objetId: objet.id } } });
-  const banque = await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId, objetId: objet.id } } });
-  const source = sac && sac.quantite > 0 ? "sac" : banque && banque.quantite > 0 ? "banque" : null;
-  if (!source) return `Il faut une ${emojiObjet(objet.nom)} **${objet.nom}** dans votre sac ou dans la banque (fabriquée par un ingénieur à l'atelier).`;
+  const plein = ville.structuresDefense + ville.structuresRenforcees >= STRUCTURES_DEFENSE_MAX;
+  const renforcee = await structureDisponible(joueurId, villeId, OBJET_STRUCTURE_RENFORCEE);
+  const simple = renforcee ? null : await structureDisponible(joueurId, villeId, OBJET_STRUCTURE_DEFENSE);
+  const choix = renforcee ?? simple;
+  if (!choix) {
+    return (
+      `Il faut une ${emojiObjet(OBJET_STRUCTURE_DEFENSE)} **${OBJET_STRUCTURE_DEFENSE}** ou une ${emojiObjet(OBJET_STRUCTURE_RENFORCEE)} ` +
+      `**${OBJET_STRUCTURE_RENFORCEE}** dans votre sac ou dans la banque (fabriquées par un ingénieur à l'atelier).`
+    );
+  }
+  const remplace = plein && renforcee !== null;
+  if (plein && (!renforcee || ville.structuresDefense === 0)) {
+    return `La ville a déjà ${STRUCTURES_DEFENSE_MAX} structures de défense${renforcee ? ", toutes renforcées" : ""} : c'est le maximum.`;
+  }
 
+  const nom = renforcee ? OBJET_STRUCTURE_RENFORCEE : OBJET_STRUCTURE_DEFENSE;
+  const bonus = renforcee ? BONUS_STRUCTURE_RENFORCEE : BONUS_STRUCTURE_DEFENSE;
+  const simples = ville.structuresDefense + (renforcee ? (remplace ? -1 : 0) : 1);
+  const renforcees = ville.structuresRenforcees + (renforcee ? 1 : 0);
+  const banque = choix.source === "banque";
+  // La structure simple remplacee rend ses ressources de construction a la banque, tant qu'il y a de la place
+  const recuperation = remplace ? await recupererStructureSimple(villeId, joueurId, banque ? poidsObjet(OBJET_STRUCTURE_RENFORCEE) : 0) : null;
   await prisma.$transaction([
-    source === "sac"
-      ? prisma.inventaireJoueur.update({ where: { id: sac!.id }, data: { quantite: { decrement: 1 } } })
-      : prisma.inventaireVille.update({ where: { id: banque!.id }, data: { quantite: { decrement: 1 } } }),
-    prisma.ville.update({ where: { id: villeId }, data: { structuresDefense: { increment: 1 } } }),
-    prisma.journalEntree.create({ data: { villeId, joueurId, message: `Structure de défense posée${source === "banque" ? " (banque)" : ""}` } }),
+    ...(recuperation?.operations ?? []),
+    banque
+      ? prisma.inventaireVille.update({ where: { id: choix.id }, data: { quantite: { decrement: 1 } } })
+      : prisma.inventaireJoueur.update({ where: { id: choix.id }, data: { quantite: { decrement: 1 } } }),
+    prisma.ville.update({ where: { id: villeId }, data: { structuresDefense: simples, structuresRenforcees: renforcees } }),
+    prisma.journalEntree.create({
+      data: { villeId, joueurId, message: `${nom} posée${remplace ? " à la place d'une structure simple" : ""}${banque ? " (banque)" : ""}` },
+    }),
   ]);
-  const total = (ville.structuresDefense + 1) * BONUS_STRUCTURE_DEFENSE;
+  const total = bonusStructures(simples, renforcees);
+  const gain = remplace ? bonus - BONUS_STRUCTURE_DEFENSE : bonus;
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:chantiers`);
   await salon
     ?.send({
-      content: `🛡️ <@${joueur.utilisateur.discordId}> pose une structure de défense : +${BONUS_STRUCTURE_DEFENSE} défense (total +${total}).`,
+      content:
+        `🛡️ <@${joueur.utilisateur.discordId}> pose une ${nom.toLowerCase()}${remplace ? " à la place d'une structure simple" : ""} : ` +
+        `+${gain} défense (total +${total}).` +
+        (recuperation ? ` ${recuperation.texte}` : ""),
       allowedMentions: { parse: [] },
     })
     .catch(() => null);
   await rafraichirPanneauChantiers(guild, villeId);
-  return `🛡️ Vous posez une structure de défense${source === "banque" ? " prise à la banque" : ""} : **+${BONUS_STRUCTURE_DEFENSE} défense** pour la ville (total +${total}).`;
+  return (
+    `🛡️ Vous posez une ${emojiObjet(nom)} ${nom.toLowerCase()}${banque ? " prise à la banque" : ""}` +
+    (remplace ? ", qui remplace une structure simple démontée pour lui faire place" : "") +
+    ` : **+${gain} défense** pour la ville (total +${total}).` +
+    (recuperation ? `\n${recuperation.texte}` : "")
+  );
+}
+
+// Structure simple demontee : ses ingredients de fabrication reviennent a la banque dans l'ordre de la recette, tant
+// qu'ils y tiennent ; le reste est perdu. liberePoids : poids qui quitte la banque dans la meme operation (structure
+// renforcee prise a la banque).
+async function recupererStructureSimple(villeId: number, joueurId: number, liberePoids: number) {
+  const recette = await prisma.recette.findUnique({
+    where: { nom: OBJET_STRUCTURE_DEFENSE },
+    include: { ingredients: { include: { objet: true } } },
+  });
+  const charge = await chargeBanque(villeId);
+  let libre = charge.capacite - charge.utilisee + liberePoids;
+  const rendus: string[] = [];
+  const perdus: string[] = [];
+  const operations = [];
+  for (const i of recette?.ingredients ?? []) {
+    const poids = poidsObjet(i.objet.nom);
+    const rendu = Math.max(0, Math.min(i.quantite, poids > 0 ? Math.floor(libre / poids) : i.quantite));
+    libre -= rendu * poids;
+    const libelle = (n: number) => `${n} ${emojiObjet(i.objet.nom)} ${i.objet.nom}`;
+    if (rendu > 0) {
+      rendus.push(libelle(rendu));
+      operations.push(
+        prisma.inventaireVille.upsert({
+          where: { villeId_objetId: { villeId, objetId: i.objetId } },
+          update: { quantite: { increment: rendu } },
+          create: { villeId, objetId: i.objetId, quantite: rendu },
+        }),
+      );
+    }
+    if (rendu < i.quantite) perdus.push(libelle(i.quantite - rendu));
+  }
+  if (rendus.length > 0) {
+    operations.push(prisma.journalEntree.create({ data: { villeId, joueurId, message: `Structure simple démontée : ${rendus.join(", ")} rendus à la banque` } }));
+  }
+  const texte =
+    rendus.length === 0
+      ? `🏦 La banque est pleine : ses ressources (${perdus.join(", ")}) sont perdues.`
+      : `🏦 Ses ressources reviennent à la banque : ${rendus.join(", ")}.` +
+        (perdus.length > 0 ? ` Faute de place, perdu : ${perdus.join(", ")}.` : "");
+  return { operations, texte };
 }

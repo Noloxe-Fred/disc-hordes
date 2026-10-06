@@ -2,7 +2,7 @@ import { CauseMort, MeteoType, StatutJoueur, StatutVille, TypeBatiment, TypePhas
 import type { Guild } from "discord.js";
 import type { DiscHordesClient } from "../client";
 import { prisma } from "../db";
-import { AVANCE_ALERTE_ATTAQUE_MINUTES, BONUS_PALISSADE_CUMULE, BONUS_STRUCTURE_DEFENSE, DEFENSE_BASE } from "../config/defense";
+import { AVANCE_ALERTE_ATTAQUE_MINUTES, BONUS_PALISSADE_CUMULE, bonusStructures, DEFENSE_BASE } from "../config/defense";
 import { calculerDefenseTotale, calculerForceAttaque } from "../game/attaque";
 import { chanceDefenseMaison, degatsNuit, nombreVictimes, ratioDeficit, tirerAuHasard } from "../game/blessuresNuit";
 import { appliquerPhaseFaimSoif, type Jauge, type NiveauJauge } from "../game/faimSoif";
@@ -196,7 +196,7 @@ export async function resoudreAttaque(
   const gardes = await gardesDeLaNuit(ville.id, ville.cycleActuel);
   const bonusGardes = gardes.reduce((somme, g) => somme + g.bonus, 0);
   const palierPalissade = palissade?.palierActuel ?? 0;
-  const defenseTotale = calculerDefenseTotale(palierPalissade, bonusGardes, ville.structuresDefense);
+  const defenseTotale = calculerDefenseTotale(palierPalissade, bonusGardes, ville.structuresDefense, ville.structuresRenforcees);
 
   if (enregistrer) {
     // Upsert : un admin a pu reculer le cycle sur un numero deja joue
@@ -215,7 +215,9 @@ export async function resoudreAttaque(
   const degats = deficit > 0 && !villeTombee ? await infligerDegatsChantiers(guild, ville.id, deficit) : [];
   const detailDefense =
     `base ${DEFENSE_BASE}, palissade +${BONUS_PALISSADE_CUMULE[Math.min(palierPalissade, BONUS_PALISSADE_CUMULE.length - 1)]}` +
-    (ville.structuresDefense > 0 ? `, structures +${ville.structuresDefense * BONUS_STRUCTURE_DEFENSE}` : "") +
+    (ville.structuresDefense + ville.structuresRenforcees > 0
+      ? `, structures +${bonusStructures(ville.structuresDefense, ville.structuresRenforcees)}`
+      : "") +
     `, ${gardes.length} garde${gardes.length > 1 ? "s" : ""} +${bonusGardes}`;
   const suites = deficit > 0 ? [...(lignes.length > 0 ? lignes : ["Personne n'a été touché."]), ...degats] : [];
   const compteRendu =

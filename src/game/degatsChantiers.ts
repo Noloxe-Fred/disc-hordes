@@ -2,6 +2,7 @@ import type { PalierBatiment } from "../config/batiments";
 import {
   BONUS_PALISSADE_CUMULE,
   BONUS_STRUCTURE_DEFENSE,
+  BONUS_STRUCTURE_RENFORCEE,
   PART_AVANCEMENT_PAR_POINT,
   POINTS_MAX_AVANCEMENT,
   SEUIL_PERTE_PALIER_ALEATOIRE,
@@ -10,19 +11,22 @@ import {
 // Degats sur les chantiers en defense insuffisante (equilibrage.md §3) : le deficit devient un budget de degats,
 // consomme dans l'ordre. Chaque element detruit absorbe sa valeur de defense, si bien qu'un petit deficit ne touche
 // que les premieres cibles :
-// 1. structures de defense : une par tranche de 3 points (entamee), jusqu'a ce qu'il n'en reste plus ;
+// 1. structures de defense : les simples d'abord, une par tranche de 3 points (entamee), puis les renforcees, une par
+//    tranche de 5 points (entamee), jusqu'a ce qu'il n'en reste plus ;
 // 2. palissade : -1 palier s'il reste du budget, qui absorbe le bonus de ce palier ;
 // 3. avancement en cours (chantiers et maisons privees) : chaque point restant en detruit 10 %, 10 points au plus ;
 // 4. s'il reste encore 5 points : -1 palier sur un batiment construit tire au hasard (hors palissade, maisons comprises).
 
 export interface EtatDefendu {
   structures: number;
+  renforcees: number;
   palierPalissade: number;
   avancementEnCours: boolean;
 }
 
 export interface PlanDegats {
   structuresDetruites: number;
+  renforceesDetruites: number;
   palissadePerdue: boolean;
   partAvancement: number; // part de l'avancement en cours detruite (0 a 1)
   palierAleatoirePerdu: boolean;
@@ -33,6 +37,8 @@ export function planifierDegats(deficit: number, etat: EtatDefendu): PlanDegats 
 
   const structuresDetruites = Math.min(etat.structures, Math.ceil(budget / BONUS_STRUCTURE_DEFENSE));
   budget -= Math.min(budget, structuresDetruites * BONUS_STRUCTURE_DEFENSE);
+  const renforceesDetruites = Math.min(etat.renforcees, Math.ceil(budget / BONUS_STRUCTURE_RENFORCEE));
+  budget -= Math.min(budget, renforceesDetruites * BONUS_STRUCTURE_RENFORCEE);
 
   const palissadePerdue = budget > 0 && etat.palierPalissade > 0;
   if (palissadePerdue) {
@@ -47,7 +53,7 @@ export function planifierDegats(deficit: number, etat: EtatDefendu): PlanDegats 
     budget -= points;
   }
 
-  return { structuresDetruites, palissadePerdue, partAvancement, palierAleatoirePerdu: budget >= SEUIL_PERTE_PALIER_ALEATOIRE };
+  return { structuresDetruites, renforceesDetruites, palissadePerdue, partAvancement, palierAleatoirePerdu: budget >= SEUIL_PERTE_PALIER_ALEATOIRE };
 }
 
 export interface Depot {

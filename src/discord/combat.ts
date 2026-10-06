@@ -1,10 +1,29 @@
 import { CauseMort, StatutJoueur, TypePhase, type PalierZone } from "@prisma/client";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, TextDisplayBuilder, type Guild } from "discord.js";
-import { DEGATS_HORDE_AUBE, DEGATS_RENCONTRE_PAR_PHASE, DEGATS_ZOMBIE, PROTECTION_FEU_HORDE, PV_ZOMBIE } from "../config/combat";
+import {
+  DEGATS_HORDE_AUBE,
+  DEGATS_RENCONTRE_PAR_PHASE,
+  DEGATS_TIR,
+  DEGATS_ZOMBIE,
+  OBJET_ARME_A_FEU,
+  OBJET_MUNITIONS,
+  PROTECTION_FEU_HORDE,
+  PV_ZOMBIE,
+} from "../config/combat";
 import { emojiObjet } from "../config/objets";
 import { prisma } from "../db";
 import { feuActif } from "../game/feu";
-import { coutAttaque, coutFuite, echangerCoups, meilleureArme, tenterFuite, tirerRencontre } from "../game/combat";
+import {
+  chanceTir,
+  coutAttaque,
+  coutFuite,
+  echangerCoups,
+  meilleureArme,
+  tenterFuite,
+  tirer as tirerSurZombie,
+  tirerRencontre,
+  type Echange,
+} from "../game/combat";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { deplacerJoueur } from "./deplacement";
 import { trouverSalonTexte } from "./reconcile";
@@ -57,7 +76,8 @@ async function armeDuJoueur(joueurId: number) {
   return meilleureArme(sac.map((e) => e.objet.nom));
 }
 
-// Ecran de combat : etat du zombie, arme utilisee, boutons « Attaquer » et « Fuir » avec leur cout
+// Ecran de combat : etat du zombie, arme utilisee, boutons « Attaquer », « Tirer » (arme a feu et munitions dans le
+// sac) et « Fuir » avec leur cout
 export async function ecranCombat(joueurId: number, texte?: string): Promise<ContainerBuilder> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
   const phase = joueur.ville!.phaseActuelle;
@@ -66,6 +86,8 @@ export async function ecranCombat(joueurId: number, texte?: string): Promise<Con
   const errant = await zombieAffrontePar(joueurId);
   const pvMax = errant?.pvMax ?? (joueur.zoneActuelle ? PV_ZOMBIE[joueur.zoneActuelle.palier] : (joueur.rencontrePvZombie ?? 0));
   const adversaire = errant ? `🧟 <@${errant.transforme.utilisateur.discordId}>, **citoyen transformé en zombie**` : "🧟 Zombie";
+  const { armeAFeu, munitions } = await equipementTir(joueurId);
+  const tirPossible = armeAFeu && munitions !== null;
   return new ContainerBuilder()
     .setAccentColor(COULEUR_COMBAT)
     .addTextDisplayComponents(
@@ -73,7 +95,11 @@ export async function ecranCombat(joueurId: number, texte?: string): Promise<Con
         (texte ? `${texte}\n\n` : "") +
           `## ⚔️ Combat — ${joueur.zoneActuelle?.nom ?? "en ville"}\n` +
           `${adversaire} : ❤️ **${joueur.rencontrePvZombie} / ${pvMax}** PV · Vous : ❤️ ${joueur.pv} PV · ⚡ ${joueur.paActuel ?? 0} PA\n` +
-          (arme ? `${emojiObjet(arme.nom)} Vous vous battez avec : **${arme.nom}**.` : "✊ Vous vous battez à mains nues."),
+          (arme ? `${emojiObjet(arme.nom)} Vous vous battez avec : **${arme.nom}**.` : "✊ Vous vous battez à mains nues.") +
+          (tirPossible
+            ? `\n${emojiObjet(OBJET_ARME_A_FEU)} Arme à feu : ${munitions.quantite} ${emojiObjet(OBJET_MUNITIONS)} munition${munitions.quantite > 1 ? "s" : ""}, ` +
+              `${Math.round(chanceTir(joueur.metier) * 100)} % de toucher, −${DEGATS_TIR} PV par tir, sans PA.`
+            : ""),
       ),
     )
     .addActionRowComponents(
@@ -83,6 +109,9 @@ export async function ecranCombat(joueurId: number, texte?: string): Promise<Con
           .setLabel(`Attaquer (${coutAttaque(phase, arme)} PA)`)
           .setEmoji("⚔️")
           .setStyle(ButtonStyle.Danger),
+        ...(tirPossible
+          ? [new ButtonBuilder().setCustomId("tirer").setLabel("Tirer (1 munition)").setEmoji(emojiObjet(OBJET_ARME_A_FEU)).setStyle(ButtonStyle.Danger)]
+          : []),
         new ButtonBuilder().setCustomId("fuir").setLabel(`Fuir (${coutFuite(phase)} PA)`).setEmoji("🏃").setStyle(ButtonStyle.Secondary),
       ),
     );
@@ -100,8 +129,7 @@ async function joueurEnRencontre(joueurId: number) {
   return actif && joueur.rencontrePvZombie !== null ? joueur : null;
 }
 
-// Echange de coups : PA depenses, coup du joueur, puis riposte eventuelle du zombie encore debout (coup recu :
-// -1 PV et 10 % d'infection)
+// Echange de coups : PA depenses, coup du joueur, puis riposte eventuelle (conclureEchange)
 export async function attaquer(guild: Guild, joueurId: number): Promise<ResultatCombat> {
   const joueur = await joueurEnRencontre(joueurId);
   if (!joueur) return { texte: "Il n'y a plus de zombie face à vous.", enCours: false };
@@ -112,6 +140,49 @@ export async function attaquer(guild: Guild, joueurId: number): Promise<Resultat
   }
 
   const echange = echangerCoups(joueur.rencontrePvZombie!, arme);
+  const coup = echange.touche ? `⚔️ Vous frappez le zombie (−${echange.degats} PV, −${cout} PA).` : `💨 Vous manquez votre coup (−${cout} PA).`;
+  return conclureEchange(guild, joueur, echange, cout, null, coup);
+}
+
+// Tir a l'arme a feu : 1 munition et aucun PA, 75 % de toucher (95 % pour le chasseur), 3 degats ; meme riposte
+export async function tirer(guild: Guild, joueurId: number): Promise<ResultatCombat> {
+  const joueur = await joueurEnRencontre(joueurId);
+  if (!joueur) return { texte: "Il n'y a plus de zombie face à vous.", enCours: false };
+  const { armeAFeu, munitions } = await equipementTir(joueurId);
+  if (!armeAFeu) return { texte: `Il vous faut une ${emojiObjet(OBJET_ARME_A_FEU)} **${OBJET_ARME_A_FEU}** dans votre sac pour tirer.`, enCours: true };
+  if (!munitions) return { texte: `Vous n'avez plus de ${emojiObjet(OBJET_MUNITIONS)} **${OBJET_MUNITIONS}**.`, enCours: true };
+
+  const echange = tirerSurZombie(joueur.rencontrePvZombie!, joueur.metier);
+  const reste = munitions.quantite - 1;
+  const coup =
+    (echange.touche ? `🔫 Vous tirez et touchez le zombie (−${echange.degats} PV)` : "🔫 Vous tirez… et manquez le zombie") +
+    ` (−1 ${emojiObjet(OBJET_MUNITIONS)}, ${reste} restante${reste > 1 ? "s" : ""}).`;
+  return conclureEchange(guild, joueur, echange, 0, munitions.id, coup);
+}
+
+// Munitions et arme a feu du sac
+async function equipementTir(joueurId: number) {
+  const sac = await prisma.inventaireJoueur.findMany({
+    where: { joueurId, quantite: { gt: 0 }, objet: { nom: { in: [OBJET_ARME_A_FEU, OBJET_MUNITIONS] } } },
+    include: { objet: true },
+  });
+  return {
+    armeAFeu: sac.some((e) => e.objet.nom === OBJET_ARME_A_FEU),
+    munitions: sac.find((e) => e.objet.nom === OBJET_MUNITIONS) ?? null,
+  };
+}
+
+// Suite d'un echange (attaque ou tir) : PA ou munition depenses, PV du zombie, puis riposte eventuelle du zombie encore
+// debout (coup recu : -1 PV et 10 % d'infection)
+async function conclureEchange(
+  guild: Guild,
+  joueur: NonNullable<Awaited<ReturnType<typeof joueurEnRencontre>>>,
+  echange: Echange,
+  cout: number,
+  munitionsId: number | null,
+  coup: string,
+): Promise<ResultatCombat> {
+  const joueurId = joueur.id;
   const vaincu = echange.pvZombie <= 0;
   const errant = await zombieAffrontePar(joueurId);
   await prisma.$transaction([
@@ -119,6 +190,7 @@ export async function attaquer(guild: Guild, joueurId: number): Promise<Resultat
       where: { id: joueurId },
       data: { paActuel: { decrement: cout }, ...(vaincu ? FIN_RENCONTRE : { rencontrePvZombie: echange.pvZombie }) },
     }),
+    ...(munitionsId !== null ? [prisma.inventaireJoueur.update({ where: { id: munitionsId }, data: { quantite: { decrement: 1 } } })] : []),
     // Un citoyen transforme abattu disparait ; sinon il garde ses blessures, meme si le joueur tombe ou s'en va
     ...(errant
       ? [
@@ -128,9 +200,7 @@ export async function attaquer(guild: Guild, joueurId: number): Promise<Resultat
         ]
       : []),
   ]);
-  const lignes = [
-    echange.touche ? `⚔️ Vous frappez le zombie (−${echange.degats} PV, −${cout} PA).` : `💨 Vous manquez votre coup (−${cout} PA).`,
-  ];
+  const lignes = [coup];
   if (vaincu) {
     await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Combat : zombie abattu", public: false } });
     lignes.push(

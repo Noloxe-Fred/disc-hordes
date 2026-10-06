@@ -1,7 +1,7 @@
 import { StatutJoueur, TypeBatiment } from "@prisma/client";
 import type { Guild } from "discord.js";
 import { chantier, PALIERS_MAISON } from "../config/batiments";
-import { BONUS_STRUCTURE_DEFENSE } from "../config/defense";
+import { bonusStructures } from "../config/defense";
 import { prisma } from "../db";
 import { avancementApresDegats, planifierDegats, type Depot } from "../game/degatsChantiers";
 import { rafraichirPanneauChantiers } from "./chantiers";
@@ -72,6 +72,7 @@ export async function infligerDegatsChantiers(guild: Guild, villeId: number, def
 
   const plan = planifierDegats(deficit, {
     structures: ville.structuresDefense,
+    renforcees: ville.structuresRenforcees,
     palierPalissade: palissade?.palierActuel ?? 0,
     avancementEnCours:
       avantBatiments.some((b) => aDeLAvancement(b.contributions, b.paInstalles)) ||
@@ -81,11 +82,16 @@ export async function infligerDegatsChantiers(guild: Guild, villeId: number, def
   const lignes: string[] = [];
   const typesPerdus = new Set<TypeBatiment>();
 
-  if (plan.structuresDetruites > 0) {
-    await prisma.ville.update({ where: { id: villeId }, data: { structuresDefense: { decrement: plan.structuresDetruites } } });
+  const detruites = plan.structuresDetruites + plan.renforceesDetruites;
+  if (detruites > 0) {
+    await prisma.ville.update({
+      where: { id: villeId },
+      data: { structuresDefense: { decrement: plan.structuresDetruites }, structuresRenforcees: { decrement: plan.renforceesDetruites } },
+    });
     lignes.push(
-      `🛡️ ${plan.structuresDetruites} structure${plan.structuresDetruites > 1 ? "s" : ""} de défense détruite${plan.structuresDetruites > 1 ? "s" : ""}` +
-        ` (−${plan.structuresDetruites * BONUS_STRUCTURE_DEFENSE} défense).`,
+      `🛡️ ${detruites} structure${detruites > 1 ? "s" : ""} de défense détruite${detruites > 1 ? "s" : ""}` +
+        (plan.renforceesDetruites > 0 ? ` (dont ${plan.renforceesDetruites} renforcée${plan.renforceesDetruites > 1 ? "s" : ""})` : "") +
+        ` (−${bonusStructures(plan.structuresDetruites, plan.renforceesDetruites)} défense).`,
     );
   }
 

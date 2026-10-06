@@ -58,7 +58,7 @@ const SALONS_VILLE: Record<string, string> = {
     "Les chantiers : le panneau montre chaque bâtiment ; ses boutons **Contribuer** (sac ou banque) et **Installer** le font avancer.",
   "maisons-privees":
     "Les maisons privées : bâtis ta maison avec les boutons du panneau (**Contribuer**, **Installer**), **Ma maison** montre où tu en es.",
-  atelier: "L'atelier : lance `/inventaire` ici, en ville, pour le bouton **Craft avancé** et les recettes de ton métier.",
+  atelier: "L'atelier : lance `/inventaire` ici, en ville, pour le bouton **Craft avancé** et les recettes de ton métier (la réparation d'une arme à feu est ouverte à tous).",
 };
 
 async function texteSalon(guild: Guild, salonId: string | null): Promise<string | null> {
@@ -125,7 +125,7 @@ async function texteJoueur(guild: Guild, utilisateurId: number): Promise<string>
   if (joueur.rencontrePvZombie !== null) {
     return (
       "## 🧟 Un zombie te barre la route\n" +
-      "⚡ `/action` : **Attaquer** ou **Fuir**, rien d'autre tant qu'il est là\n" +
+      "⚡ `/action` : **Attaquer**, **Tirer** (arme à feu et munitions) ou **Fuir**, rien d'autre tant qu'il est là\n" +
       `${inventaire}\n${communes}`
     );
   }

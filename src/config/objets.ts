@@ -18,6 +18,7 @@ const EMOJI_OBJET: Record<string, string> = {
   "Médicament basique": "💊",
   "Arme simple": "🔪",
   "Arme avancée": "🏹",
+  "Arme à feu cassée": "🪛",
   "Petit gibier": "🐇",
   "Gros gibier": "🦌",
   "Gibier rare": "🐐",
@@ -43,6 +44,9 @@ const EMOJI_OBJET: Record<string, string> = {
   "Infusion médicinale": "🍵",
   "Pièges avancés": "⛓️",
   "Armes/outils avancés": "🛠️",
+  Festin: "🍗",
+  "Structure renforcée": "🏰",
+  "Arme à feu": "🔫",
 };
 
 const EMOJI_PAR_DEFAUT = "📦";
@@ -75,6 +79,7 @@ const POIDS_OBJET: Record<string, number> = {
   "Médicament basique": PETIT,
   "Arme simple": MOYEN,
   "Arme avancée": LOURD,
+  "Arme à feu cassée": MOYEN,
   "Petit gibier": MOYEN,
   "Gros gibier": LOURD,
   "Gibier rare": LOURD,
@@ -100,6 +105,9 @@ const POIDS_OBJET: Record<string, number> = {
   "Infusion médicinale": PETIT,
   "Pièges avancés": LOURD,
   "Armes/outils avancés": LOURD,
+  Festin: MOYEN,
+  "Structure renforcée": LOURD,
+  "Arme à feu": MOYEN,
 };
 
 export function poidsObjet(nom: string): number {
@@ -116,6 +124,23 @@ export const OBJET_RADIO = "Radio";
 
 // Equipements : objets portes sans prendre de place, montres a part dans l'image du sac (a cote des PA et de la charge)
 const EQUIPEMENTS: readonly string[] = [OBJET_RADIO];
+
+// Objet rare (equilibrage.md §5) : s'ouvre depuis /inventaire (1 PA) et donne l'un de ces lots, tire au hasard a
+// chances egales
+export const OBJET_RARE = "Objet rare";
+export const COUT_OUVERTURE_OBJET_RARE = 1;
+export const LOTS_OBJET_RARE: readonly { objet: string; quantite: number }[] = [
+  { objet: OBJET_RADIO, quantite: 1 },
+  { objet: "Arme avancée", quantite: 1 },
+  { objet: "Médicament basique", quantite: 2 },
+  { objet: "Remède contre l'infection", quantite: 1 },
+  { objet: "Munitions", quantite: 3 },
+];
+
+// Festin du cuisinier (equilibrage.md §2 et §8) : servi en ville depuis le sac ou la banque, gratuit en PA, il rend
+// de la faim a chaque citoyen vivant present en ville
+export const OBJET_FESTIN = "Festin";
+export const FAIM_FESTIN = 20;
 
 export function estEquipement(nom: string): boolean {
   return EQUIPEMENTS.includes(nom);

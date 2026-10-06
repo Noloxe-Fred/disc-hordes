@@ -1,7 +1,7 @@
 import { StatutJoueur, TypePiege, type TypePhase } from "@prisma/client";
 import type { Guild } from "discord.js";
 import { emojiObjet, poidsObjet } from "../config/objets";
-import { COUT_POSE_PIEGE_JOUR, PIEGES, TYPES_ZONE_PIEGE } from "../config/pieges";
+import { BONUS_CAPTURE_APPAT, COUT_POSE_PIEGE_JOUR, OBJET_APPAT, PIEGES, TYPES_ZONE_PIEGE } from "../config/pieges";
 import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { coutSelonPhase } from "../game/deplacement";
@@ -65,6 +65,31 @@ export async function poserPiege(guild: Guild, joueurId: number, type: TypePiege
     `🪤 Vous posez un ${emojiObjet(nomPiege)} **${nomPiege}** dans **${joueur.zone.nom}** (−${cout} PA). À chaque aube, il peut ` +
     `attraper un ${emojiObjet(prise)} **${prise}**, d'autant plus facilement que la zone est loin de la ville. Revenez ` +
     "relever la prise avant qu'un autre ne le fasse ! Il figure désormais sur votre carte."
+  );
+}
+
+// Appater le piege vide de la zone avec un petit gibier du sac (gratuit) : +20 points de capture a la prochaine aube
+export async function appaterPiege(joueurId: number): Promise<string> {
+  const joueur = await joueurDehors(joueurId);
+  if (!joueur) return "Vous ne pouvez appâter un piège qu'en territoire externe.";
+  if (joueur.rencontrePvZombie !== null) return "🧟 Impossible avec un zombie sur le dos : combattez ou fuyez d'abord.";
+  const piege = joueur.zone.piege;
+  if (!piege) return "Il n'y a pas de piège ici.";
+  if (piege.priseLe) return "🪤 Une prise attend déjà dans le piège : relevez-la d'abord.";
+  if (piege.appate) return "🪤 Le piège est déjà appâté.";
+  const appat = await prisma.inventaireJoueur.findFirst({ where: { joueurId, objet: { nom: OBJET_APPAT }, quantite: { gt: 0 } } });
+  if (!appat) return `Il vous faut un ${emojiObjet(OBJET_APPAT)} **${OBJET_APPAT}** dans votre sac pour appâter le piège.`;
+
+  // Un seul appat, meme si deux survivants cliquent en meme temps
+  const appate = await prisma.piege.updateMany({ where: { id: piege.id, appate: false, priseLe: null }, data: { appate: true } });
+  if (appate.count === 0) return "🪤 Quelqu'un vient d'appâter le piège avant vous.";
+  await prisma.$transaction([
+    prisma.inventaireJoueur.update({ where: { id: appat.id }, data: { quantite: { decrement: 1 } } }),
+    prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: `Piège appâté : ${joueur.zone.nom}`, public: false } }),
+  ]);
+  return (
+    `🪤 Vous appâtez le piège avec un ${emojiObjet(OBJET_APPAT)} **${OBJET_APPAT}** : **+${Math.round(BONUS_CAPTURE_APPAT * 100)} points** ` +
+    "de chances de capture à la prochaine aube. L'appât sera consommé, qu'il y ait prise ou non."
   );
 }
 

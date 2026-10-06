@@ -27,6 +27,32 @@ export interface Chantier {
 
 export const PA_PAR_RESSOURCE = 0.2;
 
+// Objets qui comptent pour plusieurs unites d'une ressource dans les chantiers et la maison (equilibrage.md §5) :
+// un Bois rare vaut 5 Bois
+const EQUIVALENCES_CHANTIER: Record<string, { ressource: string; valeur: number }> = {
+  "Bois rare": { ressource: "Bois", valeur: 5 },
+};
+
+// Ressource du palier creditee par un objet depose, et combien d'unites il en vaut
+export function ressourceDeposee(nom: string): { ressource: string; valeur: number } {
+  return EQUIVALENCES_CHANTIER[nom] ?? { ressource: nom, valeur: 1 };
+}
+
+// Objets utiles a un palier : ses ressources et les objets qui en tiennent lieu
+export function objetsUtiles(ressources: Iterable<string>): Set<string> {
+  const utiles = new Set(ressources);
+  for (const [objet, { ressource }] of Object.entries(EQUIVALENCES_CHANTIER)) if (utiles.has(ressource)) utiles.add(objet);
+  return utiles;
+}
+
+// Depot de `quantite` objets (dont `disponible` en stock) sur une ressource dont il manque `besoin` unites : objets
+// pris (pas plus qu'il n'en faut) et unites creditees (jamais plus que le besoin)
+export function calculerDepot(nom: string, besoin: number, quantite: number, disponible: number): { pris: number; credit: number } {
+  const { valeur } = ressourceDeposee(nom);
+  const pris = Math.max(0, Math.min(quantite, Math.ceil(besoin / valeur), disponible));
+  return { pris, credit: Math.min(pris * valeur, besoin) };
+}
+
 export const CHANTIERS: readonly Chantier[] = [
   {
     type: TypeBatiment.PALISSADE,

@@ -70,8 +70,8 @@ Ton métier se choisit **une fois pour toutes**, en créant ou en rejoignant une
 💉 **Médecin** (2 places) : seul à pratiquer le **soin avancé** (+5 PV) et à administrer le **remède contre l'infection**, qu'il fabrique à l'atelier.
 🧭 **Éclaireur** (2 places) : **observer** les environs est gratuit le jour (1 PA la nuit), et entrer dans une zone qui n'est pas sur sa carte ne lui coûte **rien de plus**.
 🗡️ **Artisan** (2 places) : fabrique à l'atelier les **armes avancées** (−2 PA et 2 dégâts par coup en combat).
-🥘 **Cuisinier** (2 places) : prépare à l'atelier le **ragoût fortifiant** (+40 faim, +2 PA au réveil), la **conserve** (+25 faim) et l'**infusion** (+15 soif, soulage l'infection).
-🔧 **Ingénieur/bâtisseur** (2 places) : fabrique à l'atelier les **structures de défense** (+3 défense chacune), et de quoi réparer la voiture (bientôt utile).
+🥘 **Cuisinier** (2 places) : prépare à l'atelier le **ragoût fortifiant** (+40 faim, +2 PA au réveil), la **conserve** (+25 faim), l'**infusion** (+15 soif, soulage l'infection) et le **festin** (+20 faim pour toute la ville).
+🔧 **Ingénieur/bâtisseur** (2 places) : fabrique à l'atelier les **structures de défense** (+3 défense chacune), les **structures renforcées** (+5, atelier palier 2), et de quoi réparer la voiture (bientôt utile).
 🪤 **Chasseur/trappeur** (1 place) : fabrique à l'atelier les **pièges avancés**, qui attrapent du **gros gibier**.
 🙋 **Sans métier** (2 places) : pas de spécialité, mais toutes les actions de base te restent ouvertes.
 > 🛠️ Les recettes de métier demandent que ta ville ait construit son **atelier** (voir « Les chantiers »).
@@ -145,6 +145,7 @@ Dans une zone, le bouton **Fouiller** de `/action` te fait chercher ce qui traî
 ## 🪤 Les pièges
 Avec un piège dans ton sac, le bouton **Piège** de `/action` le pose dans ta zone, en **forêt** ou en **montagnes**, pour **1 PA** (2 la nuit). Un seul piège par zone.
 🪤 Le **piège simple** (bouton Fabriquer, ouvert à tous) attrape du **gibier** (+10 faim) ; le **piège avancé** (fabriqué par le Chasseur) attrape du **gros gibier** (+25 faim).
+🐇 Un **petit gibier** dans ton sac sert d'**appât** : le bouton **Appâter** du menu Piège le met dans un piège vide, gratuitement, pour **+20 points** de chances à la prochaine aube. L'appât est mangé à l'aube, prise ou pas.
 🦌 Le piège reste en place. **À chaque aube**, il a **60 %** de chances d'attraper sa proie en zone proche, **75 %** en moyenne et **90 %** en éloignée, tant que la zone a encore du gibier. Il garde une seule prise à la fois : tant que personne ne vient la chercher, il n'attrape plus rien.
 ✋ **N'importe qui** passant dans la zone, même d'une autre ville, peut **relever la prise** gratuitement avec le bouton **Piège**. Ne tarde pas trop !
 🗺️ Ton piège apparaît sur ta carte, et sur celle des citoyens avec qui tu la partages.
@@ -154,6 +155,7 @@ Après chaque fouille et à chaque arrivée dans une zone, un **zombie** peut su
 ⚔️ **Attaquer** pour **2 PA** (3 la nuit) : tu touches 7 fois sur 10. Un zombie a **2 PV** en zone proche, **3** en moyenne, **4** en éloignée. S'il tient encore debout, il riposte (3 fois sur 10) : **−1 PV**, et chaque coup reçu peut t'**infecter**.
 🏃 **Fuir** pour **1 PA** (2 la nuit) : ça marche 3 fois sur 4 le jour, 1 fois sur 2 la nuit. Tu rebrousses chemin vers l'endroit d'où tu venais (ou tu restes sur place si tu fouillais). Raté, le zombie te frappe (−1 PV, sans infection).
 🗡️ Une **arme** dans ton sac aide : **arme de fortune** (−1 PA par attaque), **arme simple** (tu touches plus souvent), **arme avancée** (−2 PA et 2 dégâts par coup). Seule la meilleure compte.
+🔫 Avec une **arme à feu** et des **munitions**, le bouton **Tirer** s'ajoute : **0 PA**, une munition par tir, tu touches 3 fois sur 4 (presque à coup sûr pour le **Chasseur**) et le zombie perd **3 PV**.
 ⏳ Un zombie qu'on laisse là ne s'en va pas : **−1 PV à la tombée de la nuit** tant que tu ne l'as pas réglé.
 🌙 **À la tombée de la nuit**, si tu es dehors, un zombie peut sortir de l'ombre et te tomber dessus.
 ☀️ **À l'aube, la horde déferle** sur tous ceux qui sont encore dehors : **−3 PV** en zone proche, **−4** en moyenne, **−5** en éloignée (un feu allumé t'en épargne 2), puis un zombie reste sur toi. **Rentre avant l'aube !**
@@ -168,10 +170,12 @@ Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (
 Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâtiment : la **palissade** (défense contre l'attaque de l'aube), la **place publique** (plus de place dans la banque), le **puits** (de l'eau chaque matin), l'**atelier**, la **tour radio** et la **mairie**.
 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** : dépose des ressources sur le prochain palier d'un bâtiment, depuis ton sac ou directement depuis la banque. C'est gratuit.
 🔨 **Installer** : verse tes PA pour bâtir, **2 PA par tranche de 10 ressources déposées**. Pas besoin d'attendre que tout soit réuni : on installe au fur et à mesure.
-🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense** tant qu'elle tient (5 au plus).
+🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense** tant qu'elle tient, une **renforcée** **+5** (5 structures au plus en tout). Quand tout est plein, une renforcée prend la place d'une structure simple : ses ressources (Ferraille, Bois, Pierre) reviennent à la banque, s'il y a de la place.
+🌳 Un **bois rare** déposé sur un chantier ou sur ta maison compte pour **5 Bois**.
 
 ## 🛠️ L'atelier
 Une fois l'atelier construit, son salon s'ouvre. Lance `/inventaire` **dans ce salon** : le bouton **Craft avancé** te propose les recettes de ton métier (voir « Les métiers »). Les ingrédients viennent de ton sac, puis de la banque.
+🔫 Tout le monde peut y **réparer une arme à feu cassée** (trouvée dans la ville en ruines) : **3 PA + 2 Ferraille**.
 ✅ Quand toutes les ressources et tous les PA sont là, le palier est construit et son effet s'applique tout de suite. La mairie l'annonce.
 Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim et soif d'au moins 10).
 🧟 **Quand la défense ne suffit pas**, les zombies saccagent aussi les constructions, d'autant plus que l'écart est grand : d'abord les **structures de défense**, puis **un palier de palissade**, puis les **ressources et PA déjà versés** sur les chantiers et les maisons en cours, et enfin **un palier d'un bâtiment au hasard** (maisons comprises). Un palier perdu perd son effet, et il faut le reconstruire.
@@ -195,17 +199,24 @@ Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour com
 🍶 **Ration d'eau purifiée** : 2 Eau brute + 1 Tissu
 🔦 **Torche** : 1 Bois + 1 Tissu
 🪤 **Piège simple** : 2 Bois + 1 Ferraille
-🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner, le feu à sécuriser une zone et le piège à attraper du gibier (`/action`), l'arme de fortune aide au combat. Les autres objets fabriqués seront utilisables avec les prochaines mises à jour.
+⚙️ **Dérouiller des pièces** : 2 Pièces mécaniques rouillées + 1 Eau brute, pour 1 Pièce mécanique
+🔦 La **torche** sert déjà : la nuit, en te déplaçant, tu peux en brûler une pour payer le trajet au **prix de jour**. Le plat préparé et la ration d'eau se mangent et se boivent (ci-dessous), le bandage sert à soigner, le feu à sécuriser une zone et le piège à attraper du gibier (`/action`), l'arme de fortune aide au combat. Les pièces dérouillées servent aux chantiers de l'atelier et de la tour radio.
 
 ## 🍲 Manger et boire
 Le bouton **Manger / boire (sac)** consomme ce que tu as sur toi, partout, gratuitement. En ville, **Manger / boire (banque)** puise directement dans la réserve commune.
 🫐 **Baies** : +5 faim
+🐇 **Petit gibier** : +7 faim
 🍖 **Gibier** : +10 faim
 🦌 **Gros gibier** : +25 faim
 🍲 **Plat préparé** : +20 faim
 💧 **Eau brute** : +10 soif, mais **1 chance sur 5 de perdre 1 PV** : mieux vaut la purifier
 🍶 **Ration d'eau purifiée** : +30 soif, sans risque
 Une jauge ne dépasse pas **100** : ce qui déborde est perdu. Cuisiner rapporte plus que manger cru.
+🍗 Un **festin** (préparé par le Cuisinier) ne se mange pas seul : en ville, le bouton **Servir un festin** donne **+20 faim à chaque citoyen présent en ville**, toi compris. Gratuit, depuis ton sac ou la banque.
+
+## 🏺 Les objets rares
+🏺 Un **objet rare** s'ouvre avec le bouton **Ouvrir l'objet rare** de `/inventaire`, pour **1 PA** : il contient une radio, une arme avancée, 2 médicaments, un remède contre l'infection ou 3 munitions. Garde un peu de place dans ton sac.
+🐐 Le **gibier rare** sert au festin du Cuisinier, le **minerai rare** aux structures renforcées de l'Ingénieur, les **pièces pour voiture** à la réparation de la voiture.
 
 ## 🤝 Donner
 Le bouton **Donner** ouvre un formulaire : choisis **à qui**, **quel objet** et **combien**. C'est gratuit.
@@ -271,8 +282,8 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
-🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer en banque, jeter, manger ou boire
-⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, combattre ou fuir un zombie, allumer un feu et faire la sieste, poser ou relever un piège, voir et partager ta carte, soigner, monter la garde, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
+🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer en banque, jeter, manger ou boire, ouvrir un objet rare ou servir un festin
+⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, combattre, tirer sur ou fuir un zombie, allumer un feu et faire la sieste, poser, appâter ou relever un piège, voir et partager ta carte, soigner, monter la garde, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
 ❓ `/aide` : les commandes utiles selon le salon où tu la tapes et ta situation (nomade, en ville, dehors, face à un zombie, mort)
 🚩 `/signaler` : signaler à l'équipe un comportement problématique (le membre concerné, si besoin, et ce qui s'est passé) ; seuls les MJ et les Admins le lisent
 

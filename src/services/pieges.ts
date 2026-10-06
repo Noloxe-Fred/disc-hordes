@@ -1,16 +1,19 @@
-import { CHANCE_CAPTURE_PIEGE } from "../config/pieges";
+import type { PalierZone } from "@prisma/client";
+import { BONUS_CAPTURE_APPAT, CHANCE_CAPTURE_PIEGE } from "../config/pieges";
 import { prisma } from "../db";
 import { stocksActuels } from "../game/stocks";
 
 // Pieges (equilibrage.md §6 et §8), sans Discord
 
 // Aube : chaque piege vide du groupe capture sa proie avec la chance du palier de sa zone, s'il en reste dans le
-// stock naturel de la zone (une unite puisee, comme une fouille). Appele juste apres la repousse des ressources
-// naturelles, donc une fois par aube pour le groupe.
+// stock naturel de la zone (une unite puisee, comme une fouille). Un appat ajoute 20 points de chance et est consomme
+// a l'aube, qu'il y ait prise ou non. Appele juste apres la repousse des ressources naturelles, donc une fois par aube
+// pour le groupe.
 export async function capturerPieges(groupeId: number): Promise<void> {
   const pieges = await prisma.piege.findMany({ where: { priseLe: null, zone: { groupeId } }, include: { zone: true } });
   for (const piege of pieges) {
-    if (Math.random() >= CHANCE_CAPTURE_PIEGE[piege.zone.palier]) continue;
+    if (piege.appate) await prisma.piege.update({ where: { id: piege.id }, data: { appate: false } });
+    if (Math.random() >= chanceCapture(piege.zone.palier, piege.appate)) continue;
     const naturel = stocksActuels(piege.zone).naturel;
     if (naturel <= 0) continue;
     await prisma.$transaction([
@@ -18,6 +21,10 @@ export async function capturerPieges(groupeId: number): Promise<void> {
       prisma.piege.update({ where: { id: piege.id }, data: { priseLe: new Date() } }),
     ]);
   }
+}
+
+export function chanceCapture(palier: PalierZone, appate: boolean): number {
+  return Math.min(1, CHANCE_CAPTURE_PIEGE[palier] + (appate ? BONUS_CAPTURE_APPAT : 0));
 }
 
 // Zones ou le joueur connait un piege (le sien, ou recu avec une carte partagee)

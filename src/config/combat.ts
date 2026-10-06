@@ -56,6 +56,14 @@ export const DEGATS_SURPRISE_TRANSFORME = 1;
 // Verification periodique des incubations arrivees a terme et des zombies errants sans cible
 export const INTERVALLE_ZOMBIES_ERRANTS_MS = 5 * 60_000;
 
+// Tir (equilibrage.md §5) : avec une Arme a feu dans le sac, chaque tir consomme 1 Munition et aucun PA ; meme
+// riposte qu'une attaque
+export const OBJET_ARME_A_FEU = "Arme à feu";
+export const OBJET_MUNITIONS = "Munitions";
+export const CHANCE_TIR = 0.75;
+export const CHANCE_TIR_CHASSEUR = 0.95;
+export const DEGATS_TIR = 3;
+
 // Armes portees dans le sac : seule la meilleure compte (ordre de la liste), sans cumul
 export interface Arme {
   nom: string;

@@ -15,6 +15,7 @@ export interface EffetConsommable {
 const CONSOMMABLES: Record<string, EffetConsommable> = {
   // Bruts
   Baies: { faim: 5 },
+  "Petit gibier": { faim: 7 },
   Gibier: { faim: 10 },
   "Gros gibier": { faim: 25 },
   "Eau brute": { soif: 10, risque: { chance: 0.2, pv: 1 } },

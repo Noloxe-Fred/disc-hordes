@@ -13,7 +13,7 @@ import {
   type ButtonInteraction,
   type Guild,
 } from "discord.js";
-import { PALIERS_MAISON, type PalierBatiment } from "../config/batiments";
+import { calculerDepot, objetsUtiles, PALIERS_MAISON, ressourceDeposee, type PalierBatiment } from "../config/batiments";
 import { emojiObjet } from "../config/objets";
 import { SEUIL_CRITIQUE_FAIM_SOIF } from "../config/sante";
 import { prisma } from "../db";
@@ -171,7 +171,7 @@ export async function gererBoutonMaison(interaction: ButtonInteraction, action: 
 }
 
 async function contribuer(interaction: ButtonInteraction, joueurId: number, villeId: number, source: Source, etat: EtatMaison) {
-  const utiles = new Set(Object.keys(prochainPalier(etat)!.ressources).filter((nom) => manque(etat, nom) > 0));
+  const utiles = objetsUtiles(Object.keys(prochainPalier(etat)!.ressources).filter((nom) => manque(etat, nom) > 0));
   const stock = (
     source === "sac"
       ? await prisma.inventaireJoueur.findMany({ where: { joueurId, quantite: { gt: 0 } }, include: { objet: true }, orderBy: { objet: { nom: "asc" } } })
@@ -212,19 +212,22 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
   await soumission.editReply(texte);
 }
 
-// Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque
+// Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque. Un
+// objet qui tient lieu d'une ressource (Bois rare : 5 Bois) est credite sur cette ressource.
 async function deposer(guild: Guild, joueurId: number, villeId: number, source: Source, objetId: number, quantite: number): Promise<string> {
   const etat = await etatMaison(joueurId);
   const objet = await prisma.objet.findUniqueOrThrow({ where: { id: objetId } });
   const nom = `${emojiObjet(objet.nom)} ${objet.nom}`;
   if (!prochainPalier(etat)) return "Votre maison est terminée.";
-  const besoin = manque(etat, objet.nom);
-  if (besoin === 0) return `Votre maison n'a plus besoin de ${nom} pour ce palier.`;
+  const { ressource: nomRessource } = ressourceDeposee(objet.nom);
+  const ressource = await prisma.objet.findUniqueOrThrow({ where: { nom: nomRessource } });
+  const besoin = manque(etat, nomRessource);
+  if (besoin === 0) return `Votre maison n'a plus besoin de ${emojiObjet(nomRessource)} ${nomRessource} pour ce palier.`;
   const disponible =
     source === "sac"
       ? ((await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId, objetId } } }))?.quantite ?? 0)
       : ((await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId, objetId } } }))?.quantite ?? 0);
-  const verse = Math.min(quantite, besoin, disponible);
+  const { pris: verse, credit } = calculerDepot(objet.nom, besoin, quantite, disponible);
   if (verse <= 0) return `${source === "sac" ? "Vous n'avez plus" : "La banque n'a plus"} de ${nom}.`;
 
   await prisma.$transaction([
@@ -232,9 +235,9 @@ async function deposer(guild: Guild, joueurId: number, villeId: number, source: 
       ? prisma.inventaireJoueur.update({ where: { joueurId_objetId: { joueurId, objetId } }, data: { quantite: { decrement: verse } } })
       : prisma.inventaireVille.update({ where: { villeId_objetId: { villeId, objetId } }, data: { quantite: { decrement: verse } } }),
     prisma.contributionMaison.upsert({
-      where: { joueurId_objetId: { joueurId, objetId } },
-      update: { quantiteDeposee: { increment: verse } },
-      create: { joueurId, objetId, quantiteDeposee: verse },
+      where: { joueurId_objetId: { joueurId, objetId: ressource.id } },
+      update: { quantiteDeposee: { increment: credit } },
+      create: { joueurId, objetId: ressource.id, quantiteDeposee: credit },
     }),
     prisma.journalEntree.create({
       data: { villeId, joueurId, message: `Maison privée : ${objet.nom} ×${verse}${source === "banque" ? " (banque)" : ""}` },
@@ -243,6 +246,7 @@ async function deposer(guild: Guild, joueurId: number, villeId: number, source: 
   const termine = await terminerSiComplet(guild, villeId, joueurId);
   return (
     `🏠 Vous déposez **${nom} × ${verse}** sur votre maison` +
+    (credit !== verse ? ` (${credit} ${emojiObjet(nomRessource)} ${nomRessource})` : "") +
     (source === "banque" ? " (pris à la banque)" : "") +
     "." +
     (verse < quantite ? ` Le reste n'était pas nécessaire${verse < disponible ? "" : " ou manquait"}.` : "") +

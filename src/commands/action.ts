@@ -20,7 +20,8 @@ import { DUREE_CANDIDATURES_HEURES, DUREE_DEFIANCE_HEURES, DUREE_VOTE_HEURES } f
 import { LOOT_PAR_ZONE } from "../config/loot";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
 import { emojiObjet, OBJET_RADIO, poidsObjet } from "../config/objets";
-import { CHANCE_CAPTURE_PIEGE, PIEGES } from "../config/pieges";
+import { BONUS_CAPTURE_APPAT, OBJET_APPAT, PIEGES } from "../config/pieges";
+import { chanceCapture as chanceCapturePiege } from "../services/pieges";
 import { typeDeZone } from "../config/zones";
 import { prisma } from "../db";
 import { ecranCarte, ecranPartage, empechementPartage, partagerCarte } from "../discord/carte";
@@ -29,13 +30,13 @@ import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { estMaireEnExercice, formulaireAnnonce } from "../discord/annonce";
-import { attaquer, declencherRencontre, ecranCombat, fuir } from "../discord/combat";
+import { attaquer, declencherRencontre, ecranCombat, fuir, tirer } from "../discord/combat";
 import { declencherDefiance, empechementDefiance } from "../discord/defiance";
 import { declencherElectionJoueur, electionEnCours } from "../discord/election";
 import { demandeEnAttente, formulaireAccueil, villesAccueillantes } from "../discord/accueil";
 import { formulairePriorite, formulaireRationnement, formulaireSanction } from "../discord/maire";
 import { allumerFeu, coutFeu, faireSieste } from "../discord/feu";
-import { coutPosePiege, piegeAutorise, piegesEnSac, poserPiege, releverPiege } from "../discord/pieges";
+import { appaterPiege, coutPosePiege, piegeAutorise, piegesEnSac, poserPiege, releverPiege } from "../discord/pieges";
 import { bonusGarde, estDeGarde, monterLaGarde } from "../discord/garde";
 import { formulaireSoin } from "../discord/soin";
 import { corpsAuMemeEndroit, formulaireFouilleCorps } from "../discord/depouilles";
@@ -153,16 +154,28 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
 
   // Piege : relever la prise du piege de la zone, ou poser celui du sac (confirmation avant de depenser des PA)
   const coutDuPiege = coutPosePiege(ville.phaseActuelle);
-  const chanceCapture = joueur.zoneActuelle ? Math.round(CHANCE_CAPTURE_PIEGE[joueur.zoneActuelle.palier] * 100) : 0;
+  const chanceCapture = joueur.zoneActuelle ? Math.round(chanceCapturePiege(joueur.zoneActuelle.palier, piegeIci?.appate ?? false) * 100) : 0;
   const priseIci = piegeIci ? PIEGES[piegeIci.type].prise : null;
+  // Appat : un petit gibier du sac dans un piege vide qui n'en a pas encore
+  const appatPossible =
+    piegeIci !== null &&
+    !piegeIci.priseLe &&
+    !piegeIci.appate &&
+    (await prisma.inventaireJoueur.findFirst({ where: { joueurId, objet: { nom: OBJET_APPAT }, quantite: { gt: 0 } } })) !== null;
   const ecranPiege = encadre(
     piegeIci
       ? `${entete}\n\n` +
           (piegeIci.priseLe
             ? `Un ${emojiObjet(priseIci!)} **${priseIci}** est pris dans le ${PIEGES[piegeIci.type].objet.toLowerCase()}. Le relever ? ` +
               "N'importe quel survivant de passage peut le faire."
-            : `Le ${PIEGES[piegeIci.type].objet.toLowerCase()} est vide. À chaque aube, il a **${chanceCapture} %** de chances ` +
-              `d'attraper un ${emojiObjet(priseIci!)} ${priseIci}.`)
+            : `Le ${PIEGES[piegeIci.type].objet.toLowerCase()} est vide${piegeIci.appate ? " et appâté" : ""}. ` +
+              `${piegeIci.appate ? "À la prochaine aube" : "À chaque aube"}, il a **${chanceCapture} %** de chances ` +
+              `d'attraper un ${emojiObjet(priseIci!)} ${priseIci}.` +
+              (appatPossible
+                ? `
+${emojiObjet(OBJET_APPAT)} Un **${OBJET_APPAT}** de votre sac peut servir d'appât : ` +
+                  `+${Math.round(BONUS_CAPTURE_APPAT * 100)} points à la prochaine aube.`
+                : ""))
       : `${entete}\n\n**Poser un piège** pour **${coutDuPiege} PA** ? Il restera en place et, à chaque aube, aura ` +
           `**${chanceCapture} %** de chances d'attraper sa proie ici (plus la zone est loin, plus il attrape). ` +
           "N'importe qui de passage pourra relever la prise.\n" +
@@ -171,6 +184,9 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       ...(piegeIci?.priseLe
         ? [new ButtonBuilder().setCustomId("relever-piege").setLabel("Relever").setEmoji("🪤").setStyle(ButtonStyle.Primary)]
+        : []),
+      ...(appatPossible
+        ? [new ButtonBuilder().setCustomId("appater-piege").setLabel("Appâter").setEmoji(emojiObjet(OBJET_APPAT)).setStyle(ButtonStyle.Primary)]
         : []),
       ...piegesAPoser.map((type) =>
         new ButtonBuilder()
@@ -480,12 +496,14 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       return;
     } else if (clic.customId === "piege") {
       await clic.update({ components: [ecranPiege] });
-    } else if (clic.customId.startsWith("poser-piege:") || clic.customId === "relever-piege") {
+    } else if (clic.customId.startsWith("poser-piege:") || clic.customId === "relever-piege" || clic.customId === "appater-piege") {
       await clic.deferUpdate();
       const type = piegesAPoser.find((t) => clic.customId === `poser-piege:${t}`);
       const resultat =
         clic.customId === "relever-piege"
           ? await releverPiege(guild, joueurId)
+          : clic.customId === "appater-piege"
+            ? await appaterPiege(joueurId)
           : type
             ? await poserPiege(guild, joueurId, type)
             : "Ce piège n'est plus dans votre sac.";
@@ -544,9 +562,14 @@ async function actionsVivant(interaction: ChatInputCommandInteraction, guild: Gu
       await clic.deferUpdate();
       const texte = await confirmerDeplacement(guild, joueurId, joueur.zoneActuelleId, groupeId, destination, avecTorche);
       if (!(await afficherResultat(clic, joueurId, texte))) return;
-    } else if (clic.customId === "attaquer" || clic.customId === "fuir") {
+    } else if (clic.customId === "attaquer" || clic.customId === "tirer" || clic.customId === "fuir") {
       await clic.deferUpdate();
-      const resultat = clic.customId === "attaquer" ? await attaquer(guild, joueurId) : await fuir(guild, joueurId);
+      const resultat =
+        clic.customId === "attaquer"
+          ? await attaquer(guild, joueurId)
+          : clic.customId === "tirer"
+            ? await tirer(guild, joueurId)
+            : await fuir(guild, joueurId);
       if (!(await afficherResultat(clic, joueurId, resultat.texte))) return;
     }
   }

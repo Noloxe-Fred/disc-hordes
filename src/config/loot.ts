@@ -32,6 +32,7 @@ export const LOOT_PAR_ZONE: Record<CleTypeZone, Record<PalierZone, TableLoot>> =
         { objet: "Munitions", probabilite: 0.15 },
         { objet: "Arme simple", probabilite: 0.1 },
         { objet: "Ingrédient de remède", probabilite: 0.05 },
+        { objet: "Arme à feu cassée", probabilite: 0.05 },
       ],
     },
     [PalierZone.ELOIGNEE]: {
@@ -42,6 +43,7 @@ export const LOOT_PAR_ZONE: Record<CleTypeZone, Record<PalierZone, TableLoot>> =
         { objet: "Munitions", probabilite: 0.2 },
         { objet: "Arme avancée", probabilite: 0.15 },
         { objet: "Ingrédient de remède", probabilite: 0.1 },
+        { objet: "Arme à feu cassée", probabilite: 0.1 },
       ],
     },
   },

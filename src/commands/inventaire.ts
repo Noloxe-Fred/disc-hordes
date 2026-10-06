@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille, TypeObjet } from "@prisma/client";
+import { StatutJoueur, StatutVille } from "@prisma/client";
 import {
   ActionRowBuilder,
   AttachmentBuilder,
@@ -18,7 +18,7 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 import type { Command } from "../client";
-import { CAPACITE_SAC, emojiObjet, estEquipement, OBJET_RADIO, poidsObjet } from "../config/objets";
+import { CAPACITE_SAC, emojiObjet, estEquipement, OBJET_FESTIN, OBJET_RADIO, OBJET_RARE, poidsObjet } from "../config/objets";
 import { prisma } from "../db";
 import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
@@ -28,6 +28,7 @@ import { synchroniserAccesJoueur } from "../discord/joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "../discord/permissions";
 import { trouverSalonTexte } from "../discord/reconcile";
 import { rendreInventaire } from "../discord/renduInventaire";
+import { ouvrirObjetRare, servirFestin } from "../discord/utilisation";
 import { chargeSac, deborde, libelleCharge, poidsTotal } from "../services/charge";
 import { trouverJoueurActif } from "../services/joueur";
 import { survivantsAuMemeEndroit } from "../services/voisins";
@@ -35,7 +36,8 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
 // « donner a » un autre survivant present au meme endroit, « jeter » un objet pour alleger le sac, manger et boire
-// (discord/consommation.ts) et, en ville, acces a la banque (discord/banque.ts). Le sac a une capacite en poids (equilibrage.md §5, services/charge.ts).
+// (discord/consommation.ts), ouvrir un objet rare ou servir un festin (discord/utilisation.ts) et, en ville, acces a
+// la banque (discord/banque.ts). Le sac a une capacite en poids (equilibrage.md §5, services/charge.ts).
 // Le menu montre le sac en image (renduInventaire.ts) ; le menu et chaque ecran remplacent le meme message,
 // « Retour » ramene au menu.
 
@@ -76,9 +78,9 @@ async function contenuSac(joueurId: number) {
 
 async function recettesSimples() {
   return prisma.recette.findMany({
-    where: { objetResultat: { type: TypeObjet.CRAFT_SIMPLE } },
+    where: { requiertAtelier: false },
     include: { objetResultat: true, ingredients: { include: { objet: true } } },
-    orderBy: { objetResultat: { nom: "asc" } },
+    orderBy: { nom: "asc" },
   });
 }
 type RecetteSimple = Awaited<ReturnType<typeof recettesSimples>>[number];
@@ -109,7 +111,14 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
 
   // Menu du sac, recharge a chaque retour : un depot ou un retrait a la banque change son contenu
   let sac = await contenuSac(joueurId);
+  // Festin en banque : il peut etre servi depuis la, en ville
+  const festinEnBanque = async () =>
+    empechementBanque(joueur) === null &&
+    (await prisma.inventaireVille.findFirst({ where: { villeId: joueur.villeId!, objet: { nom: OBJET_FESTIN }, quantite: { gt: 0 } } })) !== null;
+  let festinBanque = await festinEnBanque();
   const construireMenu = () => {
+    const possede = (nom: string) => sac.some((e) => e.objet.nom === nom);
+    const festinServable = empechementBanque(joueur) === null && (possede(OBJET_FESTIN) || festinBanque);
     const charge = { utilisee: poidsTotal(sac), capacite: CAPACITE_SAC };
     // Les equipements (radio) sont montres a part, a cote des PA et de la charge, pas dans la grille du sac
     const objets = sac.map((e) => ({ ...e.objet, quantite: e.quantite }));
@@ -147,6 +156,12 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
           ...(empechementBanque(joueur) === null
             ? [new ButtonBuilder().setCustomId("consommer-banque").setLabel("Manger / boire (banque)").setEmoji("🏦").setStyle(ButtonStyle.Success)]
             : []),
+          ...(festinServable
+            ? [new ButtonBuilder().setCustomId("servir-festin").setLabel("Servir un festin").setEmoji(emojiObjet(OBJET_FESTIN)).setStyle(ButtonStyle.Success)]
+            : []),
+          ...(possede(OBJET_RARE)
+            ? [new ButtonBuilder().setCustomId("ouvrir-rare").setLabel("Ouvrir l'objet rare (1 PA)").setEmoji(emojiObjet(OBJET_RARE)).setStyle(ButtonStyle.Secondary)]
+            : []),
         ),
       );
     }
@@ -168,6 +183,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
 
     if (clic.customId === "retour") {
       sac = await contenuSac(joueurId);
+      festinBanque = await festinEnBanque();
       quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
       await clic.update({ ...construireMenu(), attachments: [] }); // remplace l'image de la banque le cas echeant
     } else if (clic.customId === "banque") {
@@ -205,7 +221,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
                   .setPlaceholder("Recette…")
                   .addOptions(
                     recettes.map((r) => ({
-                      label: r.objetResultat.nom,
+                      label: r.nom,
                       value: String(r.id),
                       emoji: emojiObjet(r.objetResultat.nom),
                       description: `${libelleIngredients(r)} · ${r.coutPA ?? 0} PA${manquants(r, quantites).length > 0 ? " — il manque des ingrédients" : ""}`.slice(0, 100),
@@ -251,6 +267,16 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
         await resultat.soumission.editReply({ components: [encadre(resultat.texte)], attachments: [] });
       }
       return;
+    } else if (clic.customId === "ouvrir-rare" || clic.customId === "servir-festin") {
+      // Apres usage, retour sur le menu du sac rafraichi, le resultat en tete
+      await clic.deferUpdate();
+      const texte = clic.customId === "ouvrir-rare" ? await ouvrirObjetRare(clic.guild!, joueurId) : await servirFestin(clic.guild!, joueurId);
+      sac = await contenuSac(joueurId);
+      festinBanque = await festinEnBanque();
+      quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
+      const menu = construireMenu();
+      menu.components.unshift(encadre(texte));
+      await clic.editReply({ ...menu, attachments: [] });
     } else if (clic.isButton() && (clic.customId === "poser" || clic.customId === "consommer-sac" || clic.customId === "consommer-banque")) {
       // Apres avoir depose ou consomme, retour sur le menu du sac rafraichi, le resultat en tete
       const resultat =
@@ -259,6 +285,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
           : await formulaireConsommer(clic, joueurId, clic.customId === "consommer-sac" ? "sac" : "banque");
       if (resultat === null) continue; // formulaire ferme ou expire : le menu reste en place
       sac = await contenuSac(joueurId);
+      festinBanque = await festinEnBanque();
       quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
       const menu = construireMenu();
       menu.components.unshift(encadre(resultat.texte));

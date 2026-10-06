@@ -191,6 +191,8 @@ model Ville {
   messageChantiersId    String?
   // Structures de defense avancees posees (ingenieur) : +3 defense chacune, definitivement (equilibrage.md §8)
   structuresDefense     Int           @default(0)
+  // Structures renforcees posees (ingenieur, atelier palier 2) : +5 defense chacune ; 5 structures au plus, toutes confondues
+  structuresRenforcees  Int           @default(0)
   // Panneau permanent des maisons privees poste dans #maisons-privees (discord/maisons.ts)
   messageMaisonsId      String?
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
@@ -299,6 +301,8 @@ model Piege {
   poseLe   DateTime  @default(now())
   // Prise en attente (une proie) : le piege ne capture plus rien tant qu'elle n'est pas relevee
   priseLe  DateTime?
+  // Appat (petit gibier) : +20 points de capture a la prochaine aube, consomme qu'il y ait prise ou non
+  appate   Boolean   @default(false)
 
   zone     Zone         @relation(fields: [zoneId], references: [id], onDelete: Cascade)
   poseur   Joueur?      @relation("PiegesPoses", fields: [poseurId], references: [id], onDelete: SetNull)
@@ -371,7 +375,7 @@ model Objet {
   type       TypeObjet
   regenerant Boolean   @default(false)
 
-  recette                Recette?
+  recettes               Recette[]
   utiliseCommeIngredient RecetteIngredient[]
   inventairesJoueur      InventaireJoueur[]
   inventairesVille       InventaireVille[]
@@ -382,7 +386,10 @@ model Objet {
 
 model Recette {
   id                  Int     @id @default(autoincrement())
-  objetResultatId     Int     @unique
+  // Nom de la recette, affiche dans les menus de fabrication : celui de l'objet produit, sauf quand plusieurs
+  // recettes donnent le meme objet (ex. « Dérouiller des pièces » donne des Pièces mécaniques)
+  nom                 String  @unique
+  objetResultatId     Int
   // Nullable : equilibrage.md §4 ne chiffre precisement que le remede (6) et la reparation
   // voiture (8) ; les autres recettes avancees ne sont donnees que par une fourchette
   // generale (4-8 PA) - pas de valeur inventee ici tant que le chiffre exact n'est pas tranche.

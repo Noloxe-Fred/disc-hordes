@@ -1,4 +1,4 @@
-import { StatutJoueur, StatutVille, TypeBatiment, TypeObjet, type Metier } from "@prisma/client";
+import { StatutJoueur, StatutVille, TypeBatiment, type Metier } from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -17,7 +17,8 @@ import { trouverSalonTexte } from "./reconcile";
 
 // Craft avance (equilibrage.md §8) : dans le salon « atelier » de la ville, qui n'existe qu'une fois l'atelier construit
 // (discord/villeStructure.ts), le bouton « Craft avancé » de /inventaire propose les recettes exclusives du metier du
-// joueur. Ingredients pris dans le sac, puis completes par la banque de ville ; cout en PA de la recette (identique la
+// joueur et celles ouvertes a tous (reparer une arme a feu). Ingredients pris dans le sac, puis completes par la
+// banque de ville ; cout en PA de la recette (identique la
 // nuit, craft en ville uniquement). Bloque sous le seuil critique de faim ou de soif.
 
 const COULEUR = 0x95a5a6;
@@ -39,16 +40,18 @@ export async function estDansAtelier(
   return salon?.id === salonId && (await palierAtelier(joueur.villeId)) >= 1;
 }
 
+// Recettes d'atelier du metier du joueur et recettes d'atelier sans metier, au palier atteint
 async function recettesDuMetier(metier: Metier | null, palier: number) {
-  if (!metier) return [];
   return prisma.recette.findMany({
     where: {
-      objetResultat: { type: TypeObjet.CRAFT_AVANCE },
-      metierExclusif: metier,
-      OR: [{ palierAtelierRequis: null }, { palierAtelierRequis: { lte: palier } }],
+      requiertAtelier: true,
+      AND: [
+        { OR: [{ metierExclusif: null }, ...(metier ? [{ metierExclusif: metier }] : [])] },
+        { OR: [{ palierAtelierRequis: null }, { palierAtelierRequis: { lte: palier } }] },
+      ],
     },
     include: { objetResultat: true, ingredients: { include: { objet: true } } },
-    orderBy: { objetResultat: { nom: "asc" } },
+    orderBy: { nom: "asc" },
   });
 }
 export type RecetteAvancee = Awaited<ReturnType<typeof recettesDuMetier>>[number];
@@ -86,7 +89,7 @@ export async function ecranCraftAvance(joueurId: number, entete: string, retour:
     const metier = joueur.metier ? NOM_METIER[joueur.metier] : "sans métier";
     return {
       recettes,
-      ecran: encadre(`${entete}\n\n🛠️ Aucune recette avancée pour votre métier (${metier}).`).addActionRowComponents(ligneRetour),
+      ecran: encadre(`${entete}\n\n🛠️ Aucune recette d'atelier pour votre métier (${metier}).`).addActionRowComponents(ligneRetour),
     };
   }
   const stock = await disponibles(joueurId, joueur.villeId!);
@@ -98,7 +101,7 @@ export async function ecranCraftAvance(joueurId: number, entete: string, retour:
           .setPlaceholder("Recette…")
           .addOptions(
             recettes.map((r) => ({
-              label: r.objetResultat.nom,
+              label: r.nom,
               value: String(r.id),
               emoji: emojiObjet(r.objetResultat.nom),
               description: `${libelleIngredients(r)} · ${r.coutPA ?? 0} PA${manquants(r, stock).length > 0 ? " — il manque des ingrédients" : ""}`.slice(0, 100),
@@ -139,7 +142,7 @@ export async function fabriquerAvance(guild: Guild, salonId: string | null, joue
   }
   const villeId = joueur.villeId!;
   const recette = (await recettesDuMetier(joueur.metier, await palierAtelier(villeId))).find((r) => r.id === recetteId);
-  if (!recette) return "Cette recette n'est pas celle de votre métier.";
+  if (!recette) return "Cette recette n'est pas ouverte à votre métier.";
   const cout = recette.coutPA ?? 0;
   if ((joueur.paActuel ?? 0) < cout) return `Il vous faut **${cout} PA** pour cette recette.`;
   const stock = await disponibles(joueurId, villeId);

@@ -241,10 +241,12 @@ Règles :
 | Métier | Recette avancée exclusive |
 |---|---|
 | Médecin | Remède contre l'infection |
-| Ingénieur/bâtisseur | Réparation voiture (dès le palier 1 de l'atelier) + structures de défense avancées |
-| Cuisinier | Plats avancés (plus nourrissants / effets bonus) |
+| Ingénieur/bâtisseur | Réparation voiture (dès le palier 1 de l'atelier) + structures de défense avancées + structures renforcées (palier 2) |
+| Cuisinier | Plats avancés (plus nourrissants / effets bonus), dont le festin servi à toute la ville |
 | Chasseur/trappeur | Pièges avancés |
 | Artisan | Armes/outils avancés |
+
+  Une recette d'atelier est ouverte à tous : la réparation d'une arme à feu cassée trouvée en ville en ruines. Chaque objet de loot rare a une fonction (equilibrage.md §5, tranché le 2026-10-06) : tir à l'arme à feu avec les munitions, appât de piège, festin, bois rare à 5 Bois sur les chantiers, structure renforcée, dérouillage des pièces, objet rare à ouvrir.
 
   Les autres métiers n'ont pas de recette avancée exclusive : le garde apporte plus de défense en montant la garde (+6 au lieu de +3), l'éclaireur observe à moindre coût et ne paie pas le surcoût des zones inconnues (equilibrage.md §3 et §4).
 

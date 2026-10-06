@@ -16,6 +16,11 @@ export const CHANCE_CAPTURE_PIEGE: Record<PalierZone, number> = {
   [PalierZone.ELOIGNEE]: 0.9,
 };
 
+// Appat (petit gibier) pose dans un piege vide : +20 points de capture a la prochaine aube (100 % au plus), consomme
+// qu'il y ait prise ou non
+export const OBJET_APPAT = "Petit gibier";
+export const BONUS_CAPTURE_APPAT = 0.2;
+
 export const TYPES_ZONE_PIEGE: readonly CleTypeZone[] = ["foret", "montagnes"];
 
 // Poser un piege (consomme le piege du sac) ; relever sa prise est gratuit

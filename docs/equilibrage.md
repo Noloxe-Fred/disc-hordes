@@ -4,7 +4,7 @@
 
 Base de référence : ville de **15 joueurs max**, cycle de **48h réelles** (24h jour + 24h nuit), attaque de zombies à minuit du second jour.
 
-> **Mise à jour** : décroissance faim/soif doublée, sévérité du jet de risque chiffrée, déclenchement de l'infection formalisé, stub v0.1 pour les rencontres en territoire externe, stock max des ressources naturelles chiffré par palier de zone ; **tous les points ouverts de la section 10 sont désormais tranchés** — malus PA de l'infection passé en linéaire continu, loot rare étendu à la zone moyenne, croissance de l'attaque/rythme d'installation/recettes cuisinier/stock de ressources naturelles validés tels quels, coût PA des 6 recettes avancées restantes chiffré. La table complète des rencontres humaines/bandits reste hors scope V1 (section 11) ; l'effet mécanique de certains objets de loot sans recette reste un point ouvert (section 12).
+> **Mise à jour** : décroissance faim/soif doublée, sévérité du jet de risque chiffrée, déclenchement de l'infection formalisé, stub v0.1 pour les rencontres en territoire externe, stock max des ressources naturelles chiffré par palier de zone ; **tous les points ouverts de la section 10 sont désormais tranchés** — malus PA de l'infection passé en linéaire continu, loot rare étendu à la zone moyenne, croissance de l'attaque/rythme d'installation/recettes cuisinier/stock de ressources naturelles validés tels quels, coût PA des 6 recettes avancées restantes chiffré. La table complète des rencontres humaines/bandits reste hors scope V1 (section 11) ; la fonction des objets de loot sans recette est tranchée depuis le 2026-10-06 (section 5).
 
 ---
 
@@ -107,6 +107,7 @@ Bouton « Manger / boire (sac) » de `/inventaire`, partout, et « Manger / boir
 | Objet | Effet |
 |---|---|
 | Baies | +5 faim |
+| Petit gibier | +7 faim |
 | Gibier | +10 faim |
 | Gros gibier | +25 faim |
 | Eau brute | +10 soif, **20 % de risque de perdre 1 PV** par unité bue (mort possible : cause « eau croupie ») |
@@ -115,8 +116,9 @@ Bouton « Manger / boire (sac) » de `/inventaire`, partout, et « Manger / boir
 | Ragoût fortifiant | +40 faim, +2 PA au-delà du PA max à la prochaine régénération en ville (cumulable, conservé tant que le joueur est dehors) |
 | Ration d'eau purifiée | +30 soif |
 | Infusion médicinale | +15 soif (l'atténuation du malus d'infection n'est pas encore appliquée) |
+| Festin (cuisinier) | Ne se mange pas seul : **servi** en ville (bouton « Servir un festin » de `/inventaire`, depuis le sac ou la banque, gratuit en PA), il donne **+20 faim à chaque citoyen vivant présent en ville**, celui qui le sert compris (validé le 2026-10-06) |
 
-Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gibier crus = 15 faim contre 20 pour le plat préparé ; 2 Gibier = 20 contre 25 pour la conserve ; 2 Eau brute = 20 soif à risque contre 30 sans risque pour la ration. Gros gibier (+25 faim, validé le 2026-10-03) : surtout rapporté par le piège avancé du chasseur (section 8), il nourrit plus que 2 Gibier (+20) mais pèse 3 et reste sous le ragoût fortifiant (+40). Le petit gibier et le gibier rare ne se consomment pas (voir section 5, objets sans mécanique définie).
+Valeurs des bruts calées pour que cuisiner rapporte toujours plus : Baies + Gibier crus = 15 faim contre 20 pour le plat préparé ; 2 Gibier = 20 contre 25 pour la conserve ; 2 Eau brute = 20 soif à risque contre 30 sans risque pour la ration. Gros gibier (+25 faim, validé le 2026-10-03) : surtout rapporté par le piège avancé du chasseur (section 8), il nourrit plus que 2 Gibier (+20) mais pèse 3 et reste sous le ragoût fortifiant (+40). Petit gibier (+7 faim, validé le 2026-10-06) : entre les Baies et le Gibier, il sert aussi d'appât de piège (section 8). Le gibier rare ne se mange pas cru : il sert au Festin du cuisinier (section 8).
 
 ### Régénération des ressources naturelles
 - Ressources **naturelles** (bois, baies, gibier) : régénèrent de **+40 % du stock max de la zone par cycle** (jour+nuit), plafonnées au stock max.
@@ -205,7 +207,7 @@ Seuls les citoyens présents en ville (pas en territoire externe) sont exposés 
 
 ### Dégâts sur les chantiers (validé le 2026-09-30)
 Après les blessures, le **déficit devient un budget de dégâts**, consommé dans cet ordre. Chaque élément détruit absorbe sa valeur de défense, donc un petit déficit ne touche que les premières cibles :
-1. **Structures de défense avancées** : une détruite par tranche de **3 points** (entamée), jusqu'à ce qu'il n'en reste plus.
+1. **Structures de défense** : les simples d'abord, une détruite par tranche de **3 points** (entamée), puis les **renforcées**, une par tranche de **5 points** (entamée), jusqu'à ce qu'il n'en reste plus.
 2. **Palissade** : s'il reste du budget, elle perd **1 palier** (jamais plus d'un par attaque), ce qui absorbe le bonus de ce palier (5 à 8 points).
 3. **Avancement en cours** (ressources déposées et PA installés sur le prochain palier de **tous** les chantiers et de **toutes** les maisons privées des habitants vivants) : chaque point restant en détruit **10 %** (arrondi en faveur des zombies), **10 points au plus** (100 %).
 4. S'il reste encore **5 points ou plus** : **−1 palier** sur un bâtiment construit tiré au hasard (place publique, puits, atelier, tour radio, mairie ou maison privée d'un habitant vivant ; pas la palissade). Un seul par attaque.
@@ -240,7 +242,11 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Sieste (zone avec un feu, une fois par phase) | 0 PA | 0 PA |
 | Poser un piège, simple ou avancé (forêt ou montagnes, consomme le piège) | 1 PA | 2 PA |
 | Relever la prise d'un piège | 0 PA | 0 PA |
+| Appâter un piège (1 Petit gibier) | 0 PA | 0 PA |
 | Combat — attaquer (par échange) | 2 PA (arme : −1 ou −2, jamais sous 1) | 3 PA (idem) |
+| Combat — tirer (Arme à feu, 1 Munition par tir) | 0 PA | 0 PA |
+| Ouvrir un Objet rare (`/inventaire`) | 1 PA | 1 PA |
+| Servir un Festin (en ville) | 0 PA | 0 PA |
 | Combat — fuir | 1 PA | 2 PA (+ risque d'échec accru la nuit) |
 | Craft simple (`/inventaire`) | 1 PA (symbolique) + ingrédients | idem |
 | Craft avancé (atelier) | 4–8 PA selon recette + ingrédients | — (en ville uniquement) |
@@ -250,6 +256,7 @@ Coût de nuit = coût de jour × **1,5** (arrondi au PA supérieur), sauf mentio
 | Soin avancé, médecin (+5 PV) | 4 PA + 1 Médicament basique, ou 1 Bandage + 1 Plante médicinale | 6 PA + mêmes ingrédients |
 | Craft remède infection (médecin, exclusif) | 6 PA + ingrédients rares | — |
 | Réparation voiture (ingénieur, atelier palier 1) | 8 PA + pièces | — |
+| Réparer une arme à feu (atelier palier 1, tous métiers) | 3 PA + 2 Ferraille | — |
 | Voiture — déplacement à plusieurs (bonus) | −50 % PA du trajet, partagé entre passagers | idem |
 
 **Anti-spam de `/action`** : **3 secondes** minimum entre deux ouvertures de `/action` par un même joueur ; un seul menu ouvert à la fois (en rouvrir un ferme le précédent).
@@ -278,7 +285,7 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 | Zone | Proche (palier 1) | Moyenne (palier 2) | Éloignée (palier 3) |
 |---|---|---|---|
-| **Ville en ruines** | 2–3 objets — 50 % Tissu, 30 % Ferraille, 10 % Médicament basique | 2–4 objets — 30 % Ferraille, 30 % Pièces mécaniques, 15 % Munitions, 10 % Arme simple, 5 % Ingrédient de remède | 3–5 objets — 25 % Pièces mécaniques, 20 % Munitions, 15 % Arme avancée, 10 % Ingrédient de remède |
+| **Ville en ruines** | 2–3 objets — 50 % Tissu, 30 % Ferraille, 10 % Médicament basique | 2–4 objets — 30 % Ferraille, 30 % Pièces mécaniques, 15 % Munitions, 10 % Arme simple, 5 % Ingrédient de remède, 5 % Arme à feu cassée | 3–5 objets — 25 % Pièces mécaniques, 20 % Munitions, 15 % Arme avancée, 10 % Ingrédient de remède, 10 % Arme à feu cassée |
 | **Forêt** | 2–3 objets — 55 % Bois, 25 % Baies, 15 % Petit gibier | 2–4 objets — 35 % Bois, 30 % Gibier, 15 % Baies, 10 % Plante médicinale, 5 % Ingrédient de remède | 3–5 objets — 25 % Gros gibier, 20 % Plante médicinale, 15 % Bois rare, 10 % Ingrédient de remède |
 | **Marécages** | 2–3 objets — 45 % Eau brute, 25 % Tissu, 15 % Plante médicinale | 2–4 objets — 30 % Eau brute, 25 % Plante médicinale, 20 % Tissu, 10 % Pièces mécaniques rouillées, 5 % Ingrédient de remède, 5 % Radio | 3–5 objets — 25 % Plante médicinale, 20 % Ingrédient de remède, 15 % Objet rare, 10 % Radio |
 | **Montagnes** | 2 objets — 45 % Pierre/Minerai, 20 % Gibier rare | 2–4 objets — 30 % Pierre/Minerai, 25 % Ferraille, 15 % Munitions, 5 % Ingrédient de remède | 3–5 objets — 25 % Minerai rare, 20 % Arme avancée, 15 % Pièces pour voiture, 10 % Ingrédient de remède |
@@ -287,7 +294,17 @@ Onze ressources de base, chacune associée à une ou plusieurs zones. Elles alim
 
 **Tirage d'une fouille** : le nombre d'objets est tiré uniformément dans la fourchette de la case (ex. 2–3), puis chaque objet est tiré indépendamment avec les probabilités de la case telles quelles. Le complément à 100 % (ex. 10 % pour 50 + 30 + 10 %) est une trouvaille sans valeur : cet objet-là ne rapporte rien. Une fouille peut donc rapporter moins d'objets que la fourchette, voire aucun.
 
-**Objets sans mécanique définie (validé pour le lancement V1)** : les entrées suivantes du tableau ci-dessus n'ont ni recette ni effet chiffré — Petit gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Elles sont cataloguées comme objets à part entière (donc tirables et stockables dès la V1) mais sans alias ni comportement mécanique — l'effet de chacune reste **un point ouvert**, à trancher lors d'une prochaine passe d'équilibrage plutôt qu'à la lancer sans base claire. Le Gros gibier en est sorti le 2026-10-03 (+25 faim, section 2).
+**Fonction des objets de loot rares (validé le 2026-10-06)** : tous les objets du tableau ont désormais un usage.
+- **Munitions** : tirées avec une **Arme à feu** (combat, ci-dessous), une par tir.
+- **Arme à feu cassée** (ville en ruines : 5 % en zone moyenne, 10 % en éloignée) : se répare à l'atelier (palier 1) par **n'importe quel citoyen**, pour **3 PA + 2 Ferraille**, et donne une **Arme à feu** réutilisable.
+- **Petit gibier** : se mange (+7 faim, section 2) ou sert d'**appât** de piège (section 8).
+- **Gros gibier** : se mange (+25 faim, section 2).
+- **Gibier rare** : ingrédient du **Festin** du cuisinier (section 8).
+- **Bois rare** : vaut **5 Bois** quand on le dépose sur un chantier ou sa maison privée (il compte aussi pour 5 dans les PA installables).
+- **Minerai rare** : ingrédient de la **Structure renforcée** de l'ingénieur (section 8).
+- **Pièces mécaniques rouillées** : se **dérouillent** en craft simple (section 6) : 2 rouillées + 1 Eau brute → 1 Pièce mécanique.
+- **Pièces pour voiture** : ingrédient de la **Réparation voiture** (section 8).
+- **Objet rare** : s'**ouvre** depuis `/inventaire` (1 PA, partout) et donne, à chances égales, l'un de ces lots : 1 Radio, 1 Arme avancée, 2 Médicaments basiques, 1 Remède contre l'infection ou 3 Munitions. Refusé si le sac ne peut pas recevoir le lot le plus lourd (+1 de charge).
 
 ### Poids et capacité (sac et banque de ville)
 
@@ -296,8 +313,8 @@ Chaque objet a une classe de poids, qui compte de la même façon dans le sac et
 | Classe | Poids | Objets |
 |---|---|---|
 | **Petit** | 1 | Tissu, Baies, Plante médicinale, Ingrédient de remède, Munitions, Pièces mécaniques, Pièces mécaniques rouillées, Minerai rare, Médicament basique, Bandage, Torche, Ration d'eau purifiée, Remède contre l'infection, Infusion médicinale, Conserve longue durée |
-| **Moyen** | 2 | Bois, Ferraille, Eau brute, Gibier, Petit gibier, Bois rare, Objet rare, Arme simple, Arme de fortune, Plat préparé, Ragoût fortifiant, Piège simple, Feu |
-| **Lourd** | 3 | Pierre, Gros gibier, Gibier rare, Arme avancée, Pièces pour voiture, Pièges avancés, Structures de défense avancées, Armes/outils avancés, Réparation voiture |
+| **Moyen** | 2 | Bois, Ferraille, Eau brute, Gibier, Petit gibier, Bois rare, Objet rare, Arme simple, Arme de fortune, Arme à feu cassée, Arme à feu, Plat préparé, Ragoût fortifiant, Festin, Piège simple, Feu |
+| **Lourd** | 3 | Pierre, Gros gibier, Gibier rare, Arme avancée, Pièces pour voiture, Pièges avancés, Structures de défense avancées, Structure renforcée, Armes/outils avancés, Réparation voiture |
 
 - **Équipement (poids 0)** : la **Radio** se porte sans prendre de place. Elle n'apparaît pas dans la grille du sac mais à part, à côté des PA et de la charge.
 - **Sac : capacité 12.** Une fouille rapporte en moyenne 3–4 objets de poids 2 (≈ 7) : une à deux fouilles avant de devoir rentrer, avec de la place pour une ration et une torche. Bonus de capacité (métier, sac à dos) : piste pour plus tard.
@@ -330,6 +347,7 @@ Pour la v0.1, stub simplifié : **zombie uniquement**, probabilité liée au pal
 
 - **Attaquer** (coût : section 4) : le joueur touche à **70 %** et retire **1 PV** au zombie. Si le zombie est encore debout, il **riposte à 30 %** : **−1 PV** pour le joueur, et c'est un coup reçu (**10 % d'infection**, section 1). Zombie à 0 PV : rencontre terminée, pas de butin pour l'instant.
 - **Armes** portées dans le sac, seule la meilleure compte (dans cet ordre, sans cumul) : **Armes/outils avancés** et **Arme avancée** : −2 PA par attaque et **2 dégâts** par coup ; **Arme simple** : **+10 %** de chance de toucher ; **Arme de fortune** : −1 PA par attaque. Une attaque coûte toujours au moins 1 PA.
+- **Tirer** (validé le 2026-10-06) : avec une **Arme à feu** et au moins une **Munition** dans le sac, le bouton « Tirer » s'ajoute au combat. Chaque tir consomme **1 Munition et aucun PA**, touche à **75 %** (**95 %** pour le chasseur) et retire **3 PV** au zombie ; la riposte suit les mêmes règles qu'une attaque. L'arme à feu ne compte pas comme arme de mêlée pour « Attaquer ».
 - **Fuir** (coût : section 4) : réussite **75 % le jour, 50 % la nuit**. Réussie : le joueur rebrousse chemin vers la zone (ou la ville) d'où il arrivait, ou reste sur place libéré si le zombie a surgi pendant une fouille. Ratée : le zombie frappe (**−1 PV, sans infection** : fuir n'expose jamais à l'infection) et la rencontre continue.
 - **Rencontre laissée en suspens** (plus assez de PA, joueur absent) : **−1 PV à la tombée de la nuit** tant qu'elle dure (à l'aube, seule la horde frappe).
 
@@ -354,6 +372,7 @@ Coût PA symbolique (1 PA), coût réel = ingrédients. Liste évolutive.
 | Arme de fortune | 1 Ferraille + 1 Bois | −1 PA de coût sur l'action "attaquer" |
 | Ration d'eau purifiée | 2 Eau brute + 1 Tissu (filtre) | +30 soif, sans risque contrairement à l'eau brute |
 | Torche | 1 Bois + 1 Tissu | Annule le surcoût nocturne d'un seul déplacement (consommable, un usage) |
+| Dérouiller des pièces | 2 Pièces mécaniques rouillées + 1 Eau brute | Donne 1 Pièce mécanique (deuxième source de pièces pour l'atelier et la tour radio) |
 | Piège simple | 2 Bois + 1 Ferraille | Posé dans une zone de forêt ou de montagnes : capture 1 Gibier à chaque aube avec 60 / 75 / 90 % de chance (proche / moyenne / éloignée) ; mêmes règles que le piège avancé (section 8), qui capture du Gros gibier |
 
 ---
@@ -387,28 +406,33 @@ Coût par palier en **ressources déposées sur le chantier**, puis **installati
 
 ---
 
-## 8. Craft avancé (atelier requis) — une recette exclusive par métier
+## 8. Craft avancé (atelier requis) — recettes exclusives par métier, plus la réparation d'arme à feu ouverte à tous
 
 | Métier | Recette | Ingrédients | Coût PA | Effet |
 |---|---|---|---|---|
 | **Médecin** | Remède contre l'infection | 2 Plante médicinale + 1 Ingrédient de remède + 1 Ration d'eau purifiée | 6 | Guérit l'infection en cours |
-| **Ingénieur/bâtisseur** | Réparation voiture (palier 1 atelier) | 4 Pièces mécaniques + 2 Ferraille | 8 | Débloque le déplacement en voiture (−50 % PA partagé) |
+| **Ingénieur/bâtisseur** | Réparation voiture (palier 1 atelier) | 4 Pièces mécaniques + 2 Ferraille + 2 Pièces pour voiture | 8 | Débloque le déplacement en voiture (−50 % PA partagé) |
 | **Ingénieur/bâtisseur** | Structures de défense avancées | 3 Ferraille + 3 Bois + 2 Pierre | 8 | Bonus de défense de nuit additionnel, indépendant des paliers de palissade |
+| **Ingénieur/bâtisseur** | Structure renforcée (palier 2 atelier) | 1 Structures de défense avancées + 2 Minerai rare | 4 | +5 défense au lieu de +3 (voir ci-dessous) |
 | **Cuisinier** | Ragoût fortifiant | 1 Gibier + 2 Baies + 1 Eau purifiée | 5 | +40 faim + 2 PA au prochain réveil |
 | **Cuisinier** | Conserve longue durée | 2 Gibier + 1 Tissu (emballage) | 4 | +25 faim, ne se dégrade jamais, idéal en réserve de ville pour le rationnement |
+| **Cuisinier** | Festin | 1 Gibier rare + 2 Baies + 1 Eau purifiée | 6 | Servi en ville : +20 faim pour chaque citoyen vivant présent (section 2) |
 | **Cuisinier** | Infusion médicinale | 1 Plante médicinale + 1 Eau purifiée | 4 | +15 soif, atténue d'1 point le malus PA de l'infection pendant 1 phase (soulage sans guérir) |
 | **Chasseur/trappeur** | Pièges avancés | 2 Ferraille + 2 Bois + 1 Gibier (appât) | 5 | Posé dans une zone de forêt ou de montagnes : 60 / 75 / 90 % de chance (proche / moyenne / éloignée) de capturer un Gros gibier à chaque aube |
 | **Artisan** | Armes/outils avancés | 3 Ferraille + 2 Bois + 1 Pièce mécanique | 6 | −2 PA sur "attaquer" + bonus dégâts en combat |
+| *Tous métiers* | Arme à feu (réparation, palier 1 atelier) | 1 Arme à feu cassée + 2 Ferraille | 3 | Permet de tirer en combat avec des Munitions (section 5) |
 
 **Fonctionnement (validé le 2026-09-29)** :
 - Le salon **`atelier`** de la ville n'existe qu'une fois l'atelier construit (palier 1). Le bouton **« Craft avancé »** de `/inventaire` n'apparaît que si la commande est lancée **dans ce salon**, par un citoyen vivant en ville, faim et soif ≥ 10. Il propose les recettes du métier du joueur ; les ingrédients sont pris **dans le sac, puis complétés par la banque de ville** ; coût en PA de la recette, identique la nuit. Aucune recette n'est encore réservée au palier 2 de l'atelier.
 - **Remède contre l'infection** : administré par le **médecin** (option du bouton « Soigner » de `/action`, sur soi ou un survivant au même endroit, gratuit en PA). L'infection étant cachée, le joueur doit dire au médecin qu'il est infecté : si la cible ne l'était pas, le remède est **consommé** et un message d'erreur le signale.
 - **Structures de défense avancées** : posées avec le bouton « Poser une structure » du panneau `#chantiers` (sac, puis banque) : **+3 défense** chacune (jusqu'à leur destruction par une attaque mal contenue, section 3), **5 au plus (+15)**, comptées dans la défense de l'aube (section 3).
 - **Infusion médicinale** : le malus PA de l'infection est réduit de **10 points** (ex. −25 % → −15 %, sans passer sous 0) jusqu'au prochain changement de phase ; l'incubation n'est pas ralentie.
+- **Structure renforcée (validé le 2026-10-06)** : posée avec le même bouton « Poser une structure » (une renforcée du sac ou de la banque passe en priorité) : **+5 défense**, comptée dans le **même maximum de 5** que les structures simples (jusqu'à +25). Quand les 5 places sont prises, en poser une **démonte une structure simple** pour prendre sa place (+2 défense net) : les ressources de fabrication de la structure simple (3 Ferraille, 3 Bois, 2 Pierre) **reviennent à la banque** dans cet ordre, tant qu'il y a de la place ; ce qui ne tient pas est perdu, et le message de pose l'indique. Impossible si les 5 sont déjà renforcées.
+- **Appât (validé le 2026-10-06)** : dans le menu « Piège » de `/action`, sur un piège **vide** de la zone, le bouton « Appâter » (gratuit) consomme **1 Petit gibier** du sac : **+20 points** de chance de capture à la prochaine aube (60 → 80 %, 75 → 95 %, 90 → 100 %). Un seul appât à la fois, consommé à l'aube **qu'il y ait prise ou non**.
 - **Réparation voiture** : fabricable, effet à venir (T39).
 - **Pièges (validé le 2026-10-03)** — le **piège simple** (craft simple, section 6) capture du **Gibier**, le **piège avancé** du chasseur du **Gros gibier** ; sinon, mêmes règles : posés en territoire externe avec le bouton « Piège » de `/action` (le piège du sac, 1 PA, 2 la nuit ; un bouton par type de piège porté), par n'importe quel survivant qui en porte un, **uniquement en forêt ou en montagnes** (là où vit le gibier, section 5) et **un seul piège par zone**. Le piège est **permanent**. À chaque aube (une fois par aube pour le groupe, juste après la repousse des ressources naturelles), un piège vide capture **1 proie** avec une chance qui croît avec l'éloignement de la zone : **60 %** en zone proche, **75 %** en moyenne, **90 %** en éloignée ; la proie est puisée dans le stock naturel de la zone (rien si le stock est vide). La prise attend dans le piège, qui ne capture plus rien tant qu'elle n'est pas relevée (**1 prise au plus**). **N'importe quel survivant présent dans la zone, de n'importe quelle ville**, peut la relever gratuitement (place dans le sac requise) ; le relevage est annoncé dans le salon de la zone. Le piège apparaît sur la **carte de son poseur** et de ceux qui reçoivent ensuite sa carte en partage (qui la retransmettent à leur tour) ; les autres ne le voient qu'en passant dans la zone.
 
-**Coûts PA (validés)** : seuls le remède et la réparation voiture avaient un chiffre exact au premier jet ; les 6 autres recettes n'étaient couvertes que par la fourchette générale de la section 4 (4–8 PA). Chiffrage retenu par palier d'utilité, cohérent avec les deux valeurs déjà fixées : 8 PA pour les bonus durables/structurels (structures de défense, à l'image de la réparation voiture), 6 PA pour un bonus de combat permanent (armes/outils avancés, même tier que le remède), 5 PA pour un effet notable mais consommable (pièges avancés, ragoût fortifiant), 4 PA pour un effet mineur/de confort (conserve longue durée, infusion médicinale).
+**Coûts PA (validés)** : seuls le remède et la réparation voiture avaient un chiffre exact au premier jet ; les 6 autres recettes n'étaient couvertes que par la fourchette générale de la section 4 (4–8 PA). Chiffrage retenu par palier d'utilité, cohérent avec les deux valeurs déjà fixées : 8 PA pour les bonus durables/structurels (structures de défense, à l'image de la réparation voiture), 6 PA pour un bonus de combat permanent (armes/outils avancés, même tier que le remède), 5 PA pour un effet notable mais consommable (pièges avancés, ragoût fortifiant), 4 PA pour un effet mineur/de confort (conserve longue durée, infusion médicinale). Ajouts du 2026-10-06 : Festin 6 PA (repas collectif, au-dessus du ragoût), Structure renforcée 4 PA (amélioration d'une structure déjà fabriquée à 8 PA), réparation d'arme à feu 3 PA (ouverte à tous, l'effort est dans la recherche de l'arme et des munitions).
 
 Les 3 recettes cuisinier sont gardées telles quelles pour le lancement V1 (pas de nerf), malgré le déséquilibre relevé face aux autres métiers à une seule recette exclusive — à surveiller pendant la bêta plutôt qu'à corriger a priori.
 
@@ -444,4 +468,5 @@ Tous les points listés comme ouverts ont été tranchés pour permettre le lanc
 
 ## 12. Points ouverts restants
 
-- **Effet mécanique des objets de loot sans recette** (section 5) : Petit gibier, Gibier rare, Bois rare, Minerai rare, Pièces mécaniques rouillées, Pièces pour voiture, Objet rare. Catalogués comme objets distincts pour permettre le loot dès la V1, mais sans effet défini — à trancher avant que leur usage (soin, combat, craft...) soit implémenté côté bot.
+
+Aucun : la fonction des objets de loot sans recette, dernier point ouvert, a été tranchée le 2026-10-06 (section 5).

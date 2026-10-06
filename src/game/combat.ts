@@ -1,16 +1,19 @@
-import { TypePhase, type PalierZone } from "@prisma/client";
+import { Metier, TypePhase, type PalierZone } from "@prisma/client";
 import {
   ARMES,
   BONUS_RENCONTRE_PAR_FOUILLE,
   CHANCE_FUITE,
   CHANCE_RENCONTRE,
   CHANCE_RIPOSTE,
+  CHANCE_TIR,
+  CHANCE_TIR_CHASSEUR,
   CHANCE_TOUCHER,
   COUT_ATTAQUE_JOUR,
   COUT_ATTAQUE_MIN,
   COUT_FUITE_JOUR,
   FACTEUR_RENCONTRE_FEU,
   DEGATS_JOUEUR,
+  DEGATS_TIR,
   MAJORATION_RENCONTRE_NUIT,
   type Arme,
 } from "../config/combat";
@@ -62,6 +65,19 @@ export interface Echange {
 export function echangerCoups(pvZombie: number, arme: Arme | null, alea: () => number = Math.random): Echange {
   const touche = alea() < CHANCE_TOUCHER + (arme?.bonusToucher ?? 0);
   const degats = touche ? (arme?.degats ?? DEGATS_JOUEUR) : 0;
+  const reste = Math.max(0, pvZombie - degats);
+  const riposte = reste > 0 && alea() < CHANCE_RIPOSTE;
+  return { touche, degats, pvZombie: reste, riposte };
+}
+
+// Tir a l'arme a feu : 75 % de toucher (95 % pour le chasseur), 3 degats, meme riposte qu'une attaque
+export function chanceTir(metier: Metier | null): number {
+  return metier === Metier.CHASSEUR ? CHANCE_TIR_CHASSEUR : CHANCE_TIR;
+}
+
+export function tirer(pvZombie: number, metier: Metier | null, alea: () => number = Math.random): Echange {
+  const touche = alea() < chanceTir(metier);
+  const degats = touche ? DEGATS_TIR : 0;
   const reste = Math.max(0, pvZombie - degats);
   const riposte = reste > 0 && alea() < CHANCE_RIPOSTE;
   return { touche, degats, pvZombie: reste, riposte };
