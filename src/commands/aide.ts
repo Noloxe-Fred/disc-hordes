@@ -153,7 +153,7 @@ async function texteJoueur(guild: Guild, utilisateurId: number): Promise<string>
     "lancer une élection ou une défiance" +
     (maire ? ", agir en **maire** (annonce, bannissement, exécution, rationnement, priorité)" : "") +
     ", quitter ta ville\n" +
-    "🎒 `/inventaire` : ton sac et la banque de la ville, pour fabriquer, donner, déposer, manger ou boire\n" +
+    "🎒 `/inventaire` : ton sac et la banque de la ville, pour fabriquer, donner, déposer en banque, jeter, manger ou boire\n" +
     `${communes}\n` +
     `🏗️ Les bâtiments avancent dans ${chantiers}, ta maison dans ${maisons}.`
   );

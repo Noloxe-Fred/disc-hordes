@@ -304,7 +304,7 @@ Chaque objet a une classe de poids, qui compte de la même façon dans le sac et
 - **Banque de ville : 40 sans place publique, 80 au palier 1, 160 au palier 2** (reconversion des 40 / 80 objets de la section 7 avec un poids moyen de 2). Les ressources déposées pour un chantier ne passent pas par la banque et n'en consomment pas la capacité.
 - **Fouille** : refusée sans coût en PA si le sac est plein (plus de place même pour un objet de poids 1). Sinon, les objets entrent dans l'ordre du tirage tant qu'ils rentrent ; ceux qui ne rentrent pas restent sur place et sont perdus (pas encore d'objets au sol dans les zones). Un objet plus léger tiré après un objet trop lourd peut encore entrer.
 - **Don, fabrication, dépôt et retrait à la banque** : refusés si le résultat fait dépasser la capacité de celui qui reçoit (le destinataire du don, le sac pour la fabrication et le retrait, la banque pour le dépôt). Le poids d'une fabrication se compte après retrait des ingrédients : une fabrication qui allège le sac reste toujours possible.
-- **Déposer un objet** (`/inventaire`, gratuit) : l'objet quitte le sac et disparaît, pour alléger un sac trop lourd. Gestion des objets au sol reportée.
+- **Jeter un objet** (`/inventaire`, gratuit) : l'objet quitte le sac et disparaît, pour alléger un sac trop lourd. Gestion des objets au sol reportée.
 - **Inventaire déjà au-dessus de sa capacité** (mise en place de la limite, ajout par un admin) : rien n'est supprimé, mais il n'accepte plus rien qui l'alourdisse tant qu'il n'est pas repassé sous la limite.
 
 ### Rencontres en territoire externe (zombies uniquement pour la V1)

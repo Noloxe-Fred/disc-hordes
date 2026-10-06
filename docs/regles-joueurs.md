@@ -184,7 +184,7 @@ Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim e
 ## ⚖️ Le poids
 Chaque objet pèse **1** (petit : tissu, baies, plantes, bandage, torche…), **2** (moyen : bois, ferraille, eau brute, gibier…) ou **3** (lourd : pierre, gros gibier, armes avancées…).
 Ton sac porte **12** au plus : la jauge de charge est en haut de son image. Trop lourd, tu ne peux rien y ajouter de plus : ni fouiller, ni recevoir, ni fabriquer un objet qui l'alourdit, ni retirer de la banque.
-⬇️ Le bouton **Déposer un objet** l'allège gratuitement. Attention : pour l'instant, un objet déposé est **perdu**.
+🗑️ Le bouton **Jeter un objet** l'allège gratuitement. Attention : un objet jeté est **perdu**.
 
 ## 🔨 Fabriquer
 Le bouton **Fabriquer** transforme ce que tu as sur toi, pour **1 PA** (jour comme nuit) :
@@ -271,7 +271,7 @@ Tous ses joueurs redeviennent **Nomades**, libres de rejoindre une nouvelle vill
 
 🏗️ `/creer-ville` : crée une ville et lance son recrutement
 🧍 `/personnage` : tes PV, PA, faim, soif, métier, maison et le temps avant la prochaine phase
-🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer, manger ou boire
+🎒 `/inventaire` : le contenu de ton sac et sa charge, pour fabriquer, donner, déposer en banque, jeter, manger ou boire
 ⚡ `/action` : tes actions possibles (te déplacer, observer les environs, fouiller une zone ou un corps, combattre ou fuir un zombie, allumer un feu et faire la sieste, poser ou relever un piège, voir et partager ta carte, soigner, monter la garde, déclencher une élection ou un vote de défiance, demander l'accueil d'une ville, agir en maire, quitter ta ville)
 ❓ `/aide` : les commandes utiles selon le salon où tu la tapes et ta situation (nomade, en ville, dehors, face à un zombie, mort)
 🚩 `/signaler` : signaler à l'équipe un comportement problématique (le membre concerné, si besoin, et ce qui s'est passé) ; seuls les MJ et les Admins le lisent

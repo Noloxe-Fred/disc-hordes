@@ -34,7 +34,7 @@ import { survivantsAuMemeEndroit } from "../services/voisins";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
-// « donner a » un autre survivant present au meme endroit, « deposer » un objet pour alleger le sac, manger et boire
+// « donner a » un autre survivant present au meme endroit, « jeter » un objet pour alleger le sac, manger et boire
 // (discord/consommation.ts) et, en ville, acces a la banque (discord/banque.ts). Le sac a une capacite en poids (equilibrage.md §5, services/charge.ts).
 // Le menu montre le sac en image (renduInventaire.ts) ; le menu et chaque ecran remplacent le meme message,
 // « Retour » ramene au menu.
@@ -136,7 +136,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
           ...(empechementBanque(joueur) === null
             ? [new ButtonBuilder().setCustomId("banque").setLabel("Banque").setEmoji("🏦").setStyle(ButtonStyle.Secondary)]
             : []),
-          new ButtonBuilder().setCustomId("poser").setLabel("Déposer un objet").setEmoji("⬇️").setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder().setCustomId("poser").setLabel("Jeter un objet").setEmoji("🗑️").setStyle(ButtonStyle.Secondary),
           ...(atelier
             ? [new ButtonBuilder().setCustomId("craft-avance").setLabel("Craft avancé").setEmoji("🛠️").setStyle(ButtonStyle.Primary)]
             : []),
@@ -268,7 +268,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
   }
 }
 
-// Formulaire « deposer un objet » (objet + quantite) : l'objet quitte le sac et disparait, faute d'objets au sol pour
+// Formulaire « jeter un objet » (objet + quantite) : l'objet quitte le sac et disparait, faute d'objets au sol pour
 // l'instant. Gratuit en PA. Renvoie null si le formulaire n'est pas envoye ; texte seul (sans soumission) si le sac est
 // vide, le clic n'ayant alors pas ouvert de formulaire.
 async function formulairePoser(
@@ -276,13 +276,13 @@ async function formulairePoser(
   joueurId: number,
   sac: Awaited<ReturnType<typeof contenuSac>>,
 ): Promise<{ soumission: ModalSubmitInteraction | null; texte: string } | null> {
-  if (sac.length === 0) return { soumission: null, texte: "Votre sac est vide : rien à déposer." };
+  if (sac.length === 0) return { soumission: null, texte: "Votre sac est vide : rien à jeter." };
   const champs = champsObjetsPossedes(sac);
   const idFormulaire = `poser:${clic.id}`;
   await clic.showModal(
     new ModalBuilder()
       .setCustomId(idFormulaire)
-      .setTitle("Déposer un objet (il sera perdu)")
+      .setTitle("Jeter un objet (il sera perdu)")
       .addLabelComponents(...champs, champQuantite()),
   );
   const soumission = await clic
@@ -305,7 +305,7 @@ async function formulairePoser(
 
 async function poser(guild: Guild, joueurId: number, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
-  if (!peutAgir(joueur)) return "Vous ne pouvez plus déposer d'objet.";
+  if (!peutAgir(joueur)) return "Vous ne pouvez plus jeter d'objet.";
   const entree = await prisma.inventaireJoueur.findUnique({
     where: { joueurId_objetId: { joueurId, objetId } },
     include: { objet: true },
@@ -316,11 +316,11 @@ async function poser(guild: Guild, joueurId: number, objetId: number, quantite: 
   await prisma.$transaction([
     prisma.inventaireJoueur.update({ where: { id: entree.id }, data: { quantite: { decrement: quantite } } }),
     prisma.journalEntree.create({
-      data: { villeId: joueur.villeId!, joueurId, message: `Objet déposé : ${entree.objet.nom} ×${quantite}`, public: false },
+      data: { villeId: joueur.villeId!, joueurId, message: `Objet jeté : ${entree.objet.nom} ×${quantite}`, public: false },
     }),
   ]);
   if (entree.objet.nom === OBJET_RADIO) await synchroniserAccesJoueur(guild, joueurId);
-  return `⬇️ Vous avez déposé **${objet} × ${quantite}**. Personne ne le retrouvera.`;
+  return `🗑️ Vous avez jeté **${objet} × ${quantite}**. Personne ne le retrouvera.`;
 }
 
 // Fabrication confirmee : reverification (PA et ingredients ont pu changer), puis ingredients consommes, PA
@@ -496,7 +496,7 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
 }
 
 const command: Command = {
-  data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner, déposer, manger ou boire"),
+  data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner, déposer en banque, jeter, manger ou boire"),
 
   async execute(interaction) {
     if (interaction.guild && (await estMjActif(interaction.guild, interaction.user.id))) {
