@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import { fonderVille } from "../boutonsVille";
 import { declarerChuteVille, nettoyerGroupeSiTombe } from "../chute";
 import { changerPositionDiscord, retablirJoueurDiscord, retirerJoueurDeVilleDiscord } from "../joueurDiscord";
+import { rafraichirPanneauBanque } from "../banque";
 import { construirePalier, rafraichirPanneauChantiers } from "../chantiers";
 import { CHANTIERS, chantier } from "../../config/batiments";
 import { rafraichirPanneauMaisons } from "../maisons";
@@ -369,6 +370,7 @@ async function reset(interaction: ButtonInteraction, guild: Guild) {
   await posterDansMairie(guild, ville.id, `🔄 **${ville.nom}** repart de zéro : cycle 1, le jour se lève.`);
   await rafraichirPanneauChantiers(guild, ville.id);
   await rafraichirPanneauMaisons(guild, ville.id);
+  await rafraichirPanneauBanque(guild, ville.id);
   await synchroniserSalonAtelier(guild, ville.id);
   await journaliser(interaction.user, "Reset d'une ville", `${ville.nom} (#${ville.id}), était au cycle ${ville.cycleActuel}`);
   await choix.editReply(`**${ville.nom}** a été réinitialisée (cycle 1).`);

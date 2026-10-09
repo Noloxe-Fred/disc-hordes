@@ -6,7 +6,7 @@ import { JAUGE_MAX } from "../config/sante";
 import { prisma } from "../db";
 import { calculerPaMax } from "../game/pa";
 import { infligerDegats } from "../game/sante";
-import { empechementBanque } from "./banque";
+import { empechementBanque, rafraichirPanneauBanque } from "./banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
 import { prochaineBascule } from "../scheduler/cycle";
 import { posterDansMairie } from "./villeStructure";
@@ -132,6 +132,7 @@ async function consommer(guild: Guild, joueurId: number, source: SourceConsommat
       },
     }),
   ]);
+  if (source === "banque") await rafraichirPanneauBanque(guild, villeId);
   const paMaxApres = calculerPaMax({ ...joueur, ...apres, ...(effet.attenueInfection ? { infusionJusqua: prochaineBascule() } : {}) }).paMax;
 
   const lignes = [

@@ -14,6 +14,7 @@ import { SEUIL_CRITIQUE_FAIM_SOIF } from "../config/sante";
 import { prisma } from "../db";
 import { deborde, libelleCharge, poidsTotal } from "../services/charge";
 import { trouverSalonTexte } from "./reconcile";
+import { rafraichirPanneauBanque } from "./banque";
 
 // Craft avance (equilibrage.md §8) : dans le salon « atelier » de la ville, qui n'existe qu'une fois l'atelier construit
 // (discord/villeStructure.ts), le bouton « Craft avancé » de /inventaire propose les recettes exclusives du metier du
@@ -178,6 +179,7 @@ export async function fabriquerAvance(guild: Guild, salonId: string | null, joue
     prisma.journalEntree.create({ data: { villeId, joueurId, message: `Atelier : ${recette.objetResultat.nom}` } }),
   ]);
   const banque = parts.filter((p) => p.deLaBanque > 0).map((p) => `${p.deLaBanque} ${p.i.objet.nom}`);
+  if (banque.length > 0) await rafraichirPanneauBanque(guild, villeId);
   return (
     `🛠️ Vous fabriquez **${nom}** à l'atelier (−${cout} PA, ${(joueur.paActuel ?? 0) - cout} restants). Il est dans votre sac.` +
     (banque.length > 0 ? `\n🏦 Pris à la banque : ${banque.join(", ")}.` : "")

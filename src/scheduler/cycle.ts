@@ -10,6 +10,7 @@ import { calculerPaMax } from "../game/pa";
 import { infligerDegats, tenterInfection } from "../game/sante";
 import { evenementsTombeeNuit, hordeAube } from "../discord/combat";
 import { posterAnnonceCycle } from "../discord/annonceCycle";
+import { rafraichirPanneauBanque } from "../discord/banque";
 import { infligerDegatsChantiers } from "../discord/degatsChantiers";
 import { gardesDeLaNuit } from "../discord/garde";
 import { posterDansMairie } from "../discord/villeStructure";
@@ -263,6 +264,7 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
   });
 
   const puits = await produireEauPuits(ville.id);
+  if (puits) await rafraichirPanneauBanque(guild, ville.id);
   // Les ressources naturelles des territoires repoussent, puis les pieges avances capturent (une fois par aube pour le
   // groupe)
   if (ville.groupeId !== null && (await regenererRessourcesNaturelles(ville.groupeId))) await capturerPieges(ville.groupeId);

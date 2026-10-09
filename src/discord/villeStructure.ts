@@ -15,7 +15,7 @@ import {
 import { ROLE_MJ } from "./structure";
 
 // Structure de la categorie "Ville" a la fondation (conception.md §1) : mairie, journal (flux public des actions en
-// ville, poste par le bot : discord/journal.ts), place publique, chantiers, un salon "maisons privees" (un seul salon partage,
+// ville, poste par le bot : discord/journal.ts), banque (panneau permanent : discord/banque.ts), place publique, chantiers, un salon "maisons privees" (un seul salon partage,
 // la gestion par joueur se fait via Joueur.maisonPalier plutot que par salon dedie), et un
 // salon vocal general lie au role-ville. La mairie est fermee : seules y paraissent les annonces
 // de la ville (bot) et celles du maire (bouton « Annonce » de /action) ; les joueurs n'y ecrivent pas.
@@ -51,6 +51,7 @@ export async function creerStructureVille(guild: Guild, villeId: number, nomVill
   const lectureSeule = overwritesLectureSeule(guild, roleVille, roleMj);
   const salonMairie = await ensureTextChannel(guild, `salon:ville:${villeId}:mairie`, "mairie", categorie.id, lectureSeule);
   await ensureTextChannel(guild, `salon:ville:${villeId}:journal`, "journal", categorie.id, lectureSeule);
+  await ensureTextChannel(guild, `salon:ville:${villeId}:banque`, "banque", categorie.id, lectureSeule);
   await ensureTextChannel(guild, `salon:ville:${villeId}:place-publique`, "place-publique", categorie.id);
   await ensureTextChannel(guild, `salon:ville:${villeId}:chantiers`, "chantiers", categorie.id);
   await ensureTextChannel(guild, `salon:ville:${villeId}:maisons-privees`, "maisons-privées", categorie.id);
@@ -59,7 +60,7 @@ export async function creerStructureVille(guild: Guild, villeId: number, nomVill
   return { roleVille, salonMairie };
 }
 
-// Salon lisible par les habitants sans qu'ils puissent y ecrire (mairie, journal)
+// Salon lisible par les habitants sans qu'ils puissent y ecrire (mairie, journal, banque : on n'y agit que par boutons)
 function overwritesLectureSeule(guild: Guild, roleVille: Role, roleMj: Role | null) {
   return [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel, ...ECRITURE_MAIRIE] },
@@ -68,15 +69,16 @@ function overwritesLectureSeule(guild: Guild, roleVille: Role, roleMj: Role | nu
   ];
 }
 
-// Salon « journal » d'une ville fondee avant sa mise en place (au demarrage du bot), puis acces des habitants recalcules
-export async function ensureSalonJournal(guild: Guild, villeId: number): Promise<void> {
-  const cle = `salon:ville:${villeId}:journal`;
+// Salon en lecture seule (« journal », « banque ») d'une ville fondee avant sa mise en place (au demarrage du bot), puis
+// acces des habitants recalcules
+export async function ensureSalonLectureSeule(guild: Guild, villeId: number, nom: "journal" | "banque"): Promise<void> {
+  const cle = `salon:ville:${villeId}:${nom}`;
   if (await trouverSalonTexte(guild, cle)) return;
   const categorie = await trouverCategorie(guild, `categorie:ville:${villeId}`);
   const roleVille = await trouverRole(guild, `role:ville:${villeId}`);
   if (!categorie || !roleVille) return;
   const roleMj = await trouverRole(guild, ROLE_MJ.cle);
-  await ensureTextChannel(guild, cle, "journal", categorie.id, overwritesLectureSeule(guild, roleVille, roleMj));
+  await ensureTextChannel(guild, cle, nom, categorie.id, overwritesLectureSeule(guild, roleVille, roleMj));
   const habitants = await prisma.joueur.findMany({ where: { villeId, dateSortie: null }, select: { id: true } });
   for (const { id } of habitants) await synchroniserAccesJoueur(guild, id);
 }

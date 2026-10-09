@@ -20,7 +20,7 @@ import {
 import type { Command } from "../client";
 import { CAPACITE_SAC, emojiObjet, estEquipement, OBJET_FESTIN, OBJET_RADIO, OBJET_RARE, poidsObjet } from "../config/objets";
 import { prisma } from "../db";
-import { ecranBanque, empechementBanque, formulaireBanque } from "../discord/banque";
+import { ecranBanque, empechementBanque, formulaireBanque, toutDeposer } from "../discord/banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "../discord/champsObjets";
 import { ecranConfirmationAvance, ecranCraftAvance, estDansAtelier, fabriquerAvance, type RecetteAvancee } from "../discord/atelier";
 import { formulaireConsommer } from "../discord/consommation";
@@ -197,6 +197,11 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       const ecran = { components: [conteneur], attachments: [], files: fichiers };
       if (!resultat.soumission) await clic.update(ecran);
       else if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply(ecran);
+    } else if (clic.customId === "tout-deposer") {
+      await clic.deferUpdate();
+      const texte = await toutDeposer(clic.guild!, joueurId);
+      const { conteneur, fichiers } = await ecranBanque(joueurId, boutonRetour(), texte);
+      await clic.editReply({ components: [conteneur], attachments: [], files: fichiers });
     } else if (clic.customId === "craft-avance") {
       const { recettes: liste, ecran } = await ecranCraftAvance(joueurId, entete, boutonRetour());
       recettesAvancees = liste;

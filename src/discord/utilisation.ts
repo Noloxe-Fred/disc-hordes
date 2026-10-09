@@ -13,7 +13,7 @@ import {
 import { JAUGE_MAX } from "../config/sante";
 import { prisma } from "../db";
 import { chargeSac, deborde, libelleCharge } from "../services/charge";
-import { empechementBanque } from "./banque";
+import { empechementBanque, rafraichirPanneauBanque } from "./banque";
 import { synchroniserAccesJoueur } from "./joueurDiscord";
 import { trouverSalonTexte } from "./reconcile";
 
@@ -92,6 +92,7 @@ export async function servirFestin(guild: Guild, joueurId: number): Promise<stri
       data: { villeId, joueurId, message: `Festin servi à ${convives.length} citoyen${convives.length > 1 ? "s" : ""}${source === "banque" ? " (banque)" : ""}` },
     }),
   ]);
+  if (source === "banque") await rafraichirPanneauBanque(guild, villeId);
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:place-publique`);
   await salon
     ?.send({

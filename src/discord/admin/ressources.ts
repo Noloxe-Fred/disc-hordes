@@ -2,6 +2,7 @@ import { StatutVille } from "@prisma/client";
 import { ButtonStyle, type ButtonInteraction } from "discord.js";
 import { OBJET_RADIO } from "../../config/objets";
 import { prisma } from "../../db";
+import { rafraichirPanneauBanque } from "../banque";
 import { synchroniserAccesJoueur } from "../joueurDiscord";
 import {
   champMembre,
@@ -88,6 +89,7 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
         create: { villeId: ville.id, objetId, quantite: apres },
       });
       proprietaire = `la banque de **${ville.nom}**`;
+      await rafraichirPanneauBanque(interaction.guild!, ville.id);
     }
 
     const libelle = sens > 0 ? "Ajouter un objet" : "Retirer un objet";

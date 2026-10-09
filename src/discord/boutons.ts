@@ -3,6 +3,7 @@ import type { ButtonInteraction } from "discord.js";
 import { JOUEURS_MAX_PAR_VILLE, NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../config/metiers";
 import { prisma } from "../db";
 import { gererBoutonPanneau } from "./boutonsAdmin";
+import { gererBoutonBanque } from "./banque";
 import { gererBoutonChantier } from "./chantiers";
 import { gererBoutonAccueil } from "./accueil";
 import { gererBoutonDefiance } from "./defiance";
@@ -109,6 +110,8 @@ export async function gererBouton(interaction: ButtonInteraction) {
     await gererBoutonVille(interaction, action, id);
   } else if (prefixe === "chantier") {
     await gererBoutonChantier(interaction, action, id);
+  } else if (prefixe === "banque") {
+    await gererBoutonBanque(interaction, action, id);
   } else if (prefixe === "maison") {
     await gererBoutonMaison(interaction, action, id);
   } else if (prefixe === "election") {

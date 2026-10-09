@@ -195,6 +195,8 @@ model Ville {
   structuresRenforcees  Int           @default(0)
   // Panneau permanent des maisons privees poste dans #maisons-privees (discord/maisons.ts)
   messageMaisonsId      String?
+  // Panneau permanent de la banque poste dans #banque (discord/banque.ts)
+  messageBanqueId       String?
   // Projet expose par le createur a /creer-ville (formulaire facultatif), repris dans l'annonce
   projet                String?       @db.Text
 

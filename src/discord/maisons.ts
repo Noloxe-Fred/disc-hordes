@@ -22,6 +22,7 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
+import { rafraichirPanneauBanque } from "./banque";
 
 // Maisons privees (equilibrage.md §7) : un panneau permanent dans #maisons-privees de chaque ville. Chaque joueur
 // construit sa propre maison avec la mecanique des chantiers : « Contribuer (sac) » / « Contribuer (banque) » deposent
@@ -244,6 +245,7 @@ async function deposer(guild: Guild, joueurId: number, villeId: number, source: 
     }),
   ]);
   const termine = await terminerSiComplet(guild, villeId, joueurId);
+  if (source === "banque") await rafraichirPanneauBanque(guild, villeId);
   return (
     `🏠 Vous déposez **${nom} × ${verse}** sur votre maison` +
     (credit !== verse ? ` (${credit} ${emojiObjet(nomRessource)} ${nomRessource})` : "") +

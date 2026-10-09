@@ -18,6 +18,7 @@ Chaque action coûte des **points d'action** : se déplacer, fouiller, construir
 ## 🍖 Faim et 💧 soif
 Deux jauges de **0 à 100**, qui baissent à chaque phase (**−12** faim, **−15** soif). Plus elles sont basses, plus tes **PA max** baissent ; sous **10**, tu perds des PV.
 🍲 Mange et bois avec `/inventaire`, depuis ton sac ou la banque de la ville.
+🏦 Le salon **banque** montre la réserve commune : dépose, retire ou vide ton sac d'un bouton.
 
 ## 🌗 Le jour et la nuit
 ☀️ Chaque **aube**, les zombies attaquent la ville : construis la **palissade** dans #chantiers, monte la garde la nuit, et **rentre avant l'aube** si tu es dehors.

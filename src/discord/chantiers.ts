@@ -27,6 +27,7 @@ import { emojiObjet, poidsObjet } from "../config/objets";
 import { SEUIL_CRITIQUE_FAIM_SOIF } from "../config/sante";
 import { prisma } from "../db";
 import { chargeBanque } from "../services/charge";
+import { rafraichirPanneauBanque } from "./banque";
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
@@ -35,7 +36,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { texteRationnement } from "./maire";
 import { rafraichirPanneauMaisons } from "./maisons";
-import { ensureSalonJournal, posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
+import { ensureSalonLectureSeule, posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
 
 // Chantiers communautaires (conception.md §5, equilibrage.md §7) : un panneau permanent dans #chantiers de chaque ville,
 // mis a jour a chaque avancee. « Contribuer (sac) » / « Contribuer (banque) » deposent des ressources sur le prochain
@@ -164,13 +165,15 @@ export async function rafraichirPanneauChantiers(guild: Guild, villeId: number):
   if (message) await prisma.ville.update({ where: { id: villeId }, data: { messageChantiersId: message.id } });
 }
 
-// Panneaux (chantiers, maisons) et salons (atelier, journal) de chaque ville en jeu (au demarrage du bot : villes fondees avant les chantiers, message supprime...)
+// Panneaux (chantiers, maisons, banque) et salons (atelier, journal, banque) de chaque ville en jeu (au demarrage du bot : villes fondees avant les chantiers, message supprime...)
 export async function rafraichirTousLesPanneaux(guild: Guild): Promise<void> {
   for (const { id } of await prisma.ville.findMany({ where: { statut: StatutVille.ACTIVE }, select: { id: true } })) {
     await rafraichirPanneauChantiers(guild, id).catch((error) => console.error(`Panneau des chantiers de la ville ${id}`, error));
     await rafraichirPanneauMaisons(guild, id).catch((error) => console.error(`Panneau des maisons de la ville ${id}`, error));
     await synchroniserSalonAtelier(guild, id).catch((error) => console.error(`Salon atelier de la ville ${id}`, error));
-    await ensureSalonJournal(guild, id).catch((error) => console.error(`Salon journal de la ville ${id}`, error));
+    await ensureSalonLectureSeule(guild, id, "journal").catch((error) => console.error(`Salon journal de la ville ${id}`, error));
+    await ensureSalonLectureSeule(guild, id, "banque").catch((error) => console.error(`Salon banque de la ville ${id}`, error));
+    await rafraichirPanneauBanque(guild, id).catch((error) => console.error(`Panneau de la banque de la ville ${id}`, error));
   }
 }
 
@@ -315,6 +318,7 @@ async function deposer(
   ]);
   const termine = await terminerSiComplet(guild, villeId, type, joueurId);
   await rafraichirPanneauChantiers(guild, villeId);
+  if (source === "banque") await rafraichirPanneauBanque(guild, villeId);
   return (
     `🏗️ Vous déposez **${nom} × ${verse}** sur le chantier **${etat.chantier.nom}**` +
     (credit !== verse ? ` (${credit} ${emojiObjet(nomRessource)} ${nomRessource})` : "") +
@@ -421,6 +425,8 @@ export async function construirePalier(guild: Guild, villeId: number, type: Type
   if (type === TypeBatiment.ATELIER) await synchroniserSalonAtelier(guild, villeId);
   // La Tour Radio ouvre les ondes a tous les habitants et la ville aux porteurs de radio dehors
   if (type === TypeBatiment.TOUR_RADIO) await synchroniserAccesVille(guild, villeId);
+  // La place publique agrandit la banque
+  if (type === TypeBatiment.PLACE_PUBLIQUE) await rafraichirPanneauBanque(guild, villeId);
   return annonce;
 }
 
@@ -484,6 +490,7 @@ async function poserStructure(guild: Guild, joueurId: number, villeId: number): 
     })
     .catch(() => null);
   await rafraichirPanneauChantiers(guild, villeId);
+  if (banque || recuperation) await rafraichirPanneauBanque(guild, villeId);
   return (
     `🛡️ Vous posez une ${emojiObjet(nom)} ${nom.toLowerCase()}${banque ? " prise à la banque" : ""}` +
     (remplace ? ", qui remplace une structure simple démontée pour lui faire place" : "") +

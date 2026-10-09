@@ -54,7 +54,7 @@ Ta ville apparaît dans #fonder-une-colonie avec quatre boutons :
 ☝️ Une seule ville (ou demande) à la fois.
 
 ## 🏙️ À la fondation
-La ville reçoit ses salons privés : mairie, journal, place publique, chantiers, maisons privées et un vocal. Le salon **atelier** s'ouvre quand l'atelier est construit.
+La ville reçoit ses salons privés : mairie, journal, banque, place publique, chantiers, maisons privées et un vocal. Le salon **atelier** s'ouvre quand l'atelier est construit.
 🏛️ La **mairie** est le tableau d'affichage de la ville : tu la lis, mais tu n'y écris pas. On y trouve les annonces de la ville et celles du **maire**. Pour discuter, direction la **place publique**.
 📜 Le **journal** raconte la vie de la ville : chaque minute, le bot y inscrit ce que les citoyens ont fait **en ville** (banque, chantiers, repas, fabrications, dons, soins, votes…). Tu le lis sans y écrire. Ce qui se passe **dehors** n'y apparaît jamais : à toi de raconter tes expéditions.
 Le **créateur devient le premier maire** pour 4 cycles. Le maire publie ses annonces dans la mairie avec le bouton **Annonce** de `/action`, en notifiant ou non toute la ville.
@@ -223,7 +223,7 @@ Le bouton **Donner** ouvre un formulaire : choisis **à qui**, **quel objet** et
 Tu ne peux donner qu'à un survivant **au même endroit** que toi : un citoyen de ta ville si tu es en ville, n'importe quel survivant de ta zone si tu es dehors. Le don est annoncé dans le salon du lieu.
 
 ## 🏦 La banque
-En ville, le bouton **Banque** montre la réserve commune de ta ville. **Déposer** y range des objets de ton sac, **Retirer** en reprend : c'est gratuit, et tous les citoyens vivants présents en ville y ont accès.
+Le salon **banque** de ta ville affiche en permanence la réserve commune, mise à jour à chaque mouvement (on la retrouve aussi avec le bouton **Banque** de `/inventaire`). **Déposer** y range un objet de ton sac, **Tout déposer** y vide ton sac d'un coup (sauf la radio, et tant qu'il y a de la place), **Retirer** en reprend : c'est gratuit, et tous les citoyens vivants présents en ville y ont accès.
 ⚖️ La banque porte **50** au plus (**100** avec la place publique, **200** à son palier 2), avec les mêmes poids que le sac. Pleine, elle ne reçoit plus rien, pas même l'eau du puits.
 📜 Chaque dépôt, chaque retrait et chaque repas pris à la banque est inscrit au journal de la ville.
 

@@ -27,6 +27,7 @@ import { prisma } from "../db";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { posterAccueilVille } from "./accueilVille";
+import { rafraichirPanneauBanque } from "./banque";
 import { rafraichirPanneauChantiers } from "./chantiers";
 import { rafraichirPanneauMaisons } from "./maisons";
 import { rafraichirMessageVille, supprimerMessagesRecrutement } from "./messageVille";
@@ -364,6 +365,7 @@ export async function fonderVille(guild: Guild, villeId: number): Promise<{ nomb
   await ensureTerritoiresGroupe(guild, groupeId);
   await rafraichirPanneauChantiers(guild, ville.id);
   await rafraichirPanneauMaisons(guild, ville.id);
+  await rafraichirPanneauBanque(guild, ville.id);
 
   const roleCitoyen = await trouverRole(guild, ROLE_CITOYEN.cle);
   // Role Mort d'une partie precedente (ville tombee) retire : le joueur recommence vivant

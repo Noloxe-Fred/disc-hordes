@@ -53,6 +53,7 @@ const SALONS_VILLE: Record<string, string> = {
   mairie:
     "La mairie : annonces de la ville et du maire, comptes rendus d'attaque, panneaux d'élection et de défiance, demandes d'accueil. Lecture seule.",
   journal: "Le journal de bord : ce que les citoyens font en ville, inscrit chaque minute par le bot. Lecture seule.",
+  banque: "La banque : la réserve commune, toujours à jour ; ses boutons **Déposer**, **Tout déposer** et **Retirer** marchent depuis la ville.",
   "place-publique": "La place publique : on s'y organise entre citoyens. Les partages de carte y sont annoncés.",
   chantiers:
     "Les chantiers : le panneau montre chaque bâtiment ; ses boutons **Contribuer** (sac ou banque) et **Installer** le font avancer.",
@@ -145,6 +146,7 @@ async function texteJoueur(guild: Guild, utilisateurId: number): Promise<string>
 
   const chantiers = await lienSalon(guild, `salon:ville:${ville.id}:chantiers`, "chantiers");
   const maisons = await lienSalon(guild, `salon:ville:${ville.id}:maisons-privees`, "maisons-privées");
+  const banque = await lienSalon(guild, `salon:ville:${ville.id}:banque`, "banque");
   const maire = estMaireEnExercice(joueur);
   return (
     `## 🏙️ En ville — ${ville.nom}\n` +
@@ -155,6 +157,8 @@ async function texteJoueur(guild: Guild, utilisateurId: number): Promise<string>
     ", quitter ta ville\n" +
     "🎒 `/inventaire` : ton sac et la banque de la ville, pour fabriquer, donner, déposer en banque, jeter, manger ou boire\n" +
     `${communes}\n` +
+    `🏦 La réserve commune s'affiche dans ${banque}.
+` +
     `🏗️ Les bâtiments avancent dans ${chantiers}, ta maison dans ${maisons}.`
   );
 }
