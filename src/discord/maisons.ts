@@ -13,7 +13,7 @@ import {
   type ButtonInteraction,
   type Guild,
 } from "discord.js";
-import { calculerDepot, objetsUtiles, PALIERS_MAISON, ressourceDeposee, type PalierBatiment } from "../config/batiments";
+import { calculerDepot, objetsUtiles, PA_PAR_RESSOURCE, PALIERS_MAISON, ressourceDeposee, type PalierBatiment } from "../config/batiments";
 import { emojiObjet } from "../config/objets";
 import { SEUIL_CRITIQUE_FAIM_SOIF } from "../config/sante";
 import { prisma } from "../db";
@@ -25,8 +25,8 @@ import { trouverSalonTexte } from "./reconcile";
 
 // Maisons privees (equilibrage.md §7) : un panneau permanent dans #maisons-privees de chaque ville. Chaque joueur
 // construit sa propre maison avec la mecanique des chantiers : « Contribuer (sac) » / « Contribuer (banque) » deposent
-// des ressources sur le prochain palier (gratuit), « Installer » y verse des PA au fur et a mesure des depots (2 PA par
-// tranche de 10 ressources). « Ma maison » affiche la progression, visible du seul joueur. Les prises en banque sont
+// des ressources sur le prochain palier (gratuit), « Installer » y verse des PA au fur et a mesure des depots (1 PA pour
+// 2 ressources). « Ma maison » affiche la progression, visible du seul joueur. Les prises en banque sont
 // journalisees comme pour les chantiers. Reserve aux citoyens vivants presents en ville, hors seuil critique.
 
 const COULEUR = 0x8e5b3a;
@@ -60,11 +60,11 @@ function totalDeposees(etat: EtatMaison): number {
   return [...etat.deposees.values()].reduce((a, b) => a + b, 0);
 }
 
-// PA qu'on peut deja verser : 2 par tranche de 10 ressources deposees, sans depasser le cout du palier
+// PA qu'on peut deja verser : 1 pour 2 ressources deposees (arrondi au superieur), sans depasser le cout du palier
 function paInstallables(etat: EtatMaison): number {
   const suivant = prochainPalier(etat);
   if (!suivant) return 0;
-  return Math.min(suivant.pa, Math.floor((totalDeposees(etat) * 2) / 10)) - etat.paInstalles;
+  return Math.min(suivant.pa, Math.ceil(totalDeposees(etat) * PA_PAR_RESSOURCE)) - etat.paInstalles;
 }
 
 function manque(etat: EtatMaison, nom: string): number {
@@ -97,7 +97,7 @@ export function construirePanneauMaisons(villeId: number): ContainerBuilder {
       new TextDisplayBuilder().setContent(
         "## 🏠 Maisons privées\n" +
           "Chacun arrive sans maison et bâtit la sienne. Déposez des ressources (depuis votre sac ou la banque, gratuit), " +
-          "puis installez-les avec vos PA : 2 PA par tranche de 10 ressources déposées. Un palier est construit quand tout est réuni.\n\n" +
+          "puis installez-les avec vos PA : 1 PA pour 2 ressources déposées. Un palier est construit quand tout est réuni.\n\n" +
           paliers +
           "\n\n-# « Ma maison » affiche votre progression, visible de vous seul. Les ressources prises à la banque sont notées au journal de la ville.",
       ),
@@ -257,7 +257,7 @@ async function deposer(guild: Guild, joueurId: number, villeId: number, source: 
 async function installer(interaction: ButtonInteraction, joueurId: number, villeId: number, etat: EtatMaison) {
   if (paInstallables(etat) <= 0) {
     await interaction.reply({
-      content: "Aucune ressource à installer : déposez d'abord des ressources sur votre maison (2 PA par tranche de 10).",
+      content: "Aucune ressource à installer : déposez d'abord des ressources sur votre maison (1 PA pour 2 ressources).",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -291,7 +291,7 @@ async function verserPa(guild: Guild, joueurId: number, villeId: number, pa: num
   const etat = await etatMaison(joueurId);
   if (!prochainPalier(etat)) return "Votre maison est terminée.";
   const possible = paInstallables(etat);
-  if (possible <= 0) return "Déposez d'abord des ressources sur votre maison : 2 PA par tranche de 10.";
+  if (possible <= 0) return "Déposez d'abord des ressources sur votre maison : 1 PA pour 2 ressources.";
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
   const verse = Math.min(pa, possible, joueur.paActuel ?? 0);
   if (verse <= 0) return "Vous n'avez plus de PA.";

@@ -7,7 +7,7 @@ import {
   MODIFICATEUR_METEO_MAUVAIS,
 } from "../config/defense";
 
-// Force de base 15 a la nuit 1, +10% compose par cycle, +15% si mauvais temps
+// Force de base 10 a la nuit 1, +13% compose par cycle, +15% si mauvais temps
 // (equilibrage.md §3).
 export function calculerForceAttaque(cycleActuel: number, meteoMauvaise: boolean): number {
   const base = FORCE_ATTAQUE_BASE * Math.pow(1 + CROISSANCE_ATTAQUE_PAR_CYCLE, cycleActuel - 1);

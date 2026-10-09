@@ -110,9 +110,9 @@ Le bouton **Soigner** de `/action` soigne **toi-même** ou un survivant **au mê
 On ne dépasse jamais **10 PV**, et chaque PV rendu redonne des PA max. Soigner quelqu'un est annoncé dans le salon du lieu.
 
 ## 🏠 Ta maison
-Tu arrives **sans maison** : à toi de la bâtir, dans le salon **maisons-privées** de ta ville. Même principe que les chantiers : 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** pour déposer les ressources, puis 🔨 **Installer** pour y verser tes PA (**2 PA par tranche de 10 ressources**). 🏠 **Ma maison** te montre où tu en es.
-🏠 **Palier 1** : 30 Bois + 15 Tissu, 9 PA — un toit à toi.
-🏡 **Palier 2** : 50 Bois + 30 Tissu, 16 PA — **+15 % de PA max** et **25 % de chances de repousser les zombies** si l'attaque tombe sur toi.
+Tu arrives **sans maison** : à toi de la bâtir, dans le salon **maisons-privées** de ta ville. Même principe que les chantiers : 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** pour déposer les ressources, puis 🔨 **Installer** pour y verser tes PA (**1 PA pour 2 ressources**). 🏠 **Ma maison** te montre où tu en es.
+🏠 **Palier 1** : 10 Bois + 5 Tissu, 8 PA — un toit à toi.
+🏡 **Palier 2** : 25 Bois + 12 Tissu, 19 PA — **+15 % de PA max** et **25 % de chances de repousser les zombies** si l'attaque tombe sur toi.
 Tout ce que tu prends à la banque pour ta maison est noté au journal de la ville. 👀
 
 ## 🦠 L'infection
@@ -125,8 +125,8 @@ Ton zombie reste là où tu t'es transformé. En ville, il se jette par surprise
 
 Dans `/action`, le bouton **Se déplacer** te propose les destinations possibles et leur coût : le bot te demande de confirmer avant de dépenser tes PA.
 🧭 On avance **de proche en proche** : de la ville vers les 4 zones **proches**, puis vers les zones **moyennes** et **éloignées** du même type, ou vers les zones voisines de même distance.
-⚡ Coût : **2 PA** pour une zone proche (ou pour rentrer en ville), **3 PA** pour une moyenne, **4 PA** pour une éloignée. La nuit, c'est **50 % plus cher**.
-🗺️ Entrer dans une zone qui n'est **pas encore sur ta carte** coûte **+2 PA** (jour comme nuit) : observer les environs ou se faire partager une carte avant de partir, ça paie ! L'**Éclaireur**, lui, ne paie jamais ce surcoût.
+⚡ Coût : **1 PA** pour une zone proche (ou pour rentrer en ville), **2 PA** pour une moyenne, **3 PA** pour une éloignée. La nuit, c'est **50 % plus cher** (2, 3 et 5 PA).
+🗺️ Entrer dans une zone qui n'est **pas encore sur ta carte** coûte **+1 PA** (jour comme nuit) : observer les environs ou se faire partager une carte avant de partir, ça paie ! L'**Éclaireur**, lui, ne paie jamais ce surcoût.
 🔇 Dehors, tu ne vois plus ce qui se passe en ville : seule la **mairie** reste lisible, sans pouvoir y écrire, pour suivre les annonces (le journal t'attend à ton retour). Tu ne récupères pas non plus tes PA au changement de phase (seule une sieste près d'un feu t'en rend un peu). Tu ne vois que le salon de la zone où tu te trouves : personne ne voit ce qui se passe dans une zone sans y être.
 📻 Avec une **radio**, tu rejoins le salon **ondes-radio**, où les porteurs de radio se parlent d'une zone à l'autre. Tant que ta ville n'a pas de **tour radio**, elle ne te montre pas ta ville quand tu es dehors, mais en ville, un porteur de radio écoute les ondes et peut relayer les nouvelles à ses concitoyens. La radio se trouve dans les marécages, loin de la ville ; elle ne pèse rien et s'affiche à côté de tes PA et de ta charge.
 📡 Une fois la **tour radio** construite, tous les habitants vivants **en ville** rejoignent **ondes-radio**, même sans radio (dehors, il faut une radio pour capter les ondes), et un porteur de radio dehors garde l'accès à tous les salons de sa ville.
@@ -153,7 +153,7 @@ Avec un piège dans ton sac, le bouton **Piège** de `/action` le pose dans ta z
 ## 🧟 Les zombies
 Après chaque fouille et à chaque arrivée dans une zone, un **zombie** peut surgir : **15 %** en zone proche, **30 %** en moyenne, **45 %** en éloignée, et **50 % de plus la nuit**. Et plus tu fouilles sans croiser de zombie, plus le bruit en attire : **+10 %** à chaque fouille d'affilée, jusqu'à ce qu'un zombie surgisse ou que tu rentres en ville. Tant qu'il est là, `/action` ne te propose que deux choix :
 ⚔️ **Attaquer** pour **2 PA** (3 la nuit) : tu touches 7 fois sur 10. Un zombie a **2 PV** en zone proche, **3** en moyenne, **4** en éloignée. S'il tient encore debout, il riposte (3 fois sur 10) : **−1 PV**, et chaque coup reçu peut t'**infecter**.
-🏃 **Fuir** pour **1 PA** (2 la nuit) : ça marche 3 fois sur 4 le jour, 1 fois sur 2 la nuit. Tu rebrousses chemin vers l'endroit d'où tu venais (ou tu restes sur place si tu fouillais). Raté, le zombie te frappe (−1 PV, sans infection).
+🏃 **Fuir** pour **1 PA** (2 la nuit) : ça marche 4 fois sur 5 le jour, 3 fois sur 5 la nuit. Tu rebrousses chemin vers l'endroit d'où tu venais (ou tu restes sur place si tu fouillais). Raté, le zombie te frappe (−1 PV, sans infection).
 🗡️ Une **arme** dans ton sac aide : **arme de fortune** (−1 PA par attaque), **arme simple** (tu touches plus souvent), **arme avancée** (−2 PA et 2 dégâts par coup). Seule la meilleure compte.
 🔫 Avec une **arme à feu** et des **munitions**, le bouton **Tirer** s'ajoute : **0 PA**, une munition par tir, tu touches 3 fois sur 4 (presque à coup sûr pour le **Chasseur**) et le zombie perd **3 PV**.
 ⏳ Un zombie qu'on laisse là ne s'en va pas : **−1 PV à la tombée de la nuit** tant que tu ne l'as pas réglé.
@@ -169,7 +169,7 @@ Dehors, le bouton **Allumer un feu** de `/action` brûle un **Feu** de ton sac (
 
 Dans le salon **chantiers** de ta ville, un panneau montre où en est chaque bâtiment : la **palissade** (défense contre l'attaque de l'aube), la **place publique** (plus de place dans la banque), le **puits** (de l'eau chaque matin), l'**atelier**, la **tour radio** et la **mairie**.
 🎒 **Contribuer (sac)** ou 🏦 **Contribuer (banque)** : dépose des ressources sur le prochain palier d'un bâtiment, depuis ton sac ou directement depuis la banque. C'est gratuit.
-🔨 **Installer** : verse tes PA pour bâtir, **2 PA par tranche de 10 ressources déposées**. Pas besoin d'attendre que tout soit réuni : on installe au fur et à mesure.
+🔨 **Installer** : verse tes PA pour bâtir, **1 PA pour 2 ressources déposées**. La nuit, quand sortir coûte cher, c'est le bon moment pour installer. Pas besoin d'attendre que tout soit réuni : on installe au fur et à mesure.
 🛡️ **Poser une structure** : une structure de défense fabriquée par un ingénieur donne **+3 défense** tant qu'elle tient, une **renforcée** **+5** (5 structures au plus en tout). Quand tout est plein, une renforcée prend la place d'une structure simple : ses ressources (Ferraille, Bois, Pierre) reviennent à la banque, s'il y a de la place.
 🌳 Un **bois rare** déposé sur un chantier ou sur ta maison compte pour **5 Bois**.
 
@@ -187,7 +187,7 @@ Il faut être **en ville**, vivant, et ne pas être affamé ni assoiffé (faim e
 
 ## ⚖️ Le poids
 Chaque objet pèse **1** (petit : tissu, baies, plantes, bandage, torche…), **2** (moyen : bois, ferraille, eau brute, gibier…) ou **3** (lourd : pierre, gros gibier, armes avancées…).
-Ton sac porte **12** au plus : la jauge de charge est en haut de son image. Trop lourd, tu ne peux rien y ajouter de plus : ni fouiller, ni recevoir, ni fabriquer un objet qui l'alourdit, ni retirer de la banque.
+Ton sac porte **20** au plus : la jauge de charge est en haut de son image. Trop lourd, tu ne peux rien y ajouter de plus : ni fouiller, ni recevoir, ni fabriquer un objet qui l'alourdit, ni retirer de la banque.
 🗑️ Le bouton **Jeter un objet** l'allège gratuitement. Attention : un objet jeté est **perdu**.
 
 ## 🔨 Fabriquer
@@ -224,7 +224,7 @@ Tu ne peux donner qu'à un survivant **au même endroit** que toi : un citoyen d
 
 ## 🏦 La banque
 En ville, le bouton **Banque** montre la réserve commune de ta ville. **Déposer** y range des objets de ton sac, **Retirer** en reprend : c'est gratuit, et tous les citoyens vivants présents en ville y ont accès.
-⚖️ La banque porte **40** au plus, avec les mêmes poids que le sac.
+⚖️ La banque porte **50** au plus (**100** avec la place publique, **200** à son palier 2), avec les mêmes poids que le sac. Pleine, elle ne reçoit plus rien, pas même l'eau du puits.
 📜 Chaque dépôt, chaque retrait et chaque repas pris à la banque est inscrit au journal de la ville.
 
 

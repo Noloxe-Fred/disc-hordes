@@ -114,9 +114,9 @@ export function poidsObjet(nom: string): number {
   return POIDS_OBJET[nom] ?? MOYEN;
 }
 
-export const CAPACITE_SAC = 12;
+export const CAPACITE_SAC = 20;
 // Capacite de la banque de ville selon le palier de la place publique (0 = pas encore construite)
-export const CAPACITE_BANQUE_PAR_PALIER = [40, 80, 160];
+export const CAPACITE_BANQUE_PAR_PALIER = [50, 100, 200];
 
 // Porter une radio donne le role Radio et l'acces au salon « ondes-radio » du groupe, en ville comme dehors
 // (discord/joueurDiscord.ts)

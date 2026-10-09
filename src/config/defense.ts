@@ -29,8 +29,8 @@ export const PART_AVANCEMENT_PAR_POINT = 0.1;
 export const POINTS_MAX_AVANCEMENT = 10;
 export const SEUIL_PERTE_PALIER_ALEATOIRE = 5;
 
-export const FORCE_ATTAQUE_BASE = 15;
-export const CROISSANCE_ATTAQUE_PAR_CYCLE = 0.1; // +10% compose par cycle
+export const FORCE_ATTAQUE_BASE = 10;
+export const CROISSANCE_ATTAQUE_PAR_CYCLE = 0.13; // +13% compose par cycle
 export const MODIFICATEUR_METEO_MAUVAIS = 0.15; // +15%
 
 // Alerte postee dans la mairie des villes en nuit, avant l'attaque de l'aube (minuit)

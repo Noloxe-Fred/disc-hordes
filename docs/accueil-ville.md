@@ -16,7 +16,7 @@ Chaque action coûte des **points d'action** : se déplacer, fouiller, construir
 😴 À chaque changement de phase, à **minuit**, tu dors si tu es **en ville** : tes PA reviennent à leur maximum. Dehors, pas de repos.
 
 ## 🍖 Faim et 💧 soif
-Deux jauges de **0 à 100**, qui baissent à chaque phase (**−16** faim, **−20** soif). Plus elles sont basses, plus tes **PA max** baissent ; sous **10**, tu perds des PV.
+Deux jauges de **0 à 100**, qui baissent à chaque phase (**−12** faim, **−15** soif). Plus elles sont basses, plus tes **PA max** baissent ; sous **10**, tu perds des PV.
 🍲 Mange et bois avec `/inventaire`, depuis ton sac ou la banque de la ville.
 
 ## 🌗 Le jour et la nuit

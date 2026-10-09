@@ -33,8 +33,8 @@ export const DEGATS_ZOMBIE = 1;
 // Fuir : cout (nuit x1,5) et chance de reussite ; un echec vaut un coup du zombie, sans infection
 export const COUT_FUITE_JOUR = 1;
 export const CHANCE_FUITE: Record<TypePhase, number> = {
-  [TypePhase.JOUR]: 0.75,
-  [TypePhase.NUIT]: 0.5,
+  [TypePhase.JOUR]: 0.8,
+  [TypePhase.NUIT]: 0.6,
 };
 
 // Rencontre laissee en suspens : -1 PV a la tombee de la nuit tant qu'elle dure (a l'aube, seule la horde frappe)

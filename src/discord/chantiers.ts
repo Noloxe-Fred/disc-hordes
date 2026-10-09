@@ -14,7 +14,7 @@ import {
   type ButtonInteraction,
   type Guild,
 } from "discord.js";
-import { calculerDepot, CHANTIERS, chantier, objetsUtiles, ressourceDeposee, type Chantier } from "../config/batiments";
+import { calculerDepot, CHANTIERS, chantier, objetsUtiles, PA_PAR_RESSOURCE, ressourceDeposee, type Chantier } from "../config/batiments";
 import {
   BONUS_STRUCTURE_DEFENSE,
   BONUS_STRUCTURE_RENFORCEE,
@@ -39,7 +39,7 @@ import { ensureSalonJournal, posterDansMairie, synchroniserSalonAtelier } from "
 
 // Chantiers communautaires (conception.md §5, equilibrage.md §7) : un panneau permanent dans #chantiers de chaque ville,
 // mis a jour a chaque avancee. « Contribuer (sac) » / « Contribuer (banque) » deposent des ressources sur le prochain
-// palier d'un batiment (gratuit), « Installer » y verse des PA, au fur et a mesure des depots (2 PA par tranche de 10
+// palier d'un batiment (gratuit), « Installer » y verse des PA, au fur et a mesure des depots (1 PA pour 2
 // ressources deposees). Palier construit quand ressources et PA sont complets : son bonus s'applique aussitot.
 // Reserve aux citoyens vivants presents en ville, hors seuil critique de faim ou de soif.
 
@@ -79,11 +79,11 @@ function totalDeposees(etat: EtatChantier): number {
   return [...etat.deposees.values()].reduce((a, b) => a + b, 0);
 }
 
-// PA qu'on peut deja verser : 2 par tranche de 10 ressources deposees, sans depasser le cout du palier
+// PA qu'on peut deja verser : 1 pour 2 ressources deposees (arrondi au superieur), sans depasser le cout du palier
 function paInstallables(etat: EtatChantier): number {
   const suivant = prochainPalier(etat);
   if (!suivant) return 0;
-  return Math.min(suivant.pa, Math.floor((totalDeposees(etat) * 2) / 10)) - etat.paInstalles;
+  return Math.min(suivant.pa, Math.ceil(totalDeposees(etat) * PA_PAR_RESSOURCE)) - etat.paInstalles;
 }
 
 function manque(etat: EtatChantier, nom: string): number {
@@ -126,7 +126,7 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
       new TextDisplayBuilder().setContent(
         "## 🏗️ Chantiers de la ville\n" +
           "Déposez des ressources (depuis votre sac ou la banque, gratuit), puis installez-les avec vos PA : " +
-          "2 PA par tranche de 10 ressources déposées. Un palier est construit quand tout est réuni.\n\n" +
+          "1 PA pour 2 ressources déposées. Un palier est construit quand tout est réuni.\n\n" +
           (decisions.length > 0 ? `📋 **Décisions du maire**\n${decisions.join("\n")}\n\n` : "") +
           etats.map((e) => ligneChantier(e, e.chantier.type === ville.chantierPrioritaire)).join("\n\n") +
           `\n\n${structures}`,
@@ -329,7 +329,7 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
   const installables = etats.filter((e) => paInstallables(e) > 0);
   if (installables.length === 0) {
     await interaction.reply({
-      content: "Aucun chantier n'a de ressources à installer : déposez d'abord des ressources (2 PA par tranche de 10).",
+      content: "Aucun chantier n'a de ressources à installer : déposez d'abord des ressources (1 PA pour 2 ressources).",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -343,7 +343,7 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
         champBatiment(installables),
         new LabelBuilder()
           .setLabel("Combien de PA ?")
-          .setDescription(`Au plus ce que les ressources déposées permettent (2 PA par tranche de 10)`)
+          .setDescription(`Au plus ce que les ressources déposées permettent (1 PA pour 2 ressources)`)
           .setTextInputComponent(
             new TextInputBuilder().setCustomId("quantite").setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(4).setPlaceholder("1"),
           ),
@@ -365,7 +365,7 @@ async function verserPa(guild: Guild, joueurId: number, villeId: number, type: T
   const etat = (await etatsChantiers(villeId)).find((e) => e.chantier.type === type);
   if (!etat || !prochainPalier(etat)) return "Ce chantier est terminé.";
   const possible = paInstallables(etat);
-  if (possible <= 0) return `Déposez d'abord des ressources sur le chantier **${etat.chantier.nom}** : 2 PA par tranche de 10.`;
+  if (possible <= 0) return `Déposez d'abord des ressources sur le chantier **${etat.chantier.nom}** : 1 PA pour 2 ressources.`;
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
   const verse = Math.min(pa, possible, joueur.paActuel ?? 0);
   if (verse <= 0) return "Vous n'avez plus de PA.";

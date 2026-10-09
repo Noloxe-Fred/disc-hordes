@@ -19,8 +19,8 @@ export const RATIO_DEGATS_MAX = 0.5;
 export const FACTEUR_DEGATS_NUIT = 10;
 
 // Faim et soif (jauges 0-100)
-export const DECROISSANCE_FAIM_PAR_PHASE = 16;
-export const DECROISSANCE_SOIF_PAR_PHASE = 20;
+export const DECROISSANCE_FAIM_PAR_PHASE = 12;
+export const DECROISSANCE_SOIF_PAR_PHASE = 15;
 export const SEUIL_CRITIQUE_FAIM_SOIF = 10;
 // PV perdus par phase et par jauge : sous le seuil critique, puis a 0
 export const PV_PERDUS_JAUGE_CRITIQUE = 1;
