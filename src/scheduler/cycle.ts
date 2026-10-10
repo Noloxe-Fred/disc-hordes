@@ -25,6 +25,7 @@ import { produireEauPuits } from "../services/puits";
 import { capturerPieges } from "../services/pieges";
 import { regenererRessourcesNaturelles } from "../services/stocks";
 import { sansChevauchement, sousVerrou, verrouille } from "../services/verrou";
+import { avecContexte } from "../discord/journalErreurs";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
 // plutot que 24h/48h apres leur propre fondation (conception.md §2). Le bot ne gerant qu'un
@@ -326,7 +327,7 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
   const planifierProchainTick = () => {
     setTimeout(async () => {
       const guild = client.guilds.cache.first();
-      if (guild) await executerTick(guild);
+      if (guild) await avecContexte({ action: "Horloge : bascule de minuit" }, () => executerTick(guild));
       planifierProchainTick();
     }, msJusquauProchainMinuit());
   };
@@ -336,7 +337,11 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
   const planifierProchaineAlerte = () => {
     setTimeout(async () => {
       const guild = client.guilds.cache.first();
-      if (guild) await alerterAttaque(guild).catch((error) => console.error("Alerte d'attaque impossible", error));
+      if (guild) {
+        await avecContexte({ action: "Horloge : alerte d'attaque" }, () =>
+          alerterAttaque(guild).catch((error) => console.error("Alerte d'attaque impossible", error)),
+        );
+      }
       planifierProchaineAlerte();
     }, msJusquaProchaineAlerte());
   };
@@ -351,8 +356,10 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
     sansChevauchement(async () => {
       const guild = client.guilds.cache.first();
       if (!guild) return;
-      await sousVerrou(() => verifierZombiesErrants(guild)).catch((error) =>
-        console.error("Verification des zombies errants impossible", error),
+      await avecContexte({ action: "Horloge : zombies errants" }, () =>
+        sousVerrou(() => verifierZombiesErrants(guild)).catch((error) =>
+          console.error("Verification des zombies errants impossible", error),
+        ),
       );
     }),
     INTERVALLE_ZOMBIES_ERRANTS_MS,
@@ -364,8 +371,10 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
     sansChevauchement(async () => {
       const guild = client.guilds.cache.first();
       if (!guild) return;
-      await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
-      await verifierDefiances(guild).catch((error) => console.error("Vérification des votes de défiance impossible", error));
+      await avecContexte({ action: "Horloge : élections et votes de défiance" }, async () => {
+        await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
+        await verifierDefiances(guild).catch((error) => console.error("Vérification des votes de défiance impossible", error));
+      });
     }),
     INTERVALLE_VERIFICATION_ELECTIONS_MS,
   );
@@ -375,7 +384,9 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
     sansChevauchement(async () => {
       const guild = client.guilds.cache.first();
       if (!guild) return;
-      await publierJournaux(guild).catch((error) => console.error("Publication des journaux impossible", error));
+      await avecContexte({ action: "Horloge : publication des journaux" }, () =>
+        publierJournaux(guild).catch((error) => console.error("Publication des journaux impossible", error)),
+      );
     }),
     INTERVALLE_JOURNAL_MS,
   );

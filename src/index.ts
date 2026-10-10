@@ -2,7 +2,7 @@ import "dotenv/config";
 import "./fuseau";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { Events, MessageFlags } from "discord.js";
+import { Events, MessageFlags, type Interaction } from "discord.js";
 import { createClient, type Command } from "./client";
 import { prisma } from "./db";
 import { gererBouton } from "./discord/boutons";
@@ -12,8 +12,11 @@ import { demarrerHorlogeCycle } from "./scheduler/cycle";
 import { rafraichirTousLesPanneaux } from "./discord/chantiers";
 import { posterBienvenue } from "./discord/bienvenue";
 import { gererDepartServeur } from "./discord/departServeur";
+import { avecContexte, decrireInteraction, installerJournalErreurs, surveillerReponse } from "./discord/journalErreurs";
 
 const client = createClient();
+// Erreurs du bot relayees dans #gestion (avant toute autre operation, pour n'en manquer aucune)
+installerJournalErreurs(client);
 
 const commandsDir = join(__dirname, "commands");
 for (const file of readdirSync(commandsDir).filter((f) => f.endsWith(".ts") || f.endsWith(".js"))) {
@@ -48,18 +51,28 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 // Nouvel arrivant sur le serveur : role Nomade (pas encore de ville) et message de bienvenue dans #general
-client.on(Events.GuildMemberAdd, async (membre) => {
-  await synchroniserNomade(membre).catch((error) => console.error("Attribution du role Nomade impossible", error));
-  await posterBienvenue(membre).catch((error) => console.error("Message de bienvenue impossible", error));
-});
+client.on(Events.GuildMemberAdd, (membre) =>
+  avecContexte({ action: "Arrivée sur le serveur", joueur: `${membre.displayName} (<@${membre.id}>)` }, async () => {
+    await synchroniserNomade(membre).catch((error) => console.error("Attribution du role Nomade impossible", error));
+    await posterBienvenue(membre).catch((error) => console.error("Message de bienvenue impossible", error));
+  }),
+);
 
 // Depart du serveur : exclusion technique de sa ville (pas une mort), demandes et inscriptions retirees
-client.on(Events.GuildMemberRemove, async (membre) => {
+client.on(Events.GuildMemberRemove, (membre) => {
   if (membre.user?.bot) return;
-  await gererDepartServeur(membre.guild, membre.id).catch((error) => console.error("Départ du serveur non traité", error));
+  return avecContexte({ action: "Départ du serveur", joueur: `${membre.displayName} (<@${membre.id}>)` }, () =>
+    gererDepartServeur(membre.guild, membre.id).catch((error) => console.error("Départ du serveur non traité", error)),
+  );
 });
 
-client.on(Events.InteractionCreate, async (interaction) => {
+// Contexte (joueur, action, salon) porte par toute erreur survenue pendant le traitement, pour le journal de #gestion
+client.on(Events.InteractionCreate, (interaction) => {
+  surveillerReponse(interaction);
+  return avecContexte(decrireInteraction(interaction), () => traiterInteraction(interaction));
+});
+
+async function traiterInteraction(interaction: Interaction) {
   try {
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
@@ -71,14 +84,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
   } catch (error) {
     console.error("Erreur lors du traitement d'une interaction", error);
     // Le message d'erreur peut lui-meme echouer (salon supprime entre-temps...) : ne jamais faire tomber le bot
-    const reply = { content: "Une erreur est survenue.", flags: MessageFlags.Ephemeral } as const;
+    const reply = { content: "Une erreur est survenue, elle a été signalée à l'équipe.", flags: MessageFlags.Ephemeral } as const;
     if (interaction.isRepliable() && (interaction.replied || interaction.deferred)) {
       await interaction.followUp(reply).catch(() => null);
     } else if (interaction.isRepliable()) {
       await interaction.reply(reply).catch(() => null);
     }
   }
-});
+}
 
 async function shutdown() {
   await prisma.$disconnect();

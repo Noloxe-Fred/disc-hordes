@@ -45,7 +45,7 @@ const SALONS_FIXES: Record<string, string> = {
   [SALON_ANNONCES.cle]: "Les annonces de l'équipe du serveur. Lecture seule.",
   [SALON_SIGNALEMENTS.cle]: "Les signalements des joueurs (`/signaler`) : le bouton **Marquer traité** range ceux qui sont réglés.",
   [SALON_DISCUSSION_MJ.cle]: "Discussion entre MJ et Admins.",
-  [SALON_GESTION.cle]: "Gestion du serveur, réservée aux Admins.",
+  [SALON_GESTION.cle]: "Gestion du serveur et journal des erreurs du bot, réservée aux Admins.",
 };
 
 // Salons d'une ville : la cle est "salon:ville:<id>:<suffixe>"
