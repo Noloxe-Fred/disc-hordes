@@ -4,12 +4,13 @@ import { prisma } from "../db";
 import { declarerChuteVille } from "./chute";
 import { pourvoirMairieVacante } from "./election";
 import { changerPositionDiscord, retirerJoueurDeVilleDiscord } from "./joueurDiscord";
+import { verrouille } from "../services/verrou";
 
 // Depart definitif d'un joueur d'une ville en jeu : sortie volontaire (vivant, exclu ou mort, bouton de /action) ou
 // retrait par un admin. Le personnage est clos (plus de retour possible dans cette ville), sa place de metier se
 // libere, un maire perd son mandat (election ouverte aussitot), et le joueur redevient Nomade. Le sac reste avec le personnage clos. Si c'etait
 // le dernier habitant vivant, la ville tombe. Renvoie true si la ville est tombee.
-export async function sortirDeVille(guild: Guild, joueurId: number): Promise<boolean> {
+export const sortirDeVille = verrouille(async function sortirDeVille(guild: Guild, joueurId: number): Promise<boolean> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   const ville = joueur.ville!;
 
@@ -33,4 +34,4 @@ export async function sortirDeVille(guild: Guild, joueurId: number): Promise<boo
   }
   if (ville.maireId === joueurId) await pourvoirMairieVacante(guild, ville.id);
   return false;
-}
+});

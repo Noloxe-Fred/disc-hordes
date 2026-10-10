@@ -1,5 +1,5 @@
 import { StatutJoueur, StatutVille, TypePhase } from "@prisma/client";
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../client";
 import { NOM_METIER } from "../config/metiers";
 import { LIBELLE_CAUSE_MORT } from "../config/mort";
@@ -31,7 +31,7 @@ const command: Command = {
     if (!joueur || !joueur.ville) {
       await interaction.reply({
         content: "Vous n'avez pas de personnage actif. Créez une ville avec `/creer-ville` ou rejoignez-en une depuis #fonder-une-colonie.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -115,7 +115,7 @@ const command: Command = {
           : "Aucune action enregistrée pour l'instant.",
     });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };
 

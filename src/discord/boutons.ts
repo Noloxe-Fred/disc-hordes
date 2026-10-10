@@ -1,5 +1,5 @@
 import { StatutDemande } from "@prisma/client";
-import type { ButtonInteraction } from "discord.js";
+import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { JOUEURS_MAX_PAR_VILLE, NOM_METIER, PLACES_PAR_METIER, PLACES_SANS_METIER } from "../config/metiers";
 import { prisma } from "../db";
 import { gererBoutonPanneau } from "./boutonsAdmin";
@@ -23,25 +23,30 @@ async function gererDemande(interaction: ButtonInteraction, action: "accepter" |
   });
 
   if (!demande) {
-    await interaction.reply({ content: "Cette demande n'existe plus.", ephemeral: true });
+    await interaction.reply({ content: "Cette demande n'existe plus.", flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (interaction.user.id !== demande.ville.createur.discordId) {
-    await interaction.reply({ content: "Seul le créateur de la ville peut répondre à cette demande.", ephemeral: true });
+    await interaction.reply({ content: "Seul le créateur de la ville peut répondre à cette demande.", flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (demande.statut !== StatutDemande.EN_ATTENTE) {
-    await interaction.reply({ content: "Cette demande a déjà été traitée.", ephemeral: true });
+    await interaction.reply({ content: "Cette demande a déjà été traitée.", flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (action === "refuser") {
-    await prisma.demandeInscription.update({
-      where: { id: demande.id },
+    // Mise a jour conditionnelle : un double clic (ou une acceptation simultanee) ne traite la demande qu'une fois
+    const { count } = await prisma.demandeInscription.updateMany({
+      where: { id: demande.id, statut: StatutDemande.EN_ATTENTE },
       data: { statut: StatutDemande.REFUSEE, dateReponse: new Date() },
     });
+    if (count === 0) {
+      await interaction.reply({ content: "Cette demande a déjà été traitée.", flags: MessageFlags.Ephemeral });
+      return;
+    }
     await interaction.update({
       content: `❌ Demande de <@${demande.utilisateur.discordId}> pour **${demande.ville.nom}** refusée.`,
       components: [],
@@ -50,7 +55,7 @@ async function gererDemande(interaction: ButtonInteraction, action: "accepter" |
   }
 
   if (demande.ville.habitants.length >= JOUEURS_MAX_PAR_VILLE) {
-    await interaction.reply({ content: `**${demande.ville.nom}** a déjà atteint ${JOUEURS_MAX_PAR_VILLE} habitants.`, ephemeral: true });
+    await interaction.reply({ content: `**${demande.ville.nom}** a déjà atteint ${JOUEURS_MAX_PAR_VILLE} habitants.`, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -59,27 +64,35 @@ async function gererDemande(interaction: ButtonInteraction, action: "accepter" |
     if (occupees >= PLACES_PAR_METIER[demande.metierDemande]) {
       await interaction.reply({
         content: `Le métier ${NOM_METIER[demande.metierDemande]} est complet entre-temps ; refusez et invitez le joueur à refaire une demande.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
   } else {
     const sansMetier = demande.ville.habitants.filter((h) => !h.metier).length;
     if (sansMetier >= PLACES_SANS_METIER) {
-      await interaction.reply({ content: "Les places sans métier sont complètes entre-temps.", ephemeral: true });
+      await interaction.reply({ content: "Les places sans métier sont complètes entre-temps.", flags: MessageFlags.Ephemeral });
       return;
     }
   }
 
-  await prisma.$transaction([
-    prisma.joueur.create({
-      data: { utilisateurId: demande.utilisateurId, villeId: demande.villeId, metier: demande.metierDemande ?? undefined },
-    }),
-    prisma.demandeInscription.update({
-      where: { id: demande.id },
+  // La demande n'est acceptee (et le personnage cree) que si elle est encore en attente : un double clic ne cree
+  // pas deux personnages
+  const acceptee = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.demandeInscription.updateMany({
+      where: { id: demande.id, statut: StatutDemande.EN_ATTENTE },
       data: { statut: StatutDemande.ACCEPTEE, dateReponse: new Date() },
-    }),
-  ]);
+    });
+    if (count === 0) return false;
+    await tx.joueur.create({
+      data: { utilisateurId: demande.utilisateurId, villeId: demande.villeId, metier: demande.metierDemande ?? undefined },
+    });
+    return true;
+  });
+  if (!acceptee) {
+    await interaction.reply({ content: "Cette demande a déjà été traitée.", flags: MessageFlags.Ephemeral });
+    return;
+  }
 
   await interaction.update({
     content: `✅ <@${demande.utilisateur.discordId}> a rejoint **${demande.ville.nom}** !`,

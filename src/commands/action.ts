@@ -53,6 +53,7 @@ import { chargeSac, deborde, libelleCharge, MESSAGE_SAC_PLEIN, sacPlein } from "
 import { trouverJoueurActif } from "../services/joueur";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { destinationsDepuis } from "../services/zones";
+import { verrouille } from "../services/verrou";
 
 // Menu des actions du joueur (conception.md §4). Vivant (ou exclu) : un bouton par type d'action, chacun
 // ouvrant son ecran (« Se deplacer », « Observer », « Fouiller » avec confirmation avant de depenser des PA ;
@@ -601,7 +602,7 @@ async function afficherResultat(clic: MessageComponentInteraction, joueurId: num
 // Deplacement confirme : reverification (phase, PA ou position ont pu changer pendant la confirmation), puis
 // execution. Avec une torche, la nuit, le trajet coute le prix de jour et la torche est consommee. Renvoie le
 // texte a afficher au joueur.
-async function confirmerDeplacement(
+const confirmerDeplacement = verrouille(async function confirmerDeplacement(
   guild: Guild,
   joueurId: number,
   zoneDepartId: number | null,
@@ -660,11 +661,11 @@ async function confirmerDeplacement(
   const repli = { zoneId: zoneDepartId, ville: zoneDepartId === null };
   const rencontre = await declencherRencontre(joueurId, destination.palier!, ville.phaseActuelle, repli, false);
   return rencontre ? `${arrivee}\n\n${rencontre}` : arrivee;
-}
+});
 
 // Observation confirmee : reverification, puis PA depenses, zones adjacentes ajoutees a la carte et survivants
 // presents dans chacune affiches. Renvoie le texte a afficher au joueur.
-async function confirmerObservation(joueurId: number, zoneDepartId: number | null, groupeId: number): Promise<string> {
+const confirmerObservation = verrouille(async function confirmerObservation(joueurId: number, zoneDepartId: number | null, groupeId: number): Promise<string> {
   const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
   const ville = actuel.ville!;
   const cout = coutObservation(ville.phaseActuelle, actuel.metier);
@@ -706,12 +707,12 @@ async function confirmerObservation(joueurId: number, zoneDepartId: number | nul
     `👁️ Depuis **${depuis}**, vous observez les environs (−${cout} PA, ${paRestants} restants) :\n${lignes.join("\n")}\n\n` +
     (nouvelles > 0 ? `🗺️ ${nouvelles} nouvelle(s) zone(s) ajoutée(s) à votre carte (\`/carte\`).` : "🗺️ Vous connaissiez déjà toutes ces zones.")
   );
-}
+});
 
 // Fouille confirmee : reverification, puis PA depenses et objets tires ajoutes au sac dans l'ordre du tirage, tant
 // qu'ils rentrent (equilibrage.md §5, « Poids et capacite ») ; ceux qui ne rentrent pas sont perdus.
 // Renvoie le texte a afficher au joueur.
-async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: number | null): Promise<string> {
+const confirmerFouille = verrouille(async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: number | null): Promise<string> {
   const actuel = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, zoneActuelle: true } });
   const ville = actuel.ville!;
   const zone = actuel.zoneActuelle;
@@ -777,10 +778,10 @@ async function confirmerFouille(guild: Guild, joueurId: number, zoneDepartId: nu
   // Le bruit attire parfois un zombie ; en cas de fuite, le joueur reste dans la zone
   const rencontre = await declencherRencontre(joueurId, zone.palier, ville.phaseActuelle, { zoneId: null, ville: false }, true);
   return rencontre ? `${bilan}\n\n${rencontre}` : bilan;
-}
+});
 
 // Sortie volontaire d'un vivant ou d'un exclu (conception.md §3) : annoncee dans la mairie, puis depart definitif
-async function quitterVilleVivant(guild: Guild, joueurId: number): Promise<string> {
+const quitterVilleVivant = verrouille(async function quitterVilleVivant(guild: Guild, joueurId: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   const ville = joueur.ville!;
   if (joueur.dateSortie !== null) return "Vous avez déjà quitté cette ville.";
@@ -792,7 +793,7 @@ async function quitterVilleVivant(guild: Guild, joueurId: number): Promise<strin
     (villeTombee ? " Vous en étiez le dernier habitant vivant : la ville est tombée." : "") +
     "\nVous pouvez rejoindre une ville depuis #fonder-une-colonie ou en créer une avec `/creer-ville`."
   );
-}
+});
 
 // --- Mort : quitter sa ville pour en rejoindre une autre ---
 

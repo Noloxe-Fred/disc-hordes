@@ -37,6 +37,7 @@ import { ROLE_CITOYEN, ROLE_MORT, ROLE_NOMADE, SALON_ETRANGER_PORTES } from "./s
 import { ensureTerritoiresGroupe } from "./territoires";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "./texteLibre";
 import { creerStructureVille } from "./villeStructure";
+import { sousVerrou, verrouille } from "../services/verrou";
 
 // Boutons du message de recrutement d'une ville (messageVille.ts) : customId "ville:<action>:<villeId>"
 // Les reponses a ces boutons sont collectees sur leur propre message (withResponse) : sur une reponse a un
@@ -140,25 +141,24 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
   }
 
   const motivation = soumission.fields.getTextInputValue("motivation").trim() || null;
+  // Accuse reception avant d'attendre son tour dans la file des operations
+  if (soumission.isFromMessage()) await soumission.deferUpdate();
+  else await soumission.deferReply({ flags: MessageFlags.Ephemeral });
 
-  // Reverifications : la saisie peut durer plusieurs minutes
-  if (!(await villeEnCreation(ville.id))) {
-    await soumission.reply({ content: `**${ville.nom}** n'accepte plus d'inscriptions.`, flags: MessageFlags.Ephemeral });
-    await interaction.editReply({ components: [] }).catch(() => null);
-    return;
-  }
-  if (await utilisateurEstEngage(utilisateur.id)) {
-    await soumission.reply({
-      content: "Vous êtes déjà engagé dans une ville, ou une de vos demandes est encore en attente.",
-      flags: MessageFlags.Ephemeral,
+  // Reverifications : la saisie peut durer plusieurs minutes. Dans la file des operations, pour qu'un second
+  // formulaire envoye en meme temps ne cree pas une seconde demande.
+  const resultat = await sousVerrou(async () => {
+    if (!(await villeEnCreation(ville.id))) return `**${ville.nom}** n'accepte plus d'inscriptions.`;
+    if (await utilisateurEstEngage(utilisateur.id)) return "Vous êtes déjà engagé dans une ville, ou une de vos demandes est encore en attente.";
+    return prisma.demandeInscription.create({
+      data: { villeId: ville.id, utilisateurId: utilisateur.id, metierDemande: metierChoisi ?? undefined, motivation },
     });
-    await interaction.editReply({ components: [] }).catch(() => null);
+  });
+  if (typeof resultat === "string") {
+    await soumission.editReply({ content: resultat, components: [] });
     return;
   }
-
-  const demande = await prisma.demandeInscription.create({
-    data: { villeId: ville.id, utilisateurId: utilisateur.id, metierDemande: metierChoisi ?? undefined, motivation },
-  });
+  const demande = resultat;
 
   const salon = await trouverSalonTexte(guild, SALON_ETRANGER_PORTES.cle);
   if (salon) {
@@ -186,8 +186,7 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
       (salon ? "" : " (Salon #un-etranger-aux-portes introuvable : un Admin doit initialiser le serveur (panneau /admin).)"),
     components: [],
   };
-  if (soumission.isFromMessage()) await soumission.update(confirmation);
-  else await soumission.reply({ ...confirmation, flags: MessageFlags.Ephemeral });
+  await soumission.editReply(confirmation);
 }
 
 // --- Quitter : depart d'un inscrit, ou retrait d'une demande en attente ---
@@ -207,7 +206,7 @@ async function quitter(interaction: ButtonInteraction, guild: Guild, villeId: nu
 
   const joueur = await prisma.joueur.findFirst({ where: { villeId, utilisateurId: utilisateur.id } });
   if (joueur) {
-    await prisma.joueur.delete({ where: { id: joueur.id } });
+    await prisma.joueur.deleteMany({ where: { id: joueur.id } }); // deleteMany : un double clic ne leve pas d'erreur
     await rafraichirMessageVille(guild, villeId);
     await repondre(interaction, `Vous avez quitté **${ville.nom}**.`);
     return;
@@ -272,18 +271,22 @@ async function annuler(interaction: ButtonInteraction, guild: Guild, villeId: nu
   // Suppression des messages + base : plus long que les 3 s accordees par Discord pour repondre
   await choix.deferUpdate();
 
-  // La ville a pu etre fondee pendant la confirmation
-  if (!(await villeEnCreation(villeId))) {
+  // La ville a pu etre fondee (ou annulee) pendant la confirmation : reverifiee dans la file des operations, pour ne
+  // pas supprimer une ville en train d'etre fondee
+  const annulee = await sousVerrou(async () => {
+    if (!(await villeEnCreation(villeId))) return false;
+    await supprimerMessagesRecrutement(guild, villeId);
+    // Aucun role n'est attribue avant la fondation : rien a retirer aux inscrits
+    await prisma.$transaction([
+      prisma.joueur.deleteMany({ where: { villeId } }),
+      prisma.ville.delete({ where: { id: villeId } }), // demandes supprimees en cascade
+    ]);
+    return true;
+  });
+  if (!annulee) {
     await choix.editReply({ content: "Cette ville n'est plus en cours de création.", components: [] });
     return;
   }
-
-  await supprimerMessagesRecrutement(guild, villeId);
-  // Aucun role n'est attribue avant la fondation : rien a retirer aux inscrits
-  await prisma.$transaction([
-    prisma.joueur.deleteMany({ where: { villeId } }),
-    prisma.ville.delete({ where: { id: villeId } }), // demandes supprimees en cascade
-  ]);
 
   await choix.editReply({ content: `**${ville.nom}** a été annulée.`, components: [] });
 }
@@ -315,7 +318,12 @@ async function fonder(interaction: ButtonInteraction, guild: Guild, villeId: num
   }
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  const { paMax } = await fonderVille(guild, ville.id);
+  const fondation = await fonderVille(guild, ville.id);
+  if (!fondation) {
+    await interaction.editReply("Cette ville n'est plus en cours de création.");
+    return;
+  }
+  const { paMax } = fondation;
   await interaction.editReply(
     `**${ville.nom}** est fondée avec ${nombreHabitants} habitant(s) (PA max individuel : ${paMax}). Vous êtes le premier maire.`,
   );
@@ -323,12 +331,17 @@ async function fonder(interaction: ButtonInteraction, guild: Guild, villeId: num
 
 // Lancement de la partie d'une ville en creation, sans controle du minimum d'habitants : appele par le
 // bouton « Fonder la ville » (apres ses controles) et par « Forcer la fondation » du panneau /admin.
-// Le createur devient le premier maire.
-export async function fonderVille(guild: Guild, villeId: number): Promise<{ nombreHabitants: number; paMax: number }> {
+// Le createur devient le premier maire. Renvoie null si la ville n'est plus en creation (double clic, fondation
+// simultanee depuis /admin).
+export const fonderVille = verrouille(async function fonderVille(
+  guild: Guild,
+  villeId: number,
+): Promise<{ nombreHabitants: number; paMax: number } | null> {
   const ville = await prisma.ville.findUniqueOrThrow({
     where: { id: villeId },
     include: { createur: true, habitants: { include: { utilisateur: true } } },
   });
+  if (ville.statut !== StatutVille.EN_CREATION) return null;
   const nombreHabitants = ville.habitants.length;
 
   const createurJoueur = ville.habitants.find((h) => h.utilisateurId === ville.createurUtilisateurId);
@@ -396,7 +409,7 @@ export async function fonderVille(guild: Guild, villeId: number): Promise<{ nomb
   ).catch((error) => console.error("Message d'accueil de la ville impossible", error));
 
   return { nombreHabitants, paMax };
-}
+});
 
 
 const ACTIONS = { rejoindre, quitter, annuler, fonder } as const;

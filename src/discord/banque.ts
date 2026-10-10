@@ -24,6 +24,7 @@ import { synchroniserAccesJoueur } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { rendreInventaire } from "./renduInventaire";
+import { enArrierePlan, verrouille } from "../services/verrou";
 
 // Banque de ville (conception.md §1, inventaire de ville) : les citoyens vivants presents en ville y deposent des
 // objets de leur sac ou en retirent, sans passer par le don. Gratuit en PA, inscrit au journal public de la ville.
@@ -104,7 +105,7 @@ export async function ecranBanque(
   const ville = joueur.ville!;
   const [banque, charge, sac] = await Promise.all([contenuBanque(ville.id), chargeBanque(ville.id), chargeSac(joueurId)]);
 
-  const png = rendreInventaire(`Banque — ${ville.nom}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), { charge });
+  const png = await rendreInventaire(`Banque — ${ville.nom}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), { charge });
   const conteneur = encadre(
     (message ? `${message}\n\n` : "") +
       `## 🏦 Banque — ${ville.nom}\nRéserve à la disposition de tous les citoyens : 🏦 ${libelleCharge(charge)} · 🎒 votre sac ${libelleCharge(sac)}.`,
@@ -118,7 +119,7 @@ export async function ecranBanque(
 // Panneau permanent du salon #banque : contenu en image et boutons "banque:<deposer|tout-deposer|retirer>:<villeId>"
 async function construirePanneauBanque(villeId: number, nomVille: string) {
   const [banque, charge] = await Promise.all([contenuBanque(villeId), chargeBanque(villeId)]);
-  const png = rendreInventaire(`Banque — ${nomVille}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), { charge });
+  const png = await rendreInventaire(`Banque — ${nomVille}`, banque.map((e) => ({ ...e.objet, quantite: e.quantite })), { charge });
   const conteneur = encadre(
     `## 🏦 Banque — ${nomVille}\nRéserve à la disposition de tous les citoyens : 🏦 ${libelleCharge(charge)}.\n` +
       "Les citoyens vivants présents en ville y déposent et en retirent librement des objets (gratuit, inscrit au journal).",
@@ -129,8 +130,14 @@ async function construirePanneauBanque(villeId: number, nomVille: string) {
   return { components: [conteneur], files: [new AttachmentBuilder(png, { name: FICHIER_BANQUE })] };
 }
 
-// Poste le panneau dans #banque, ou le met a jour s'il existe deja (image comprise)
+// Poste le panneau dans #banque, ou le met a jour s'il existe deja (image comprise). Lance en arriere-plan, hors de la
+// file des operations : le rendu de l'image et l'envoi a Discord ne retardent pas les actions suivantes, et des
+// mouvements rapproches ne donnent qu'un rafraichissement de plus (services/verrou.ts).
 export async function rafraichirPanneauBanque(guild: Guild, villeId: number): Promise<void> {
+  enArrierePlan(`panneau-banque:${villeId}`, () => posterPanneauBanque(guild, villeId));
+}
+
+async function posterPanneauBanque(guild: Guild, villeId: number): Promise<void> {
   const ville = await prisma.ville.findUnique({ where: { id: villeId } });
   if (!ville || ville.statut !== StatutVille.ACTIVE) return;
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:banque`);
@@ -214,7 +221,7 @@ export async function formulaireBanque(
 
 // Depot ou retrait : reverification (le joueur doit etre toujours en ville, l'objet toujours disponible), puis
 // transfert entre le sac et la banque, et entree au journal public de la ville.
-async function operer(guild: Guild, joueurId: number, sens: SensBanque, objetId: number, quantite: number): Promise<string> {
+const operer = verrouille(async function operer(guild: Guild, joueurId: number, sens: SensBanque, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   const raison = empechementBanque(joueur);
   if (raison) return raison;
@@ -265,11 +272,11 @@ async function operer(guild: Guild, joueurId: number, sens: SensBanque, objetId:
   return sens === "deposer"
     ? `📥 Vous avez déposé **${nom} × ${quantite}** à la banque de la ville.`
     : `📤 Vous avez retiré **${nom} × ${quantite}** de la banque de la ville.`;
-}
+});
 
 // « Tout déposer » : vide le sac dans la banque, objet par objet tant qu'il y a de la place (en partie pour le dernier
 // qui ne tient pas en entier). Les equipements (radio) restent dans le sac : ils se deposent un par un.
-export async function toutDeposer(guild: Guild, joueurId: number): Promise<string> {
+export const toutDeposer = verrouille(async function toutDeposer(guild: Guild, joueurId: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   const raison = empechementBanque(joueur);
   if (raison) return raison;
@@ -313,4 +320,4 @@ export async function toutDeposer(guild: Guild, joueurId: number): Promise<strin
     ...(bloques ? ["🏦 La banque est pleine : le reste est resté dans votre sac."] : []),
     ...(deposables.length < sac.length ? ["Vos équipements restent dans votre sac (ils se déposent un par un)."] : []),
   ].join("\n");
-}
+});

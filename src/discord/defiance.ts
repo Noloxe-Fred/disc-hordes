@@ -17,6 +17,7 @@ import { horodatage, pourvoirMairieVacante } from "./election";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Vote de defiance (conception.md §5) : un citoyen vivant, autre que le maire, le declenche (bouton « Défiance » de
 // /action, avec confirmation) quand la ville a un maire et qu'aucun vote de defiance n'est en cours. Vote ouvert
@@ -98,7 +99,7 @@ export async function empechementDefiance(joueurId: number): Promise<string | nu
   return null;
 }
 
-export async function declencherDefiance(guild: Guild, joueurId: number): Promise<string> {
+export const declencherDefiance = verrouille(async function declencherDefiance(guild: Guild, joueurId: number): Promise<string> {
   const raison = await empechementDefiance(joueurId);
   if (raison) return raison;
   const joueur = await prisma.joueur.findUniqueOrThrow({
@@ -122,7 +123,7 @@ export async function declencherDefiance(guild: Guild, joueurId: number): Promis
   );
   await rafraichirPanneau(guild, election.id);
   return `⚖️ Le vote de défiance est ouvert pour ${DUREE_DEFIANCE_HEURES} h : le panneau est dans la mairie.`;
-}
+});
 
 // --- Boutons du panneau : "defiance:<destituer|maintenir>:<electionId>" ---
 
@@ -178,7 +179,7 @@ export async function verifierDefiances(guild: Guild): Promise<void> {
 }
 
 // Depouille le vote (a l'echeance, ou sans attendre depuis /admin) ; renvoie ce qui s'est passe
-export async function cloreDefiance(guild: Guild, election: Election): Promise<string> {
+export const cloreDefiance = verrouille(async function cloreDefiance(guild: Guild, election: Election): Promise<string> {
   // Garde contre une double cloture (verification periodique et /admin en meme temps)
   const { count } = await prisma.election.updateMany({
     where: { id: election.id, statut: StatutElection.EN_COURS },
@@ -206,4 +207,4 @@ export async function cloreDefiance(guild: Guild, election: Election): Promise<s
   const texte = await conclure(`La ville destitue ${mention} : la mairie est vacante. Il peut se représenter.`);
   await pourvoirMairieVacante(guild, ville.id);
   return texte;
-}
+});

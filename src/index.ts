@@ -2,7 +2,7 @@ import "dotenv/config";
 import "./fuseau";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { Events } from "discord.js";
+import { Events, MessageFlags } from "discord.js";
 import { createClient, type Command } from "./client";
 import { prisma } from "./db";
 import { gererBouton } from "./discord/boutons";
@@ -71,7 +71,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   } catch (error) {
     console.error("Erreur lors du traitement d'une interaction", error);
     // Le message d'erreur peut lui-meme echouer (salon supprime entre-temps...) : ne jamais faire tomber le bot
-    const reply = { content: "Une erreur est survenue.", ephemeral: true };
+    const reply = { content: "Une erreur est survenue.", flags: MessageFlags.Ephemeral } as const;
     if (interaction.isRepliable() && (interaction.replied || interaction.deferred)) {
       await interaction.followUp(reply).catch(() => null);
     } else if (interaction.isRepliable()) {

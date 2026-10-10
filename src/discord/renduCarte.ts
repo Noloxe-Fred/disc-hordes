@@ -195,6 +195,6 @@ export function construireSvgCarte(donnees: DonneesRenduCarte): string {
   );
 }
 
-export function rendreCarte(donnees: DonneesRenduCarte): Buffer {
+export function rendreCarte(donnees: DonneesRenduCarte): Promise<Buffer> {
   return svgEnPng(construireSvgCarte(donnees), LARGEUR);
 }

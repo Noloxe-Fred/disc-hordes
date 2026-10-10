@@ -16,6 +16,7 @@ import { ajouterACarte, citoyensDehors, grilleCarte, zonesDecouvertes } from "..
 import { partagerPieges, zonesPiegesConnus } from "../services/pieges";
 import { trouverSalonTexte } from "./reconcile";
 import { rendreCarte } from "./renduCarte";
+import { verrouille } from "../services/verrou";
 
 // Ecrans « Carte » et « Partager la carte » du menu /action (conception.md §1 et §4).
 // - Carte : image de la carte individuelle, avec la position des concitoyens hors les murs (jamais celle des
@@ -50,7 +51,7 @@ export async function ecranCarte(
 
   const citoyensParZone = new Map<number, number>();
   for (const c of dehors) citoyensParZone.set(c.zoneActuelleId!, (citoyensParZone.get(c.zoneActuelleId!) ?? 0) + 1);
-  const png = rendreCarte({ nomVille: ville.nom, enVille: joueur.zoneActuelleId === null, grille, citoyensParZone, pieges });
+  const png = await rendreCarte({ nomVille: ville.nom, enVille: joueur.zoneActuelleId === null, grille, citoyensParZone, pieges });
 
   const cases = grille.flatMap((ligne) => ligne.cases);
   const connues = cases.filter((c) => c.decouverte || c.ici).length;
@@ -140,7 +141,7 @@ export async function ecranPartage(joueurId: number, retour: ButtonBuilder): Pro
 }
 
 // Partage effectif ; destinataireIds null = tous les citoyens vivants de la ville. Renvoie le texte a afficher.
-export async function partagerCarte(guild: Guild, joueurId: number, destinataireIds: number[] | null): Promise<string> {
+export const partagerCarte = verrouille(async function partagerCarte(guild: Guild, joueurId: number, destinataireIds: number[] | null): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   const raison = empechementPartage(joueur);
   if (raison) return raison;
@@ -186,4 +187,4 @@ export async function partagerCarte(guild: Guild, joueurId: number, destinataire
     .catch(() => null);
 
   return `## 🤝 Carte partagée\n${bilans.join("\n")}`;
-}
+});

@@ -7,12 +7,13 @@ import { trouverSalonTexte } from "./reconcile";
 import { sortirDeVille } from "./sortie";
 import { SALON_ETRANGER_PORTES } from "./structure";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Membre qui quitte le serveur Discord (conception.md §3) : exclusion technique automatique, jamais comptee comme
 // une mort. Ses demandes d'inscription en attente sont retirees ; inscrit a une ville en creation, son inscription
 // disparait (s'il en etait le createur, la ville est annulee) ; habitant d'une ville en jeu, il la quitte comme par le
 // bouton « Quitter la ville » de /action (place de metier liberee, mandat de maire perdu, chute si dernier vivant).
-export async function gererDepartServeur(guild: Guild, discordId: string): Promise<void> {
+export const gererDepartServeur = verrouille(async function gererDepartServeur(guild: Guild, discordId: string): Promise<void> {
   const utilisateur = await prisma.utilisateur.findUnique({ where: { discordId } });
   if (!utilisateur) return;
   const nom = utilisateur.pseudoCache ?? discordId;
@@ -53,4 +54,4 @@ export async function gererDepartServeur(guild: Guild, discordId: string): Promi
     await posterDansMairie(guild, ville.id, `🚪 **${nom}** a quitté le serveur et ne fait plus partie de **${ville.nom}**.`);
   }
   await sortirDeVille(guild, joueur.id);
-}
+});

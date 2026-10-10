@@ -27,6 +27,7 @@ import {
   repondre,
   type FamilleAdmin,
 } from "./outils";
+import { verrouille } from "../../services/verrou";
 
 // Famille "Ville" du panneau /admin (conception.md §4) : effacer, renommer, recharger des territoires, forcer la fondation,
 // forcer la chute, reset. Effacer, forcer la chute et reset demandent une confirmation.
@@ -49,7 +50,7 @@ async function choisirVille(interaction: ButtonInteraction, titre: string, statu
 
 // --- Effacer : supprime la ville, ses personnages et ses salons/roles, quel que soit son statut ---
 
-export async function effacerVille(guild: Guild, villeId: number): Promise<void> {
+export const effacerVille = verrouille(async function effacerVille(guild: Guild, villeId: number): Promise<void> {
   const ville = await prisma.ville.findUniqueOrThrow({
     where: { id: villeId },
     include: { habitants: { include: { utilisateur: true } } },
@@ -81,7 +82,7 @@ export async function effacerVille(guild: Guild, villeId: number): Promise<void>
 
   // Groupe sans ville en creation ni en jeu : salons, roles, zones et groupe supprimes
   if (ville.groupeId !== null) await nettoyerGroupeSiTombe(guild, ville.groupeId);
-}
+});
 
 async function effacer(interaction: ButtonInteraction, guild: Guild) {
   const cible = await choisirVille(
@@ -238,7 +239,12 @@ async function forcerFondation(interaction: ButtonInteraction, guild: Guild) {
   }
 
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
-  const { nombreHabitants, paMax } = await fonderVille(guild, ville.id);
+  const fondation = await fonderVille(guild, ville.id);
+  if (!fondation) {
+    await soumission.editReply("Cette ville n'est plus en cours de création.");
+    return;
+  }
+  const { nombreHabitants, paMax } = fondation;
   await journaliser(interaction.user, "Forcer la fondation", `${ville.nom} (#${ville.id}), ${nombreHabitants} habitant(s)`);
   await soumission.editReply(
     `**${ville.nom}** est fondée avec ${nombreHabitants} habitant(s) (PA max individuel : ${paMax}). Son créateur en est le premier maire.`,
@@ -275,7 +281,7 @@ async function forcerChute(interaction: ButtonInteraction, guild: Guild) {
 
 // --- Reset : la ville repart au cycle 1 avec ses habitants actuels, tous vivants et a pleine sante ---
 
-async function resetVille(guild: Guild, villeId: number): Promise<void> {
+const resetVille = verrouille(async function resetVille(guild: Guild, villeId: number): Promise<void> {
   const habitants = await prisma.joueur.findMany({ where: { villeId, dateSortie: null }, include: { utilisateur: true } });
 
   const joueurIds = habitants.map((h) => h.id);
@@ -345,7 +351,7 @@ async function resetVille(guild: Guild, villeId: number): Promise<void> {
     await changerPositionDiscord(guild, habitant.utilisateur.discordId, habitant.zoneActuelleId, null);
     await retablirJoueurDiscord(guild, habitant.id);
   }
-}
+});
 
 async function reset(interaction: ButtonInteraction, guild: Guild) {
   const cible = await choisirVille(interaction, "Reset d'une ville", [StatutVille.ACTIVE], "Aucune ville en jeu.");

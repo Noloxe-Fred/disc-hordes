@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Resvg } from "@resvg/resvg-js";
+import { renderAsync } from "@resvg/resvg-js";
 
 // Charte graphique commune a toutes les images generees par le bot (carte, sac, regles, bienvenue, annonces de phase), inspiree de
 // MyHordes : cadre brun a bordure beige, titres creme en Courier Prime, texte courant en Nunito, accents vert olive.
@@ -102,16 +102,16 @@ export function titreSvg(largeur: number, bandeau: number, texte: string): strin
   );
 }
 
-// Rasterise un SVG en PNG a l'echelle commune
-export function svgEnPng(svg: string, largeur: number): Buffer {
-  return new Resvg(svg, {
+// Rasterise un SVG en PNG a l'echelle commune. Le rendu tourne hors du thread principal : un rendu synchrone
+// bloquait le bot assez longtemps pour faire expirer les clics des autres joueurs (delai de 3 s de Discord)
+export async function svgEnPng(svg: string, largeur: number): Promise<Buffer> {
+  const image = await renderAsync(svg, {
     fitTo: { mode: "width", value: Math.round(largeur * ECHELLE) },
     font: {
       fontFiles: FICHIERS_POLICES.filter((p) => p.nom === POLICE_TITRE).map((p) => join(DOSSIER_POLICES, p.fichier)),
       loadSystemFonts: false,
       defaultFontFamily: POLICE_TITRE,
     },
-  })
-    .render()
-    .asPng();
+  });
+  return image.asPng();
 }

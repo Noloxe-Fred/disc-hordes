@@ -6,6 +6,7 @@ import { chargeSac, deborde, libelleCharge } from "../services/charge";
 import { champQuantite, lireQuantite } from "./champsObjets";
 import { synchroniserAccesJoueur } from "./joueurDiscord";
 import { trouverSalonTexte } from "./reconcile";
+import { verrouille } from "../services/verrou";
 
 // Corps des morts (conception.md §3, equilibrage.md §1) : le sac d'un joueur mort reste la ou il est tombe, en ville ou
 // dans sa zone (Joueur.zoneMortId). Les survivants presents peuvent le fouiller depuis /action (« Fouiller un corps ») :
@@ -93,7 +94,7 @@ export async function formulaireFouilleCorps(
 
 // Fouille confirmee : reverification (le corps doit toujours etre la, l'objet toujours dessus), puis transfert dans le
 // sac, journal du joueur et mention dans le salon du lieu. Gratuit en PA.
-async function fouillerCorps(guild: Guild, joueurId: number, corpsId: number, objetId: number, quantite: number): Promise<string> {
+const fouillerCorps = verrouille(async function fouillerCorps(guild: Guild, joueurId: number, corpsId: number, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   if (
     joueur.ville?.statut !== StatutVille.ACTIVE ||
@@ -146,4 +147,4 @@ async function fouillerCorps(guild: Guild, joueurId: number, corpsId: number, ob
     .catch(() => null);
 
   return `💀 Vous prenez **${objet} × ${quantite}** sur le corps de **${nomJoueur(corps)}**. C'est dans votre sac.`;
-}
+});

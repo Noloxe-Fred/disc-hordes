@@ -188,6 +188,6 @@ export function construireSvgInventaire(titre: string, objets: ObjetSac[], entet
   );
 }
 
-export function rendreInventaire(titre: string, objets: ObjetSac[], entete: EnteteInventaire = {}): Buffer {
+export function rendreInventaire(titre: string, objets: ObjetSac[], entete: EnteteInventaire = {}): Promise<Buffer> {
   return svgEnPng(construireSvgInventaire(titre, objets, entete), LARGEUR);
 }

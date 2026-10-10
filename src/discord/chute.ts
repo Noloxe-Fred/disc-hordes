@@ -6,6 +6,7 @@ import { prisma } from "../db";
 import { retirerJoueurDeVilleDiscord } from "./joueurDiscord";
 import { supprimerRessources, trouverSalonTexte } from "./reconcile";
 import { SALON_COMMEMORATION } from "./structure";
+import { verrouille } from "../services/verrou";
 
 // Chute d'une ville (conception.md §1, Multi-villes), declenchee par la mort ou le depart de son dernier habitant
 // vivant. Le recapitulatif est poste dans #commemoration, puis tous les joueurs quittent la ville (retour au role
@@ -14,11 +15,14 @@ import { SALON_COMMEMORATION } from "./structure";
 // et roles d'une ville tombee restent en place tant que d'autres villes de son groupe sont en jeu ; quand toutes les
 // villes du groupe sont tombees, tout ce qui appartient au groupe est supprime : roles-ville, categories Ville et
 // leurs salons, categorie Territoires externes, salons de zone et roles Position, puis en base le groupe et ses zones.
-export async function declarerChuteVille(guild: Guild, villeId: number): Promise<void> {
-  const ville = await prisma.ville.update({
-    where: { id: villeId },
+export const declarerChuteVille = verrouille(async function declarerChuteVille(guild: Guild, villeId: number): Promise<void> {
+  // Une seule chute par ville : deux morts simultanees (ou une chute forcee depuis /admin) ne la rejouent pas
+  const { count } = await prisma.ville.updateMany({
+    where: { id: villeId, statut: { not: StatutVille.TOMBEE } },
     data: { statut: StatutVille.TOMBEE, dateChute: new Date() },
   });
+  if (count === 0) return;
+  const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
 
   await posterRecapitulatif(guild, villeId).catch((error) =>
     console.error(`Recapitulatif de chute de la ville ${villeId} impossible`, error),
@@ -28,7 +32,7 @@ export async function declarerChuteVille(guild: Guild, villeId: number): Promise
   await purgerEtatVilleTombee(villeId);
 
   if (ville.groupeId !== null) await nettoyerGroupeSiTombe(guild, ville.groupeId);
-}
+});
 
 // Etat de jeu d'une ville tombee, efface de la base : sacs et cartes de ses joueurs, banque, batiments, journal,
 // attaques et gardes, elections et demandes. Restent la ville et ses personnages (historique).

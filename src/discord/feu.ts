@@ -9,6 +9,7 @@ import { debutPhase, feuActif } from "../game/feu";
 import { calculerPaMax } from "../game/pa";
 import { declencherRencontre } from "./combat";
 import { trouverSalonTexte } from "./reconcile";
+import { verrouille } from "../services/verrou";
 
 // Feu et sieste en territoire externe (equilibrage.md §1 et §6). Un feu allume dans une zone la securise jusqu'au
 // changement de phase suivant, pour tous les survivants presents : sieste possible et rencontres deux fois moins
@@ -30,7 +31,7 @@ async function joueurDehors(joueurId: number) {
 }
 
 // Allumer un feu : 1 Feu du sac et 1 PA (2 la nuit), annonce dans le salon de la zone
-export async function allumerFeu(guild: Guild, joueurId: number): Promise<string> {
+export const allumerFeu = verrouille(async function allumerFeu(guild: Guild, joueurId: number): Promise<string> {
   const joueur = await joueurDehors(joueurId);
   if (!joueur) return "Vous ne pouvez allumer un feu qu'en territoire externe.";
   if (joueur.rencontrePvZombie !== null) return "🧟 Impossible avec un zombie sur le dos : combattez ou fuyez d'abord.";
@@ -57,10 +58,10 @@ export async function allumerFeu(guild: Guild, joueurId: number): Promise<string
     `🔥 Vous allumez un feu dans **${joueur.zone.nom}** (−${cout} PA). Jusqu'au changement de phase, les zombies s'approchent ` +
     "deux fois moins, et chacun ici peut faire la sieste."
   );
-}
+});
 
 // Sieste : zone securisee par un feu, une fois par phase ; un zombie qui surgit l'interrompt (aucun PA gagne)
-export async function faireSieste(joueurId: number): Promise<string> {
+export const faireSieste = verrouille(async function faireSieste(joueurId: number): Promise<string> {
   const joueur = await joueurDehors(joueurId);
   if (!joueur) return "Vous ne pouvez faire la sieste qu'en territoire externe.";
   if (joueur.rencontrePvZombie !== null) return "🧟 Impossible avec un zombie sur le dos : combattez ou fuyez d'abord.";
@@ -82,4 +83,4 @@ export async function faireSieste(joueurId: number): Promise<string> {
     prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: `Sieste : +${gain} PA`, public: false } }),
   ]);
   return `😴 Vous faites la sieste près du feu : **+${gain} PA** (${paActuel + gain} / ${paMax}).`;
-}
+});

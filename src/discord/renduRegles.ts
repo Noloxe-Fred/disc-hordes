@@ -1,4 +1,4 @@
-import { Resvg } from "@resvg/resvg-js";
+import { renderAsync } from "@resvg/resvg-js";
 import satori from "satori";
 import { COULEURS, ECHELLE, EPAISSEUR_CADRE, POLICE_TEXTE, POLICE_TITRE, TITRE_SECTION, policesPourSatori } from "./charteImages";
 import { imageEmoji } from "./emojis";
@@ -177,5 +177,5 @@ export async function rendreSection(section: string): Promise<Buffer> {
     fonts: policesPourSatori(),
     loadAdditionalAsset: async (code, segment) => (code === "emoji" ? imageEmoji(segment) : []),
   });
-  return new Resvg(svg, { fitTo: { mode: "width", value: LARGEUR * ECHELLE } }).render().asPng();
+  return (await renderAsync(svg, { fitTo: { mode: "width", value: LARGEUR * ECHELLE } })).asPng();
 }

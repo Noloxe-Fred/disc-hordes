@@ -10,6 +10,7 @@ import { empechementBanque, rafraichirPanneauBanque } from "./banque";
 import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } from "./champsObjets";
 import { prochaineBascule } from "../scheduler/cycle";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Manger et boire (equilibrage.md §2, « Consommation ») depuis /inventaire : partout avec ce qu'on a dans son sac, et
 // en ville directement dans la banque. Gratuit en PA. Les jauges remontent (plafond 100), ce qui fait remonter le
@@ -84,7 +85,7 @@ export async function formulaireConsommer(
 
 // Consommation : reverification (acces, quantite disponible), jauges remontees et plafonnees, compteur de phases a
 // vide remis a zero si la jauge remonte, bonus de PA au reveil cumule, puis jets de risque (eau brute) par unite.
-async function consommer(guild: Guild, joueurId: number, source: SourceConsommation, objetId: number, quantite: number): Promise<string> {
+const consommer = verrouille(async function consommer(guild: Guild, joueurId: number, source: SourceConsommation, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   const raison = empechementConsommer(joueur, source);
   if (raison) return raison;
@@ -159,4 +160,4 @@ async function consommer(guild: Guild, joueurId: number, source: SourceConsommat
     }
   }
   return lignes.join("\n");
-}
+});

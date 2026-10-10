@@ -15,6 +15,7 @@ import { coutSelonPhase } from "../game/deplacement";
 import { calculerPaMax } from "../game/pa";
 import { survivantsAuMemeEndroit } from "../services/voisins";
 import { trouverSalonTexte } from "./reconcile";
+import { verrouille } from "../services/verrou";
 
 // Bouton « Soigner » de /action (equilibrage.md §1 et §4) : un formulaire unique (soin + qui soigner), puis le soin.
 // Sur soi ou sur un survivant au meme endroit ; les PV rendus font remonter le PA max effectif du soigne.
@@ -109,7 +110,7 @@ export async function formulaireSoin(
 
 // Soin valide : reverification (metier, PA, ingredients, soigne toujours au meme endroit et blesse), puis PA et
 // ingredients depenses, PV rendus (plafond 10), journal, et annonce dans le salon du lieu si on soigne quelqu'un d'autre.
-async function soigner(guild: Guild, joueurId: number, soin: Soin, cibleId: number): Promise<string> {
+const soigner = verrouille(async function soigner(guild: Guild, joueurId: number, soin: Soin, cibleId: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   if (
     joueur.ville?.statut !== StatutVille.ACTIVE ||
@@ -182,11 +183,11 @@ async function soigner(guild: Guild, joueurId: number, soin: Soin, cibleId: numb
     `PV ${cible.pv} → **${pv}** / ${PV_MAX}` +
     (paMaxApres !== paMaxAvant ? ` · PA max ${soi ? "" : "du soigné "}${paMaxAvant} → **${paMaxApres}**` : "")
   );
-}
+});
 
 // Remede contre l'infection, administre par le medecin (equilibrage.md §8) : le joueur doit lui avoir dit qu'il est
 // infecte. Le remede est consomme dans tous les cas ; si le soigne n'etait pas infecte, il est perdu.
-async function administrerRemede(
+const administrerRemede = verrouille(async function administrerRemede(
   guild: Guild,
   medecin: { id: number; villeId: number | null; zoneActuelleId: number | null; utilisateur: { discordId: string; pseudoCache: string | null } },
   cible: { id: number; villeId: number | null; infecteDepuis: Date | null; utilisateur: { discordId: string; pseudoCache: string | null } },
@@ -230,4 +231,4 @@ async function administrerRemede(
   return infecte
     ? `💉 Le remède fait effet : ${qui} ${soi ? "êtes guéri" : "est guéri"} de l'infection.`
     : `❌ ${qui} ${soi ? "n'étiez" : "n'était"} pas infecté : le remède est perdu.`;
-}
+});

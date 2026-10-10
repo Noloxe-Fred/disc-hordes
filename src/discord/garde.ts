@@ -4,6 +4,7 @@ import { BONUS_GARDE_CITOYEN, BONUS_GARDE_METIER, COUT_GARDE } from "../config/d
 import { prisma } from "../db";
 import { calculerForceAttaque } from "../game/attaque";
 import { trouverSalonTexte } from "./reconcile";
+import { verrouille } from "../services/verrou";
 
 // Garde volontaire (equilibrage.md §3) : la nuit, un citoyen vivant en ville se porte volontaire pour 6 PA ; a l'aube,
 // il ajoute +3 a la defense (+6 pour le metier Garde), a condition d'etre toujours vivant et en ville. Les volontaires
@@ -41,7 +42,7 @@ export async function empechementGarde(joueurId: number): Promise<string | null>
   return null;
 }
 
-export async function monterLaGarde(guild: Guild, joueurId: number): Promise<string> {
+export const monterLaGarde = verrouille(async function monterLaGarde(guild: Guild, joueurId: number): Promise<string> {
   const raison = await empechementGarde(joueurId);
   if (raison) return raison;
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
@@ -73,4 +74,4 @@ export async function monterLaGarde(guild: Guild, joueurId: number): Promise<str
     `🛡️ Vous montez la garde cette nuit (−${COUT_GARDE} PA) : **+${bonus} défense** à l'attaque de l'aube, ` +
     "si vous êtes toujours en ville à ce moment-là."
   );
-}
+});

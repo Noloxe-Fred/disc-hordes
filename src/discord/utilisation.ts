@@ -16,6 +16,7 @@ import { chargeSac, deborde, libelleCharge } from "../services/charge";
 import { empechementBanque, rafraichirPanneauBanque } from "./banque";
 import { synchroniserAccesJoueur } from "./joueurDiscord";
 import { trouverSalonTexte } from "./reconcile";
+import { verrouille } from "../services/verrou";
 
 // Objets qui s'utilisent depuis /inventaire (equilibrage.md §2 et §5) : l'Objet rare s'ouvre et donne un lot tire au
 // hasard ; le Festin du cuisinier se sert en ville et nourrit tous les citoyens presents.
@@ -26,7 +27,7 @@ function poidsMaxLot(): number {
 }
 
 // Ouvrir un Objet rare du sac : 1 PA, un lot tire au hasard a chances egales
-export async function ouvrirObjetRare(guild: Guild, joueurId: number): Promise<string> {
+export const ouvrirObjetRare = verrouille(async function ouvrirObjetRare(guild: Guild, joueurId: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   const actif = joueur.statut === StatutJoueur.VIVANT || joueur.statut === StatutJoueur.EXCLU;
   if (!actif || joueur.ville?.statut !== StatutVille.ACTIVE) return "Vous ne pouvez plus ouvrir d'objet.";
@@ -65,10 +66,10 @@ export async function ouvrirObjetRare(guild: Guild, joueurId: number): Promise<s
     `🏺 Vous ouvrez l'objet rare (−${COUT_OUVERTURE_OBJET_RARE} PA) : il contenait **${emojiObjet(lot.objet)} ${lot.objet} × ${lot.quantite}**, ` +
     "maintenant dans votre sac."
   );
-}
+});
 
 // Servir un Festin (sac, puis banque), gratuit en PA : +20 faim pour chaque citoyen vivant present en ville
-export async function servirFestin(guild: Guild, joueurId: number): Promise<string> {
+export const servirFestin = verrouille(async function servirFestin(guild: Guild, joueurId: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   // Memes conditions que la banque : citoyen vivant, en ville
   if (empechementBanque(joueur) !== null) return "Un festin se sert en ville, par un citoyen vivant.";
@@ -106,4 +107,4 @@ export async function servirFestin(guild: Guild, joueurId: number): Promise<stri
     `${emojiObjet(OBJET_FESTIN)} Vous servez un festin${source === "banque" ? " pris à la banque" : ""} : ` +
     `**+${FAIM_FESTIN} faim** pour ${convives.length} citoyen${convives.length > 1 ? "s" : ""} présent${convives.length > 1 ? "s" : ""} en ville, vous compris.`
   );
-}
+});

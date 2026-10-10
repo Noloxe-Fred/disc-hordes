@@ -15,6 +15,7 @@ import { prisma } from "../db";
 import { deborde, libelleCharge, poidsTotal } from "../services/charge";
 import { trouverSalonTexte } from "./reconcile";
 import { rafraichirPanneauBanque } from "./banque";
+import { verrouille } from "../services/verrou";
 
 // Craft avance (equilibrage.md §8) : dans le salon « atelier » de la ville, qui n'existe qu'une fois l'atelier construit
 // (discord/villeStructure.ts), le bouton « Craft avancé » de /inventaire propose les recettes exclusives du metier du
@@ -135,7 +136,7 @@ export async function ecranConfirmationAvance(joueurId: number, recette: Recette
 }
 
 // Fabrication confirmee : reverification complete, ingredients pris dans le sac puis la banque, objet ajoute au sac
-export async function fabriquerAvance(guild: Guild, salonId: string | null, joueurId: number, recetteId: number): Promise<string> {
+export const fabriquerAvance = verrouille(async function fabriquerAvance(guild: Guild, salonId: string | null, joueurId: number, recetteId: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   if (!(await estDansAtelier(guild, salonId, joueur))) return "Le craft avancé se fait dans le salon atelier de votre ville, en ville.";
   if (joueur.faim < SEUIL_CRITIQUE_FAIM_SOIF || joueur.soif < SEUIL_CRITIQUE_FAIM_SOIF) {
@@ -184,4 +185,4 @@ export async function fabriquerAvance(guild: Guild, salonId: string | null, joue
     `🛠️ Vous fabriquez **${nom}** à l'atelier (−${cout} PA, ${(joueur.paActuel ?? 0) - cout} restants). Il est dans votre sac.` +
     (banque.length > 0 ? `\n🏦 Pris à la banque : ${banque.join(", ")}.` : "")
   );
-}
+});

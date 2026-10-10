@@ -24,6 +24,7 @@ import { cloreSanctions } from "../discord/sanction";
 import { produireEauPuits } from "../services/puits";
 import { capturerPieges } from "../services/pieges";
 import { regenererRessourcesNaturelles } from "../services/stocks";
+import { sansChevauchement, sousVerrou, verrouille } from "../services/verrou";
 
 // Horloge commune : toutes les villes actives basculent jour/nuit au meme minuit reel,
 // plutot que 24h/48h apres leur propre fondation (conception.md §2). Le bot ne gerant qu'un
@@ -280,11 +281,11 @@ async function basculerVersJour(guild: Guild, ville: Ville) {
 
 // Changement de phase d'une ville : a minuit (horloge commune) ou force depuis le panneau /admin
 // Les votes de bannissement et d'execution se closent d'abord (une pendaison peut faire tomber la ville).
-export async function basculerPhase(guild: Guild, ville: Ville): Promise<void> {
+export const basculerPhase = verrouille(async function basculerPhase(guild: Guild, ville: Ville): Promise<void> {
   if (await cloreSanctions(guild, ville.id)) return;
   if (ville.phaseActuelle === TypePhase.JOUR) await basculerVersNuit(guild, ville);
   else await basculerVersJour(guild, ville);
-}
+});
 
 async function executerTick(guild: Guild) {
   const villes = await prisma.ville.findMany({ where: { statut: StatutVille.ACTIVE } });
@@ -342,26 +343,40 @@ export function demarrerHorlogeCycle(client: DiscHordesClient): void {
 
   planifierProchaineAlerte();
 
-  // Incubations arrivees a terme et citoyens transformes en quete d'une victime (discord/zombieErrant.ts)
-  setInterval(async () => {
-    const guild = client.guilds.cache.first();
-    if (!guild) return;
-    await verifierZombiesErrants(guild).catch((error) => console.error("Verification des zombies errants impossible", error));
-  }, INTERVALLE_ZOMBIES_ERRANTS_MS);
+  // Taches periodiques : un passage encore en cours quand le suivant arrive le laisse passer (pas d'empilement)
+
+  // Incubations arrivees a terme et citoyens transformes en quete d'une victime (discord/zombieErrant.ts) : dans la
+  // file des operations, les victimes etant des joueurs en train d'agir
+  setInterval(
+    sansChevauchement(async () => {
+      const guild = client.guilds.cache.first();
+      if (!guild) return;
+      await sousVerrou(() => verifierZombiesErrants(guild)).catch((error) =>
+        console.error("Verification des zombies errants impossible", error),
+      );
+    }),
+    INTERVALLE_ZOMBIES_ERRANTS_MS,
+  );
 
   // Elections du maire arrivees a une echeance : fin des candidatures, fin du vote (discord/election.ts) ; votes de
   // defiance arrives a terme (discord/defiance.ts)
-  setInterval(async () => {
-    const guild = client.guilds.cache.first();
-    if (!guild) return;
-    await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
-    await verifierDefiances(guild).catch((error) => console.error("Vérification des votes de défiance impossible", error));
-  }, INTERVALLE_VERIFICATION_ELECTIONS_MS);
+  setInterval(
+    sansChevauchement(async () => {
+      const guild = client.guilds.cache.first();
+      if (!guild) return;
+      await verifierElections(guild).catch((error) => console.error("Vérification des élections impossible", error));
+      await verifierDefiances(guild).catch((error) => console.error("Vérification des votes de défiance impossible", error));
+    }),
+    INTERVALLE_VERIFICATION_ELECTIONS_MS,
+  );
 
   // Journal de bord : entrees publiques recentes postees dans le salon #journal de chaque ville (discord/journal.ts)
-  setInterval(async () => {
-    const guild = client.guilds.cache.first();
-    if (!guild) return;
-    await publierJournaux(guild).catch((error) => console.error("Publication des journaux impossible", error));
-  }, INTERVALLE_JOURNAL_MS);
+  setInterval(
+    sansChevauchement(async () => {
+      const guild = client.guilds.cache.first();
+      if (!guild) return;
+      await publierJournaux(guild).catch((error) => console.error("Publication des journaux impossible", error));
+    }),
+    INTERVALLE_JOURNAL_MS,
+  );
 }

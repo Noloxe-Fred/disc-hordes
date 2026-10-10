@@ -11,6 +11,7 @@ import {
 } from "discord.js";
 import { prisma } from "../db";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Annonce du maire (bouton « Annonce » de /action) : la mairie etant fermee aux joueurs, le maire y publie par le bot,
 // en choisissant de notifier ou non toute la ville (role-ville). Inscrite au journal public de la ville.
@@ -71,7 +72,7 @@ export async function formulaireAnnonce(
   return { soumission, texte: await annoncer(clic.guild!, joueurId, texte, notifier) };
 }
 
-async function annoncer(guild: Guild, joueurId: number, texte: string, notifier: boolean): Promise<string> {
+const annoncer = verrouille(async function annoncer(guild: Guild, joueurId: number, texte: string, notifier: boolean): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   if (!estMaireEnExercice(joueur)) return "Vous n'êtes plus maire : l'annonce n'a pas été publiée.";
   if (texte === "") return "L'annonce est vide.";
@@ -81,4 +82,4 @@ async function annoncer(guild: Guild, joueurId: number, texte: string, notifier:
   });
   await prisma.journalEntree.create({ data: { villeId: joueur.villeId!, joueurId, message: "Annonce du maire publiée dans la mairie" } });
   return `📢 Votre annonce est publiée dans la mairie${notifier ? ", avec une notification à toute la ville" : ""}.`;
-}
+});

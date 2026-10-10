@@ -37,6 +37,7 @@ import { trouverSalonTexte } from "./reconcile";
 import { texteRationnement } from "./maire";
 import { rafraichirPanneauMaisons } from "./maisons";
 import { ensureSalonLectureSeule, posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
+import { enArrierePlan, verrouille } from "../services/verrou";
 
 // Chantiers communautaires (conception.md §5, equilibrage.md §7) : un panneau permanent dans #chantiers de chaque ville,
 // mis a jour a chaque avancee. « Contribuer (sac) » / « Contribuer (banque) » deposent des ressources sur le prochain
@@ -149,8 +150,13 @@ export async function construirePanneauChantiers(villeId: number): Promise<Conta
     );
 }
 
-// Poste le panneau dans #chantiers, ou le met a jour s'il existe deja
+// Poste le panneau dans #chantiers, ou le met a jour s'il existe deja. Lance en arriere-plan, hors de la file des
+// operations, comme le panneau de la banque (discord/banque.ts).
 export async function rafraichirPanneauChantiers(guild: Guild, villeId: number): Promise<void> {
+  enArrierePlan(`panneau-chantiers:${villeId}`, () => posterPanneauChantiers(guild, villeId));
+}
+
+async function posterPanneauChantiers(guild: Guild, villeId: number): Promise<void> {
   const ville = await prisma.ville.findUnique({ where: { id: villeId } });
   if (!ville || ville.statut !== StatutVille.ACTIVE) return;
   const salon = await trouverSalonTexte(guild, `salon:ville:${villeId}:chantiers`);
@@ -274,7 +280,7 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
 
 // Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque. Un
 // objet qui tient lieu d'une ressource (Bois rare : 5 Bois) est credite sur cette ressource.
-async function deposer(
+const deposer = verrouille(async function deposer(
   guild: Guild,
   joueurId: number,
   villeId: number,
@@ -327,7 +333,7 @@ async function deposer(
     (verse < quantite ? ` Le reste n'était pas nécessaire${verse < disponible ? "" : " ou manquait"}.` : "") +
     (termine ? `\n${termine}` : "")
   );
-}
+});
 
 async function installer(interaction: ButtonInteraction, joueurId: number, villeId: number, etats: EtatChantier[]) {
   const installables = etats.filter((e) => paInstallables(e) > 0);
@@ -365,7 +371,7 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
 }
 
 // Installation : au plus les PA installables (ressources deposees) et ceux du joueur
-async function verserPa(guild: Guild, joueurId: number, villeId: number, type: TypeBatiment, pa: number): Promise<string> {
+const verserPa = verrouille(async function verserPa(guild: Guild, joueurId: number, villeId: number, type: TypeBatiment, pa: number): Promise<string> {
   const etat = (await etatsChantiers(villeId)).find((e) => e.chantier.type === type);
   if (!etat || !prochainPalier(etat)) return "Ce chantier est terminé.";
   const possible = paInstallables(etat);
@@ -386,7 +392,7 @@ async function verserPa(guild: Guild, joueurId: number, villeId: number, type: T
     (verse < pa ? ` Seuls ${verse} PA pouvaient être versés pour l'instant.` : "") +
     (termine ? `\n${termine}` : "")
   );
-}
+});
 
 // Palier complet (ressources et PA) : palier construit, avancement remis a zero, annonce dans #chantiers et la mairie
 async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatiment, joueurId: number): Promise<string | null> {
@@ -402,7 +408,7 @@ async function terminerSiComplet(guild: Guild, villeId: number, type: TypeBatime
 
 // Palier suivant construit (chantier complet, ou forcé depuis /admin) : avancement remis a zero, annonce dans #chantiers
 // (suivie de la signature) et la mairie, effets immediats du batiment. Null si le batiment est deja au dernier palier.
-export async function construirePalier(guild: Guild, villeId: number, type: TypeBatiment, signature: string): Promise<string | null> {
+export const construirePalier = verrouille(async function construirePalier(guild: Guild, villeId: number, type: TypeBatiment, signature: string): Promise<string | null> {
   const etat = (await etatsChantiers(villeId)).find((e) => e.chantier.type === type)!;
   const suivant = prochainPalier(etat);
   if (!suivant) return null;
@@ -428,7 +434,7 @@ export async function construirePalier(guild: Guild, villeId: number, type: Type
   // La place publique agrandit la banque
   if (type === TypeBatiment.PLACE_PUBLIQUE) await rafraichirPanneauBanque(guild, villeId);
   return annonce;
-}
+});
 
 // Structure du sac, sinon de la banque, ou null
 async function structureDisponible(joueurId: number, villeId: number, nom: string) {
@@ -442,7 +448,7 @@ async function structureDisponible(joueurId: number, villeId: number, nom: strin
 // Structure de defense posee (sac, puis banque), renforcee de preference : +3 defense pour une simple, +5 pour une
 // renforcee (jusqu'a sa destruction par une attaque, discord/degatsChantiers.ts), 5 au plus toutes confondues. Ville
 // pleine, une renforcee detruit une structure simple pour prendre sa place.
-async function poserStructure(guild: Guild, joueurId: number, villeId: number): Promise<string> {
+const poserStructure = verrouille(async function poserStructure(guild: Guild, joueurId: number, villeId: number): Promise<string> {
   const ville = await prisma.ville.findUniqueOrThrow({ where: { id: villeId } });
   const plein = ville.structuresDefense + ville.structuresRenforcees >= STRUCTURES_DEFENSE_MAX;
   const renforcee = await structureDisponible(joueurId, villeId, OBJET_STRUCTURE_RENFORCEE);
@@ -497,7 +503,7 @@ async function poserStructure(guild: Guild, joueurId: number, villeId: number): 
     ` : **+${gain} défense** pour la ville (total +${total}).` +
     (recuperation ? `\n${recuperation.texte}` : "")
   );
-}
+});
 
 // Structure simple demontee : ses ingredients de fabrication reviennent a la banque dans l'ordre de la recette, tant
 // qu'ils y tiennent ; le reste est perdu. liberePoids : poids qui quitte la banque dans la meme operation (structure

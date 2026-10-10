@@ -17,6 +17,7 @@ import { ROLE_NOMADE, SALON_FONDER_COLONIE } from "../discord/structure";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_NOM_VILLE, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteLibre";
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
+import { sousVerrou } from "../services/verrou";
 
 const VALEUR_SANS_METIER = "AUCUN";
 
@@ -101,20 +102,24 @@ const command: Command = {
       return;
     }
 
-    // Reverification : une autre commande a pu engager le joueur pendant la saisie
-    if (await utilisateurEstEngage(utilisateur.id)) {
+    // Reverification : une autre commande a pu engager le joueur pendant la saisie. Dans la file des operations,
+    // pour que deux formulaires envoyes en meme temps ne creent pas deux villes.
+    const ville = await sousVerrou(async () =>
+      (await utilisateurEstEngage(utilisateur.id))
+        ? null
+        : prisma.ville.create({
+            data: {
+              nom,
+              projet,
+              createurUtilisateurId: utilisateur.id,
+              habitants: { create: { utilisateurId: utilisateur.id, metier: metier ?? undefined } },
+            },
+          }),
+    );
+    if (!ville) {
       await soumission.editReply("Vous êtes déjà engagé dans une ville (en jeu ou en cours de création).");
       return;
     }
-
-    const ville = await prisma.ville.create({
-      data: {
-        nom,
-        projet,
-        createurUtilisateurId: utilisateur.id,
-        habitants: { create: { utilisateurId: utilisateur.id, metier: metier ?? undefined } },
-      },
-    });
 
     // Message de recrutement avec les boutons Rejoindre / Quitter / Fonder / Annuler
     const salon = await trouverSalonTexte(guild, SALON_FONDER_COLONIE.cle);

@@ -7,6 +7,7 @@ import { prisma } from "../db";
 import { coutSelonPhase } from "../game/deplacement";
 import { chargeSac, deborde } from "../services/charge";
 import { trouverSalonTexte } from "./reconcile";
+import { verrouille } from "../services/verrou";
 
 // Pieges en territoire externe (equilibrage.md §6 et §8). Un survivant pose un piege du sac (simple ou avance) dans une
 // zone de foret ou de montagnes sans piege ; il reste en place, et a chaque aube il peut capturer sa proie
@@ -41,7 +42,7 @@ async function joueurDehors(joueurId: number) {
 }
 
 // Poser un piege : le piege du sac et 1 PA (2 la nuit)
-export async function poserPiege(guild: Guild, joueurId: number, type: TypePiege): Promise<string> {
+export const poserPiege = verrouille(async function poserPiege(guild: Guild, joueurId: number, type: TypePiege): Promise<string> {
   const { objet: nomPiege, prise } = PIEGES[type];
   const joueur = await joueurDehors(joueurId);
   if (!joueur) return "Vous ne pouvez poser un piège qu'en territoire externe.";
@@ -66,10 +67,10 @@ export async function poserPiege(guild: Guild, joueurId: number, type: TypePiege
     `attraper un ${emojiObjet(prise)} **${prise}**, d'autant plus facilement que la zone est loin de la ville. Revenez ` +
     "relever la prise avant qu'un autre ne le fasse ! Il figure désormais sur votre carte."
   );
-}
+});
 
 // Appater le piege vide de la zone avec un petit gibier du sac (gratuit) : +20 points de capture a la prochaine aube
-export async function appaterPiege(joueurId: number): Promise<string> {
+export const appaterPiege = verrouille(async function appaterPiege(joueurId: number): Promise<string> {
   const joueur = await joueurDehors(joueurId);
   if (!joueur) return "Vous ne pouvez appâter un piège qu'en territoire externe.";
   if (joueur.rencontrePvZombie !== null) return "🧟 Impossible avec un zombie sur le dos : combattez ou fuyez d'abord.";
@@ -91,10 +92,10 @@ export async function appaterPiege(joueurId: number): Promise<string> {
     `🪤 Vous appâtez le piège avec un ${emojiObjet(OBJET_APPAT)} **${OBJET_APPAT}** : **+${Math.round(BONUS_CAPTURE_APPAT * 100)} points** ` +
     "de chances de capture à la prochaine aube. L'appât sera consommé, qu'il y ait prise ou non."
   );
-}
+});
 
 // Relever la prise du piege de la zone : la proie dans le sac, gratuit en PA
-export async function releverPiege(guild: Guild, joueurId: number): Promise<string> {
+export const releverPiege = verrouille(async function releverPiege(guild: Guild, joueurId: number): Promise<string> {
   const joueur = await joueurDehors(joueurId);
   if (!joueur) return "Vous ne pouvez relever un piège qu'en territoire externe.";
   if (joueur.rencontrePvZombie !== null) return "🧟 Impossible avec un zombie sur le dos : combattez ou fuyez d'abord.";
@@ -128,4 +129,4 @@ export async function releverPiege(guild: Guild, joueurId: number): Promise<stri
     })
     .catch(() => null);
   return `🪤 Vous relevez le piège : ${emojiObjet(prise)} **${prise}** dans votre sac. Le piège reste en place.`;
-}
+});

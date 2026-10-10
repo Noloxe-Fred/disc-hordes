@@ -21,6 +21,7 @@ import { appliquerExclusionDiscord } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Bannissement et execution (conception.md §5) : le maire les propose depuis son panneau (/action → « Maire »), la
 // ville tranche par un vote Pour/Contre ouvert jusqu'au prochain changement de phase, reserve aux citoyens vivants
@@ -102,7 +103,7 @@ export function ciblesPossibles(villeId: number, maireId: number) {
   });
 }
 
-export async function lancerSanction(guild: Guild, maireId: number, type: TypeSanction, cibleId: number, motif: string): Promise<string> {
+export const lancerSanction = verrouille(async function lancerSanction(guild: Guild, maireId: number, type: TypeSanction, cibleId: number, motif: string): Promise<string> {
   const maire = await prisma.joueur.findUniqueOrThrow({ where: { id: maireId }, include: { ville: true, utilisateur: true } });
   if (!estMaireEnExercice(maire)) return "Vous n'êtes plus maire.";
   const villeId = maire.villeId!;
@@ -129,7 +130,7 @@ export async function lancerSanction(guild: Guild, maireId: number, type: TypeSa
   );
   await rafraichirPanneau(guild, election.id);
   return `${emoji} Le vote sur ${action} de <@${cible.utilisateur.discordId}> est ouvert dans la mairie jusqu'au changement de phase.`;
-}
+});
 
 // --- Boutons du panneau : "sanction:<pour|contre>:<electionId>" ---
 

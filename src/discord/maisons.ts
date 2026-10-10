@@ -23,6 +23,7 @@ import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } f
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { rafraichirPanneauBanque } from "./banque";
+import { verrouille } from "../services/verrou";
 
 // Maisons privees (equilibrage.md §7) : un panneau permanent dans #maisons-privees de chaque ville. Chaque joueur
 // construit sa propre maison avec la mecanique des chantiers : « Contribuer (sac) » / « Contribuer (banque) » deposent
@@ -215,7 +216,7 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
 
 // Depot : reverification, puis au plus ce qui manque encore au palier ; le surplus reste dans le sac ou la banque. Un
 // objet qui tient lieu d'une ressource (Bois rare : 5 Bois) est credite sur cette ressource.
-async function deposer(guild: Guild, joueurId: number, villeId: number, source: Source, objetId: number, quantite: number): Promise<string> {
+const deposer = verrouille(async function deposer(guild: Guild, joueurId: number, villeId: number, source: Source, objetId: number, quantite: number): Promise<string> {
   const etat = await etatMaison(joueurId);
   const objet = await prisma.objet.findUniqueOrThrow({ where: { id: objetId } });
   const nom = `${emojiObjet(objet.nom)} ${objet.nom}`;
@@ -254,7 +255,7 @@ async function deposer(guild: Guild, joueurId: number, villeId: number, source: 
     (verse < quantite ? ` Le reste n'était pas nécessaire${verse < disponible ? "" : " ou manquait"}.` : "") +
     `\n${termine ?? ligneMaison(await etatMaison(joueurId))}`
   );
-}
+});
 
 async function installer(interaction: ButtonInteraction, joueurId: number, villeId: number, etat: EtatMaison) {
   if (paInstallables(etat) <= 0) {
@@ -289,7 +290,7 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
 }
 
 // Installation : au plus les PA installables (ressources deposees) et ceux du joueur
-async function verserPa(guild: Guild, joueurId: number, villeId: number, pa: number): Promise<string> {
+const verserPa = verrouille(async function verserPa(guild: Guild, joueurId: number, villeId: number, pa: number): Promise<string> {
   const etat = await etatMaison(joueurId);
   if (!prochainPalier(etat)) return "Votre maison est terminée.";
   const possible = paInstallables(etat);
@@ -308,7 +309,7 @@ async function verserPa(guild: Guild, joueurId: number, villeId: number, pa: num
     (verse < pa ? ` Seuls ${verse} PA pouvaient être versés pour l'instant.` : "") +
     `\n${termine ?? ligneMaison(await etatMaison(joueurId))}`
   );
-}
+});
 
 // Palier complet (ressources et PA) : palier construit, avancement remis a zero, annonce dans #maisons-privees
 async function terminerSiComplet(guild: Guild, villeId: number, joueurId: number): Promise<string | null> {

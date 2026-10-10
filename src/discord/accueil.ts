@@ -24,6 +24,7 @@ import { changerDeVilleDiscord, retablirJoueurDiscord } from "./joueurDiscord";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Demandes d'accueil (conception.md §5) : un survivant dehors (vivant ou exclu) demande a rejoindre une autre ville en jeu
 // de son groupe, ou un exclu a revenir dans la sienne (bouton « Demander l'accueil » de /action). La demande est postee
@@ -101,7 +102,7 @@ export async function formulaireAccueil(
   return { soumission, texte: await demanderAccueil(clic.guild!, joueurId, villeId, motivation) };
 }
 
-async function demanderAccueil(guild: Guild, joueurId: number, villeId: number, motivation: string): Promise<string> {
+const demanderAccueil = verrouille(async function demanderAccueil(guild: Guild, joueurId: number, villeId: number, motivation: string): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true, ville: true } });
   const ville = (await villesAccueillantes(joueur)).find((v) => v.id === villeId);
   if (!ville) return "Vous ne pouvez plus demander à rejoindre cette ville (il faut être dehors, vivant ou exclu).";
@@ -125,7 +126,7 @@ async function demanderAccueil(guild: Guild, joueurId: number, villeId: number, 
     .catch(() => null);
   if (message) await prisma.demandeAccueil.update({ where: { id: demande.id }, data: { messageId: message.id } });
   return `🚪 Votre demande est déposée dans la mairie de **${ville.nom}**. Vous serez prévenu ici dès que le maire aura répondu.`;
-}
+});
 
 function texteDemande(
   joueur: { villeId: number | null; statut: StatutJoueur; metier: keyof typeof NOM_METIER | null; utilisateur: { discordId: string }; ville: { nom: string } | null },
@@ -174,10 +175,10 @@ export async function gererBoutonAccueil(interaction: ButtonInteraction, action:
   const valable = (await villesAccueillantes(demande.joueur)).some((v) => v.id === demande.villeId);
   let bilan: string;
   if (!valable) {
-    await prisma.demandeAccueil.update({ where: { id: demandeId }, data: { statut: StatutDemande.ANNULEE, dateReponse: new Date() } });
+    await prisma.demandeAccueil.updateMany({ where: { id: demandeId, statut: StatutDemande.EN_ATTENTE }, data: { statut: StatutDemande.ANNULEE, dateReponse: new Date() } });
     bilan = `❌ La demande de ${demandeur} n'est plus valable (il n'est plus dehors, ou plus en vie).`;
   } else if (action === "refuser") {
-    await prisma.demandeAccueil.update({ where: { id: demandeId }, data: { statut: StatutDemande.REFUSEE, dateReponse: new Date() } });
+    await prisma.demandeAccueil.updateMany({ where: { id: demandeId, statut: StatutDemande.EN_ATTENTE }, data: { statut: StatutDemande.REFUSEE, dateReponse: new Date() } });
     bilan = `❌ Le maire refuse d'accueillir ${demandeur}.`;
     await prevenirDemandeur(interaction.guild, demande.joueur, `❌ ${demandeur}, le maire de **${demande.ville.nom}** refuse votre demande.`);
   } else {
@@ -192,11 +193,13 @@ async function prevenirDemandeur(guild: Guild, joueur: { zoneActuelleId: number 
   await salon?.send({ content: texte, allowedMentions: { parse: ["users"] } }).catch(() => null);
 }
 
-async function accueillir(guild: Guild, demandeId: number): Promise<string> {
+const accueillir = verrouille(async function accueillir(guild: Guild, demandeId: number): Promise<string> {
   const demande = await prisma.demandeAccueil.findUniqueOrThrow({
     where: { id: demandeId },
     include: { ville: true, joueur: { include: { utilisateur: true, ville: true } } },
   });
+  // Double clic du maire : la seconde reponse arrive apres la premiere (file des operations) et ne fait rien
+  if (demande.statut !== StatutDemande.EN_ATTENTE) return "Cette demande a déjà été traitée.";
   const joueur = demande.joueur;
   const ancienne = joueur.ville!;
   const mention = `<@${joueur.utilisateur.discordId}>`;
@@ -244,4 +247,4 @@ async function accueillir(guild: Guild, demandeId: number): Promise<string> {
     else if (ancienne.maireId === joueur.id) await pourvoirMairieVacante(guild, ancienne.id);
   }
   return `✅ Le maire accueille ${mention} dans **${demande.ville.nom}**.`;
-}
+});

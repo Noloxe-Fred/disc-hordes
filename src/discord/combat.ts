@@ -28,6 +28,7 @@ import { infligerDegats, tenterInfection } from "../game/sante";
 import { deplacerJoueur } from "./deplacement";
 import { trouverSalonTexte } from "./reconcile";
 import { attaquerAvecZombieErrant, libererZombieErrant, zombieAffrontePar } from "./zombieErrant";
+import { verrouille } from "../services/verrou";
 
 // Rencontres de zombies en territoire externe et combat (equilibrage.md §4 et §5). Une rencontre se tire apres chaque
 // fouille et a chaque arrivee dans une zone ; tant qu'elle dure, /action ne propose plus qu'« Attaquer » et « Fuir ».
@@ -130,7 +131,7 @@ async function joueurEnRencontre(joueurId: number) {
 }
 
 // Echange de coups : PA depenses, coup du joueur, puis riposte eventuelle (conclureEchange)
-export async function attaquer(guild: Guild, joueurId: number): Promise<ResultatCombat> {
+export const attaquer = verrouille(async function attaquer(guild: Guild, joueurId: number): Promise<ResultatCombat> {
   const joueur = await joueurEnRencontre(joueurId);
   if (!joueur) return { texte: "Il n'y a plus de zombie face à vous.", enCours: false };
   const arme = await armeDuJoueur(joueurId);
@@ -142,10 +143,10 @@ export async function attaquer(guild: Guild, joueurId: number): Promise<Resultat
   const echange = echangerCoups(joueur.rencontrePvZombie!, arme);
   const coup = echange.touche ? `⚔️ Vous frappez le zombie (−${echange.degats} PV, −${cout} PA).` : `💨 Vous manquez votre coup (−${cout} PA).`;
   return conclureEchange(guild, joueur, echange, cout, null, coup);
-}
+});
 
 // Tir a l'arme a feu : 1 munition et aucun PA, 75 % de toucher (95 % pour le chasseur), 3 degats ; meme riposte
-export async function tirer(guild: Guild, joueurId: number): Promise<ResultatCombat> {
+export const tirer = verrouille(async function tirer(guild: Guild, joueurId: number): Promise<ResultatCombat> {
   const joueur = await joueurEnRencontre(joueurId);
   if (!joueur) return { texte: "Il n'y a plus de zombie face à vous.", enCours: false };
   const { armeAFeu, munitions } = await equipementTir(joueurId);
@@ -158,7 +159,7 @@ export async function tirer(guild: Guild, joueurId: number): Promise<ResultatCom
     (echange.touche ? `🔫 Vous tirez et touchez le zombie (−${echange.degats} PV)` : "🔫 Vous tirez… et manquez le zombie") +
     ` (−1 ${emojiObjet(OBJET_MUNITIONS)}, ${reste} restante${reste > 1 ? "s" : ""}).`;
   return conclureEchange(guild, joueur, echange, 0, munitions.id, coup);
-}
+});
 
 // Munitions et arme a feu du sac
 async function equipementTir(joueurId: number) {
@@ -227,7 +228,7 @@ async function conclureEchange(
 
 // Fuite : PA depenses ; reussie, le joueur repart vers la zone d'ou il venait (ou la ville), ou reste sur place s'il
 // fouillait ; ratee, le zombie frappe (-1 PV, sans infection) et la rencontre continue
-export async function fuir(guild: Guild, joueurId: number): Promise<ResultatCombat> {
+export const fuir = verrouille(async function fuir(guild: Guild, joueurId: number): Promise<ResultatCombat> {
   const joueur = await joueurEnRencontre(joueurId);
   if (!joueur) return { texte: "Il n'y a plus de zombie face à vous.", enCours: false };
   const phase = joueur.ville!.phaseActuelle;
@@ -277,7 +278,7 @@ ${pendaison}`, enCours: false };
       ? `Vous vous réfugiez à **${joueur.ville!.nom}**.`
       : `Vous rebroussez chemin vers **${nomRepli ?? "la zone précédente"}**.`;
   return { texte: `🏃 Vous prenez la fuite (−${cout} PA). ${destination}`, enCours: false };
-}
+});
 
 // --- Evenements des changements de phase pour les survivants dehors (vivants ou exclus) de la ville ---
 // debutPhaseFinie : debut de la phase qui s'acheve, pour savoir si un feu y brulait encore au moment de la bascule.

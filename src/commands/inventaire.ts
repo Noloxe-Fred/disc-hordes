@@ -33,6 +33,7 @@ import { chargeSac, deborde, libelleCharge, poidsTotal } from "../services/charg
 import { trouverJoueurActif } from "../services/joueur";
 import { survivantsAuMemeEndroit } from "../services/voisins";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
+import { verrouille } from "../services/verrou";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
 // « donner a » un autre survivant present au meme endroit, « jeter » un objet pour alleger le sac, manger et boire
@@ -116,13 +117,13 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
     empechementBanque(joueur) === null &&
     (await prisma.inventaireVille.findFirst({ where: { villeId: joueur.villeId!, objet: { nom: OBJET_FESTIN }, quantite: { gt: 0 } } })) !== null;
   let festinBanque = await festinEnBanque();
-  const construireMenu = () => {
+  const construireMenu = async () => {
     const possede = (nom: string) => sac.some((e) => e.objet.nom === nom);
     const festinServable = empechementBanque(joueur) === null && (possede(OBJET_FESTIN) || festinBanque);
     const charge = { utilisee: poidsTotal(sac), capacite: CAPACITE_SAC };
     // Les equipements (radio) sont montres a part, a cote des PA et de la charge, pas dans la grille du sac
     const objets = sac.map((e) => ({ ...e.objet, quantite: e.quantite }));
-    const png = rendreInventaire(`Sac — ${interaction.user.username}`, objets.filter((o) => !estEquipement(o.nom)), {
+    const png = await rendreInventaire(`Sac — ${interaction.user.username}`, objets.filter((o) => !estEquipement(o.nom)), {
       pa: actif ? paActuel : undefined,
       charge,
       equipements: objets.filter((o) => estEquipement(o.nom)),
@@ -168,7 +169,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
     return { components: [menu], files: [new AttachmentBuilder(png, { name: FICHIER_SAC })] };
   };
 
-  const reponse = await interaction.reply({ ...construireMenu(), flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+  const reponse = await interaction.reply({ ...(await construireMenu()), flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
   if (!actif) return;
 
   const recettes = await recettesSimples();
@@ -185,7 +186,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       sac = await contenuSac(joueurId);
       festinBanque = await festinEnBanque();
       quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
-      await clic.update({ ...construireMenu(), attachments: [] }); // remplace l'image de la banque le cas echeant
+      await clic.update({ ...(await construireMenu()), attachments: [] }); // remplace l'image de la banque le cas echeant
     } else if (clic.customId === "banque") {
       const { conteneur, fichiers } = await ecranBanque(joueurId, boutonRetour());
       await clic.update({ components: [conteneur], attachments: [], files: fichiers });
@@ -279,7 +280,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       sac = await contenuSac(joueurId);
       festinBanque = await festinEnBanque();
       quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
-      const menu = construireMenu();
+      const menu = await construireMenu();
       menu.components.unshift(encadre(texte));
       await clic.editReply({ ...menu, attachments: [] });
     } else if (clic.isButton() && (clic.customId === "poser" || clic.customId === "consommer-sac" || clic.customId === "consommer-banque")) {
@@ -292,7 +293,7 @@ async function afficherSac(interaction: Parameters<Command["execute"]>[0], joueu
       sac = await contenuSac(joueurId);
       festinBanque = await festinEnBanque();
       quantites = new Map(sac.map((e) => [e.objetId, e.quantite]));
-      const menu = construireMenu();
+      const menu = await construireMenu();
       menu.components.unshift(encadre(resultat.texte));
       if (!resultat.soumission) await clic.update({ ...menu, attachments: [] });
       else if (resultat.soumission.isFromMessage()) await resultat.soumission.editReply({ ...menu, attachments: [] });
@@ -335,7 +336,7 @@ async function formulairePoser(
   return { soumission, texte };
 }
 
-async function poser(guild: Guild, joueurId: number, objetId: number, quantite: number): Promise<string> {
+const poser = verrouille(async function poser(guild: Guild, joueurId: number, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   if (!peutAgir(joueur)) return "Vous ne pouvez plus jeter d'objet.";
   const entree = await prisma.inventaireJoueur.findUnique({
@@ -353,11 +354,11 @@ async function poser(guild: Guild, joueurId: number, objetId: number, quantite: 
   ]);
   if (entree.objet.nom === OBJET_RADIO) await synchroniserAccesJoueur(guild, joueurId);
   return `🗑️ Vous avez jeté **${objet} × ${quantite}**. Personne ne le retrouvera.`;
-}
+});
 
 // Fabrication confirmee : reverification (PA et ingredients ont pu changer), puis ingredients consommes, PA
 // depenses et objet fabrique ajoute au sac. Pas de surcout nocturne (equilibrage.md §4 : « idem » la nuit).
-async function fabriquer(joueurId: number, recette: RecetteSimple): Promise<string> {
+const fabriquer = verrouille(async function fabriquer(joueurId: number, recette: RecetteSimple): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true } });
   if (!peutAgir(joueur)) return "Vous ne pouvez plus fabriquer.";
   const cout = recette.coutPA ?? 0;
@@ -397,7 +398,7 @@ async function fabriquer(joueurId: number, recette: RecetteSimple): Promise<stri
     }),
   ]);
   return `🔨 Vous avez fabriqué **${objetAvecEmoji(recette.objetResultat.nom)}** (−${cout} PA, ${paRestants} restants). Il est dans votre sac.`;
-}
+});
 
 // Formulaire unique du don : destinataire, objet et quantite. Renvoie null si le formulaire n'est pas envoye.
 async function formulaireDon(
@@ -463,7 +464,7 @@ async function formulaireDon(
 
 // Don confirme : reverification (le destinataire doit toujours etre au meme endroit, l'objet toujours dans le sac),
 // puis transfert, journal des deux joueurs et mention du destinataire dans le salon du lieu. Gratuit en PA.
-async function donner(guild: Guild, joueurId: number, destinataireId: number, objetId: number, quantite: number): Promise<string> {
+const donner = verrouille(async function donner(guild: Guild, joueurId: number, destinataireId: number, objetId: number, quantite: number): Promise<string> {
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { ville: true, utilisateur: true } });
   if (!peutAgir(joueur)) return "Vous ne pouvez plus donner d'objet.";
   const destinataire = (await survivantsAuMemeEndroit(joueur)).find((d) => d.id === destinataireId);
@@ -525,7 +526,7 @@ async function donner(guild: Guild, joueurId: number, destinataireId: number, ob
     .catch(() => null);
 
   return `🤝 Vous avez donné **${objet} × ${quantite}** à **${nomJoueur(destinataire)}**.`;
-}
+});
 
 const command: Command = {
   data: new SlashCommandBuilder().setName("inventaire").setDescription("Affiche votre sac, pour fabriquer, donner, déposer en banque, jeter, manger ou boire"),

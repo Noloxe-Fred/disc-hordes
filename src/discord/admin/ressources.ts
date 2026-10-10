@@ -1,5 +1,5 @@
 import { StatutVille } from "@prisma/client";
-import { ButtonStyle, type ButtonInteraction } from "discord.js";
+import { ButtonStyle, MessageFlags, type ButtonInteraction } from "discord.js";
 import { OBJET_RADIO } from "../../config/objets";
 import { prisma } from "../../db";
 import { rafraichirPanneauBanque } from "../banque";
@@ -18,6 +18,7 @@ import {
   repondre,
   type FamilleAdmin,
 } from "./outils";
+import { sousVerrou } from "../../services/verrou";
 
 // Famille "Ressources" du panneau /admin (conception.md §4) : objets d'un joueur ou de la banque de ville (la faim,
 // la soif et les PA s'ajustent dans la famille Joueur).
@@ -52,6 +53,9 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
       await repondre(soumission, `La quantité doit être un nombre entier entre 1 et ${QUANTITE_MAX}.`);
       return;
     }
+    // Accuse reception avant d'attendre son tour dans la file des operations (services/verrou.ts) : la lecture de la
+    // quantite et son ecriture s'y font d'un bloc, pour ne pas ecraser un mouvement fait au meme moment par un joueur
+    await soumission.deferReply({ flags: MessageFlags.Ephemeral });
     const objet = await prisma.objet.findUniqueOrThrow({ where: { id: objetId } });
 
     let proprietaire: string;
@@ -64,13 +68,15 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
         await repondre(soumission, "Ce membre n'a pas de personnage dans une ville en jeu.");
         return;
       }
-      const ligne = await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId: joueur.id, objetId } } });
-      avant = ligne?.quantite ?? 0;
-      apres = Math.max(0, avant + sens * quantite);
-      await prisma.inventaireJoueur.upsert({
-        where: { joueurId_objetId: { joueurId: joueur.id, objetId } },
-        update: { quantite: apres },
-        create: { joueurId: joueur.id, objetId, quantite: apres },
+      [avant, apres] = await sousVerrou(async () => {
+        const ligne = await prisma.inventaireJoueur.findUnique({ where: { joueurId_objetId: { joueurId: joueur.id, objetId } } });
+        const nouvelle = Math.max(0, (ligne?.quantite ?? 0) + sens * quantite);
+        await prisma.inventaireJoueur.upsert({
+          where: { joueurId_objetId: { joueurId: joueur.id, objetId } },
+          update: { quantite: nouvelle },
+          create: { joueurId: joueur.id, objetId, quantite: nouvelle },
+        });
+        return [ligne?.quantite ?? 0, nouvelle];
       });
       proprietaire = `<@${joueur.utilisateur.discordId}>`;
       if (objet.nom === OBJET_RADIO) joueurRadio = joueur.id;
@@ -80,13 +86,15 @@ function modifierObjet(cible: "joueur" | "ville", sens: 1 | -1) {
         await repondre(soumission, "Cette ville n'est plus en jeu.");
         return;
       }
-      const ligne = await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId: ville.id, objetId } } });
-      avant = ligne?.quantite ?? 0;
-      apres = Math.max(0, avant + sens * quantite);
-      await prisma.inventaireVille.upsert({
-        where: { villeId_objetId: { villeId: ville.id, objetId } },
-        update: { quantite: apres },
-        create: { villeId: ville.id, objetId, quantite: apres },
+      [avant, apres] = await sousVerrou(async () => {
+        const ligne = await prisma.inventaireVille.findUnique({ where: { villeId_objetId: { villeId: ville.id, objetId } } });
+        const nouvelle = Math.max(0, (ligne?.quantite ?? 0) + sens * quantite);
+        await prisma.inventaireVille.upsert({
+          where: { villeId_objetId: { villeId: ville.id, objetId } },
+          update: { quantite: nouvelle },
+          create: { villeId: ville.id, objetId, quantite: nouvelle },
+        });
+        return [ligne?.quantite ?? 0, nouvelle];
       });
       proprietaire = `la banque de **${ville.nom}**`;
       await rafraichirPanneauBanque(interaction.guild!, ville.id);

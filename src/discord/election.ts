@@ -20,6 +20,7 @@ import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { posterDansMairie } from "./villeStructure";
+import { verrouille } from "../services/verrou";
 
 // Election du maire (conception.md §5) : declenchable a tout moment par un citoyen vivant (bouton « Élection » de
 // /action), une seule a la fois par ville. Un panneau poste dans la mairie porte les boutons : 24 h de candidatures
@@ -133,7 +134,7 @@ export async function empechementElection(joueurId: number): Promise<string | nu
   return null;
 }
 
-export async function declencherElectionJoueur(guild: Guild, joueurId: number): Promise<string> {
+export const declencherElectionJoueur = verrouille(async function declencherElectionJoueur(guild: Guild, joueurId: number): Promise<string> {
   const raison = await empechementElection(joueurId);
   if (raison) return raison;
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId }, include: { utilisateur: true } });
@@ -142,7 +143,7 @@ export async function declencherElectionJoueur(guild: Guild, joueurId: number): 
     `🗳️ L'élection est lancée : ${DUREE_CANDIDATURES_HEURES} h de candidatures puis ${DUREE_VOTE_HEURES} h de vote. ` +
     "Le panneau est dans la mairie."
   );
-}
+});
 
 // Ouvre l'election d'une ville (par un citoyen ou depuis /admin) : annonce dans la mairie puis panneau
 export async function ouvrirElection(guild: Guild, villeId: number, annonce: string, joueurId: number | null = null): Promise<void> {
@@ -165,12 +166,12 @@ export async function ouvrirElection(guild: Guild, villeId: number, annonce: str
 
 // Mairie liberee en cours de partie : election ouverte aussitot, sauf si une election est deja en cours (elle
 // designera le successeur) ou si la ville n'est plus en jeu
-export async function pourvoirMairieVacante(guild: Guild, villeId: number): Promise<void> {
+export const pourvoirMairieVacante = verrouille(async function pourvoirMairieVacante(guild: Guild, villeId: number): Promise<void> {
   const ville = await prisma.ville.findUnique({ where: { id: villeId } });
   if (ville?.statut !== StatutVille.ACTIVE || ville.maireId !== null) return;
   if (await electionEnCours(villeId)) return;
   await ouvrirElection(guild, villeId, "La mairie est vacante : une élection du maire s'ouvre automatiquement.");
-}
+});
 
 // Fin de mandat, verifiee a l'aube : le maire assure l'interim jusqu'au resultat de l'election (ouverte ici, ou
 // deja en cours). mandatFinCycle a null avec un maire marque l'interim, pour n'annoncer la fin qu'une fois.
@@ -236,7 +237,7 @@ export async function gererBoutonElection(interaction: ButtonInteraction, action
   }
 }
 
-async function candidater(election: Election, joueurId: number): Promise<string> {
+const candidater = verrouille(async function candidater(election: Election, joueurId: number): Promise<string> {
   const existante = await prisma.candidature.findUnique({ where: { electionId_joueurId: { electionId: election.id, joueurId } } });
   if (existante) return "Vous êtes déjà candidat.";
   await prisma.$transaction([
@@ -244,14 +245,14 @@ async function candidater(election: Election, joueurId: number): Promise<string>
     prisma.journalEntree.create({ data: { villeId: election.villeId, joueurId, message: "Candidature à l'élection du maire" } }),
   ]);
   return `🙋 Vous êtes candidat. Le vote s'ouvrira le ${horodatage(election.dateVote)}.`;
-}
+});
 
-async function retirer(election: Election, joueurId: number): Promise<string> {
+const retirer = verrouille(async function retirer(election: Election, joueurId: number): Promise<string> {
   const { count } = await prisma.candidature.deleteMany({ where: { electionId: election.id, joueurId } });
   if (count === 0) return "Vous n'êtes pas candidat.";
   await prisma.journalEntree.create({ data: { villeId: election.villeId, joueurId, message: "Candidature à l'élection du maire retirée" } });
   return "Votre candidature est retirée.";
-}
+});
 
 async function formulaireVote(interaction: ButtonInteraction, election: Election, joueurId: number): Promise<void> {
   const candidats = await candidatsEligibles(election.id, election.villeId);
@@ -294,7 +295,7 @@ async function formulaireVote(interaction: ButtonInteraction, election: Election
 }
 
 // Vote : tout est reverifie, le formulaire ayant pu rester ouvert pendant la cloture ou un depart
-async function voter(electionId: number, joueurId: number, candidatId: number): Promise<string> {
+const voter = verrouille(async function voter(electionId: number, joueurId: number, candidatId: number): Promise<string> {
   const election = await prisma.election.findUniqueOrThrow({ where: { id: electionId } });
   if (election.statut !== StatutElection.EN_COURS || !election.voteOuvert) return "Le vote est clos.";
   const joueur = await prisma.joueur.findUniqueOrThrow({ where: { id: joueurId } });
@@ -311,7 +312,7 @@ async function voter(electionId: number, joueurId: number, candidatId: number): 
     create: { electionId, votantId: joueurId, candidatId },
   });
   return `🗳️ Votre vote pour <@${candidat.joueur.utilisateur.discordId}> est enregistré. Vous pouvez en changer jusqu'à la clôture.`;
-}
+});
 
 // --- Echeances : fin des candidatures, puis depouillement ---
 
@@ -328,9 +329,9 @@ export async function verifierElections(guild: Guild): Promise<void> {
 }
 
 // Passe a l'etape suivante sans attendre l'echeance (aussi pour le panneau /admin) ; renvoie ce qui s'est passe
-export async function avancerElection(guild: Guild, election: Election): Promise<string> {
+export const avancerElection = verrouille(async function avancerElection(guild: Guild, election: Election): Promise<string> {
   return election.voteOuvert ? depouiller(guild, election) : cloreCandidatures(guild, election);
-}
+});
 
 async function cloreCandidatures(guild: Guild, election: Election): Promise<string> {
   const candidats = await candidatsEligibles(election.id, election.villeId);
