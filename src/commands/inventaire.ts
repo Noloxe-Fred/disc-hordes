@@ -34,6 +34,7 @@ import { trouverJoueurActif } from "../services/joueur";
 import { survivantsAuMemeEndroit } from "../services/voisins";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "../discord/formulaires";
 
 // Sac du joueur (conception.md §4) : contenu, craft simple avec ce qu'on a sur soi (equilibrage.md §6) et troc
 // « donner a » un autre survivant present au meme endroit, « jeter » un objet pour alleger le sac, manger et boire
@@ -318,9 +319,7 @@ async function formulairePoser(
       .setTitle("Jeter un objet (il sera perdu)")
       .addLabelComponents(...champs, champQuantite()),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_CHOIX_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_CHOIX_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (soumission.isFromMessage()) await soumission.deferUpdate();
@@ -443,9 +442,7 @@ async function formulaireDon(
         champQuantite(),
       ),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_CHOIX_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_CHOIX_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (soumission.isFromMessage()) await soumission.deferUpdate();

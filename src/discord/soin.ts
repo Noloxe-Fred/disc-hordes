@@ -16,6 +16,7 @@ import { calculerPaMax } from "../game/pa";
 import { survivantsAuMemeEndroit } from "../services/voisins";
 import { trouverSalonTexte } from "./reconcile";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Bouton « Soigner » de /action (equilibrage.md §1 et §4) : un formulaire unique (soin + qui soigner), puis le soin.
 // Sur soi ou sur un survivant au meme endroit ; les PV rendus font remonter le PA max effectif du soigne.
@@ -95,9 +96,7 @@ export async function formulaireSoin(
         ),
       ),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (soumission.isFromMessage()) await soumission.deferUpdate();

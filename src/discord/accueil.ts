@@ -25,6 +25,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { posterDansMairie } from "./villeStructure";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Demandes d'accueil (conception.md §5) : un survivant dehors (vivant ou exclu) demande a rejoindre une autre ville en jeu
 // de son groupe, ou un exclu a revenir dans la sienne (bouton « Demander l'accueil » de /action). La demande est postee
@@ -92,9 +93,7 @@ export async function formulaireAccueil(
           ),
       ),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return null;
   if (soumission.isFromMessage()) await soumission.deferUpdate();
   const villeId = Number(soumission.fields.getStringSelectValues("ville")[0]);

@@ -20,6 +20,7 @@ import {
 } from "discord.js";
 import { prisma } from "../../db";
 import { DELAI_FORMULAIRE_MS } from "../texteLibre";
+import { attendreFormulaire } from "../formulaires";
 
 // Outils communs aux actions du panneau /admin : description des familles, formulaires (modals) de ciblage,
 // confirmation des actions destructives et journal des actions admin.
@@ -80,9 +81,7 @@ export async function ouvrirFormulaire(
       .setTitle(titre.slice(0, 45))
       .addLabelComponents(...champs),
   );
-  return interaction
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  return attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
 }
 
 export function champTexte(

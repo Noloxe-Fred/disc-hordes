@@ -38,6 +38,7 @@ import { ensureTerritoiresGroupe } from "./territoires";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE, enCitation } from "./texteLibre";
 import { creerStructureVille } from "./villeStructure";
 import { sousVerrou, verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Boutons du message de recrutement d'une ville (messageVille.ts) : customId "ville:<action>:<villeId>"
 // Les reponses a ces boutons sont collectees sur leur propre message (withResponse) : sur une reponse a un
@@ -132,9 +133,7 @@ async function rejoindre(interaction: ButtonInteraction, guild: Guild, villeId: 
       ),
   );
 
-  const soumission = await selectionMetier
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(selectionMetier, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) {
     await interaction.editReply({ content: "Formulaire non envoyé, demande annulée.", components: [] }).catch(() => null);
     return;

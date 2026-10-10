@@ -12,6 +12,7 @@ import {
 import { prisma } from "../db";
 import { posterDansMairie } from "./villeStructure";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Annonce du maire (bouton « Annonce » de /action) : la mairie etant fermee aux joueurs, le maire y publie par le bot,
 // en choisissant de notifier ou non toute la ville (role-ville). Inscrite au journal public de la ville.
@@ -60,9 +61,7 @@ export async function formulaireAnnonce(
         ),
       ),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (soumission.isFromMessage()) await soumission.deferUpdate();

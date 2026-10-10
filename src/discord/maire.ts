@@ -14,6 +14,7 @@ import { estMaireEnExercice } from "./annonce";
 import { rafraichirPanneauChantiers } from "./chantiers";
 import { ciblesPossibles, lancerSanction } from "./sanction";
 import { posterDansMairie } from "./villeStructure";
+import { attendreFormulaire } from "./formulaires";
 
 // Pouvoirs du maire (conception.md §5), depuis le panneau « Maire » de /action : Annonce (discord/annonce.ts), Bannir et
 // Executer (vote de la ville, discord/sanction.ts), Rationner et Prioriser un chantier. Rationnement et priorite sont
@@ -30,9 +31,7 @@ type Resultat = { soumission: ModalSubmitInteraction; texte: string } | null;
 async function ouvrirFormulaire(clic: ButtonInteraction, titre: string, champs: LabelBuilder[]): Promise<ModalSubmitInteraction | null> {
   const idFormulaire = `maire:${clic.id}`;
   await clic.showModal(new ModalBuilder().setCustomId(idFormulaire).setTitle(titre).addLabelComponents(...champs));
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   // Accuse reception tout de suite : annonces et panneaux peuvent depasser les 3 s laissees par Discord
   if (soumission?.isFromMessage()) await soumission.deferUpdate();
   return soumission;

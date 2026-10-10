@@ -38,6 +38,7 @@ import { texteRationnement } from "./maire";
 import { rafraichirPanneauMaisons } from "./maisons";
 import { ensureSalonLectureSeule, posterDansMairie, synchroniserSalonAtelier } from "./villeStructure";
 import { enArrierePlan, verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Chantiers communautaires (conception.md §5, equilibrage.md §7) : un panneau permanent dans #chantiers de chaque ville,
 // mis a jour a chaque avancee. « Contribuer (sac) » / « Contribuer (banque) » deposent des ressources sur le prochain
@@ -260,9 +261,7 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
       .setTitle(source === "sac" ? "Contribuer depuis le sac" : "Contribuer depuis la banque")
       .addLabelComponents(champBatiment(etats), ...champsObjets, champQuantite()),
   );
-  const soumission = await interaction
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return;
   // Accuse reception tout de suite : terminer un palier (salon, acces des habitants) peut depasser les 3 s de Discord
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
@@ -359,9 +358,7 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
           ),
       ),
   );
-  const soumission = await interaction
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return;
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   const type = soumission.fields.getStringSelectValues("batiment")[0] as TypeBatiment;

@@ -24,6 +24,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { rafraichirPanneauBanque } from "./banque";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Maisons privees (equilibrage.md §7) : un panneau permanent dans #maisons-privees de chaque ville. Chaque joueur
 // construit sa propre maison avec la mecanique des chantiers : « Contribuer (sac) » / « Contribuer (banque) » deposent
@@ -198,9 +199,7 @@ async function contribuer(interaction: ButtonInteraction, joueurId: number, vill
       .setTitle(source === "sac" ? "Maison : depuis le sac" : "Maison : depuis la banque")
       .addLabelComponents(...champsObjets, champQuantite()),
   );
-  const soumission = await interaction
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return;
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   const objetId = lireObjetPossede(soumission, champsObjets.length);
@@ -279,9 +278,7 @@ async function installer(interaction: ButtonInteraction, joueurId: number, ville
           ),
       ),
   );
-  const soumission = await interaction
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return;
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   const pa = lireQuantite(soumission);

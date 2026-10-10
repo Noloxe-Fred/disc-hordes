@@ -6,6 +6,7 @@ import { Events, MessageFlags, type Interaction } from "discord.js";
 import { createClient, type Command } from "./client";
 import { prisma } from "./db";
 import { gererBouton } from "./discord/boutons";
+import { repondreFormulaireOrphelin } from "./discord/formulaires";
 import { synchroniserNomade } from "./discord/joueurDiscord";
 import { ensureAdjacencesGroupe } from "./services/zones";
 import { demarrerHorlogeCycle } from "./scheduler/cycle";
@@ -80,6 +81,8 @@ async function traiterInteraction(interaction: Interaction) {
       await command.execute(interaction);
     } else if (interaction.isButton()) {
       await gererBouton(interaction);
+    } else if (interaction.isModalSubmit()) {
+      await repondreFormulaireOrphelin(interaction);
     }
   } catch (error) {
     console.error("Erreur lors du traitement d'une interaction", error);

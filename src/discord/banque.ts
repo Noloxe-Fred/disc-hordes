@@ -25,6 +25,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { rendreInventaire } from "./renduInventaire";
 import { enArrierePlan, verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Banque de ville (conception.md §1, inventaire de ville) : les citoyens vivants presents en ville y deposent des
 // objets de leur sac ou en retirent, sans passer par le don. Gratuit en PA, inscrit au journal public de la ville.
@@ -200,9 +201,7 @@ export async function formulaireBanque(
       .setTitle(sens === "deposer" ? "Déposer à la banque" : "Retirer de la banque")
       .addLabelComponents(...champs, champQuantite()),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (accuse === "reponse") await soumission.deferReply({ flags: MessageFlags.Ephemeral });

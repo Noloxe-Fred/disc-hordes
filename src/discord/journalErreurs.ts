@@ -44,6 +44,9 @@ const TEXTE_MAX = 1_400;
 // Discord affiche « L'application ne repond plus » faute de reponse sous 3 s ; marge pour la requete en vol
 const DELAI_REPONSE_INTERACTION_MS = 4_000;
 const BLOCAGE_BOUCLE_MS = 5_000;
+// Retards de la boucle d'evenements gardes pour le diagnostic des interactions sans reponse (au-dela du bruit normal)
+const RETARD_BOUCLE_NOTE_MS = 200;
+const RETARDS_GARDES_MS = 60_000;
 // En deca, une coupure est une reconnexion de routine demandee par Discord : pas d'entree
 const COUPURE_SIGNALEE_MS = 60_000;
 
@@ -53,6 +56,7 @@ let enAttente: Entree[] = [];
 let ignorees = 0;
 let minuteur: NodeJS.Timeout | null = null;
 let salonId: string | null = null;
+let retardsBoucle: { fin: number; retard: number }[] = [];
 
 export function signalerErreur(titre: string, texte: string, gravite: Gravite = "erreur"): void {
   const ctx = contexte.getStore();
@@ -159,16 +163,26 @@ export function decrireInteraction(interaction: Interaction): ContexteAction {
 export function surveillerReponse(interaction: Interaction): void {
   if (!interaction.isRepliable()) return;
   const ctx = decrireInteraction(interaction);
+  const reception = Date.now();
   setTimeout(() => {
     if (interaction.replied || interaction.deferred) return;
+    // Diagnostic : lenteur avant l'arrivee au bot (Discord, reseau, horloge du serveur) ou bot occupe ensuite
+    const acheminement = reception - interaction.createdTimestamp;
+    const blocage = retardsBoucle.filter((r) => r.fin > reception).reduce((total, r) => total + r.retard, 0);
     avecContexte(ctx, () =>
       signalerErreur(
         "⏱️ Interaction sans réponse",
-        `Aucune réponse du bot dans les 3 s : Discord a affiché « L'application ne répond plus » au joueur.`,
+        `Aucune réponse du bot dans les 3 s : Discord a affiché « L'application ne répond plus » au joueur.
+` +
+          `Reçue par le bot ${secondes(acheminement)} après le clic ; bot bloqué ${secondes(blocage)} pendant les ${secondes(DELAI_REPONSE_INTERACTION_MS)} suivantes.`,
         "alerte",
       ),
     );
   }, DELAI_REPONSE_INTERACTION_MS).unref();
+}
+
+function secondes(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
 }
 
 function heure(date: Date): string {
@@ -241,6 +255,10 @@ export function installerJournalErreurs(c: Client): void {
     const maintenant = Date.now();
     const retard = maintenant - precedent - 1_000;
     precedent = maintenant;
+    if (retard >= RETARD_BOUCLE_NOTE_MS) {
+      retardsBoucle = retardsBoucle.filter((r) => r.fin > maintenant - RETARDS_GARDES_MS);
+      retardsBoucle.push({ fin: maintenant, retard });
+    }
     if (retard >= BLOCAGE_BOUCLE_MS) {
       signalerErreur(
         "🧊 Bot figé",

@@ -18,6 +18,7 @@ import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_NOM_VILLE, LONGUEUR_MAX_TEXTE_LIBRE }
 import { utilisateurEstEngage } from "../services/engagement";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
 import { sousVerrou } from "../services/verrou";
+import { attendreFormulaire } from "../discord/formulaires";
 
 const VALEUR_SANS_METIER = "AUCUN";
 
@@ -85,9 +86,7 @@ const command: Command = {
     const idFormulaire = `creer-ville:${interaction.id}`;
     await interaction.showModal(construireFormulaire(idFormulaire));
 
-    const soumission = await interaction
-      .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-      .catch(() => null);
+    const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
     if (!soumission) return; // formulaire ferme ou delai depasse : rien n'est cree
 
     const nom = soumission.fields.getTextInputValue("nom").trim();

@@ -7,6 +7,7 @@ import { champQuantite, lireQuantite } from "./champsObjets";
 import { synchroniserAccesJoueur } from "./joueurDiscord";
 import { trouverSalonTexte } from "./reconcile";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Corps des morts (conception.md §3, equilibrage.md §1) : le sac d'un joueur mort reste la ou il est tombe, en ville ou
 // dans sa zone (Joueur.zoneMortId). Les survivants presents peuvent le fouiller depuis /action (« Fouiller un corps ») :
@@ -74,9 +75,7 @@ export async function formulaireFouilleCorps(
         champQuantite(),
       ),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (soumission.isFromMessage()) await soumission.deferUpdate();

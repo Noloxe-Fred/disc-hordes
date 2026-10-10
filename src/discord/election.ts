@@ -21,6 +21,7 @@ import { estMjActif, MESSAGE_MJ_ACTIF_NE_JOUE_PAS } from "./permissions";
 import { trouverSalonTexte } from "./reconcile";
 import { posterDansMairie } from "./villeStructure";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Election du maire (conception.md §5) : declenchable a tout moment par un citoyen vivant (bouton « Élection » de
 // /action), une seule a la fois par ville. Un panneau poste dans la mairie porte les boutons : 24 h de candidatures
@@ -284,9 +285,7 @@ async function formulaireVote(interaction: ButtonInteraction, election: Election
           ),
       ),
   );
-  const soumission = await interaction
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return;
   await soumission.deferReply({ flags: MessageFlags.Ephemeral });
   const candidatId = Number(soumission.fields.getStringSelectValues("candidat")[0]);

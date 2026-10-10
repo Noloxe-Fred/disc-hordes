@@ -11,6 +11,7 @@ import { champQuantite, champsObjetsPossedes, lireObjetPossede, lireQuantite } f
 import { prochaineBascule } from "../scheduler/cycle";
 import { posterDansMairie } from "./villeStructure";
 import { verrouille } from "../services/verrou";
+import { attendreFormulaire } from "./formulaires";
 
 // Manger et boire (equilibrage.md §2, « Consommation ») depuis /inventaire : partout avec ce qu'on a dans son sac, et
 // en ville directement dans la banque. Gratuit en PA. Les jauges remontent (plafond 100), ce qui fait remonter le
@@ -65,9 +66,7 @@ export async function formulaireConsommer(
       .setTitle(source === "sac" ? "Manger ou boire (sac)" : "Manger ou boire (banque)")
       .addLabelComponents(...champs, champQuantite()),
   );
-  const soumission = await clic
-    .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-    .catch(() => null);
+  const soumission = await attendreFormulaire(clic, idFormulaire, DELAI_FORMULAIRE_MS);
   if (!soumission) return null;
   // Accuse reception tout de suite : le traitement peut depasser les 3 s laissees par Discord
   if (soumission.isFromMessage()) await soumission.deferUpdate();

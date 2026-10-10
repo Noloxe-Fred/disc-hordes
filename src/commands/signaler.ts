@@ -12,6 +12,7 @@ import { prisma } from "../db";
 import { posterSignalement } from "../discord/signalement";
 import { DELAI_FORMULAIRE_MS, LONGUEUR_MAX_TEXTE_LIBRE } from "../discord/texteLibre";
 import { trouverOuCreerUtilisateur } from "../services/utilisateur";
+import { attendreFormulaire } from "../discord/formulaires";
 
 // /signaler : formulaire (membre signale, facultatif, et message) poste dans #signalements pour l'equipe
 function construireFormulaire(idFormulaire: string): ModalBuilder {
@@ -48,9 +49,7 @@ const command: Command = {
 
     const idFormulaire = `signaler:${interaction.id}`;
     await interaction.showModal(construireFormulaire(idFormulaire));
-    const soumission = await interaction
-      .awaitModalSubmit({ time: DELAI_FORMULAIRE_MS, filter: (i) => i.customId === idFormulaire })
-      .catch(() => null);
+    const soumission = await attendreFormulaire(interaction, idFormulaire, DELAI_FORMULAIRE_MS);
     if (!soumission) return;
 
     const cible = soumission.fields.getSelectedUsers("cible")?.first() ?? null;
