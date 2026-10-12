@@ -26,7 +26,7 @@ L'utilisateur clôt le ticket sur lequel on vient de travailler. Enchaîner les 
 
 ## 3. Push
 
-- `git push` sur la branche courante (`main`, remote `origin`).
+- `git push` sur la branche de travail `dev` (remote `origin`). Ne **jamais** pousser sur `master` ici : `master` est la prod NorthHost, elle ne reçoit `dev` (fusion + push) que lorsque l'utilisateur confirme que c'est testé.
 - En cas de refus (retard sur le remote, conflit), s'arrêter et expliquer ; pas de force push.
 
 ## 4. Valider le ticket sur Airtable
